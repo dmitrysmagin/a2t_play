@@ -1,0 +1,5 @@
+*.o
+*.so
+*.exe
+*.dll
+a2t_play32-linux32
