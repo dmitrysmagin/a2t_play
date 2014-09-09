@@ -188,16 +188,16 @@ const
   INSTRUMENT_SIZE = SizeOf(tADTRACK2_INS);
   CHUNK_SIZE = SizeOf(tADTRACK2_EVENT);
   PATTERN_SIZE = 20*256*CHUNK_SIZE;
-  NULL = $0ff;
+  NONE = $0ff;
 
 const                    { 01 - 02 - 03 - 04 - 05 - 06 - 07 - 08 - 09 - 10 - 11 - 12 - 13 - 14 - 15 - 16 - 17 - 18 - 19 - 20 }
-  _chmm_n: tTRACK_ADDR = ($003,$000,$004,$001,$005,$002,$006,$007,$008,$103,$100,$104,$101,$105,$102,$106,$107,$108,NULL,NULL);
-  _chmm_m: tTRACK_ADDR = ($008,$000,$009,$001,$00a,$002,$010,$011,$012,$108,$100,$109,$101,$10a,$102,$110,$111,$112,NULL,NULL);
-  _chmm_c: tTRACK_ADDR = ($00b,$003,$00c,$004,$00d,$005,$013,$014,$015,$10b,$103,$10c,$104,$10d,$105,$113,$114,$115,NULL,NULL);
+  _chmm_n: tTRACK_ADDR = ($003,$000,$004,$001,$005,$002,$006,$007,$008,$103,$100,$104,$101,$105,$102,$106,$107,$108,NONE,NONE);
+  _chmm_m: tTRACK_ADDR = ($008,$000,$009,$001,$00a,$002,$010,$011,$012,$108,$100,$109,$101,$10a,$102,$110,$111,$112,NONE,NONE);
+  _chmm_c: tTRACK_ADDR = ($00b,$003,$00c,$004,$00d,$005,$013,$014,$015,$10b,$103,$10c,$104,$10d,$105,$113,$114,$115,NONE,NONE);
                          {                                                                            BD   SD   TT   TC   HH }
   _chpm_n: tTRACK_ADDR = ($003,$000,$004,$001,$005,$002,$106,$107,$108,$103,$100,$104,$101,$105,$102,$006,$007,$008,$008,$007);
   _chpm_m: tTRACK_ADDR = ($008,$000,$009,$001,$00a,$002,$110,$111,$112,$108,$100,$109,$101,$10a,$102,$010,$014,$012,$015,$011);
-  _chpm_c: tTRACK_ADDR = ($00b,$003,$00c,$004,$00d,$005,$113,$114,$115,$10b,$103,$10c,$104,$10d,$105,$013,NULL,NULL,NULL,NULL);
+  _chpm_c: tTRACK_ADDR = ($00b,$003,$00c,$004,$00d,$005,$113,$114,$115,$10b,$103,$10c,$104,$10d,$105,$013,NONE,NONE,NONE,NONE);
 
 var
   _chan_n: tTRACK_ADDR;
@@ -664,10 +664,10 @@ begin
            SizeOf(fmpar_table[chan].adsrw_mod),0);
 
   opl3out($0b0+_chan_n[chan],0);
-  opl3out(_instr[04]+_chan_m[chan],NULL);
-  opl3out(_instr[05]+_chan_c[chan],NULL);
-  opl3out(_instr[06]+_chan_m[chan],NULL);
-  opl3out(_instr[07]+_chan_c[chan],NULL);
+  opl3out(_instr[04]+_chan_m[chan],NONE);
+  opl3out(_instr[05]+_chan_c[chan],NONE);
+  opl3out(_instr[06]+_chan_m[chan],NONE);
+  opl3out(_instr[07]+_chan_c[chan],NONE);
 
   key_off(chan);
   event_table[chan].instr_def := 0;
@@ -686,7 +686,7 @@ var
   temp: Byte;
 
 begin
-  If (modulator <> NULL) then
+  If (modulator <> NONE) then
     begin
       temp := modulator;
       If volume_scaling then
@@ -707,7 +707,7 @@ begin
       else modulator_vol[chan] := 63-modulator;
     end;
 
-  If (carrier <> NULL) then
+  If (carrier <> NONE) then
     begin
       temp := carrier;
       If volume_scaling then
@@ -739,7 +739,7 @@ begin
     If NOT ((carrier_vol[chan] = 0) and
             (modulator_vol[chan] = 0)) then
       If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
-        set_ins_volume(NULL,HI(volume_table[chan]),chan)
+        set_ins_volume(NONE,HI(volume_table[chan]),chan)
       else set_ins_volume(LO(volume_table[chan]),HI(volume_table[chan]),chan);
 end;
 
@@ -976,7 +976,7 @@ begin
   result := TRUE;
   For chan := 1 to PRED(current_chan) do
     If (loop_table[chan][current_line] <> 0) and
-       (loop_table[chan][current_line] <> NULL) then
+       (loop_table[chan][current_line] <> NONE) then
       begin
         result := FALSE;
         BREAK;
@@ -995,7 +995,7 @@ begin
       effect_table2[chan] := effect_table2[chan] AND $0ff00;
       ftune_table[chan] := 0;
 
-      If (event.note = NULL) then
+      If (event.note = NONE) then
         event.note := event_table[chan].note OR keyoff_flag
       else If (event.note in [fixed_note_flag+1..fixed_note_flag+12*8+1]) then
              event.note := event.note-fixed_note_flag;
@@ -1086,8 +1086,8 @@ begin
       If NOT (pattern_break and (next_line AND $0f0 = pattern_loop_flag)) and
              (current_order <> last_order) then
         begin
-          FillChar(loopbck_table,SizeOf(loopbck_table),NULL);
-          FillChar(loop_table,SizeOf(loop_table),NULL);
+          FillChar(loopbck_table,SizeOf(loopbck_table),NONE);
+          FillChar(loop_table,SizeOf(loop_table),NONE);
           last_order := current_order;
         end;
 
@@ -1255,21 +1255,21 @@ begin
           end;
 
         ef_SetCarrierVol:
-          set_ins_volume(NULL,63-event.effect,chan);
+          set_ins_volume(NONE,63-event.effect,chan);
 
         ef_SetModulatorVol:
-          set_ins_volume(63-event.effect,NULL,chan);
+          set_ins_volume(63-event.effect,NONE,chan);
 
         ef_SetInsVolume:
           If percussion_mode and (chan in [17..20]) then
-            set_ins_volume(63-event.effect,NULL,chan)
+            set_ins_volume(63-event.effect,NONE,chan)
           else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
-                 set_ins_volume(NULL,63-event.effect,chan)
+                 set_ins_volume(NONE,63-event.effect,chan)
                else set_ins_volume(63-event.effect,63-event.effect,chan);
 
         ef_ForceInsVolume:
           If percussion_mode and (chan in [17..20]) then
-            set_ins_volume(63-event.effect,NULL,chan)
+            set_ins_volume(63-event.effect,NONE,chan)
           else set_ins_volume(scale_volume(ins_parameter(voice_table[chan],2) AND $3f,63-event.effect),63-event.effect,chan);
 
         ef_PositionJump:
@@ -1439,9 +1439,9 @@ begin
             ef_ex_PatternLoopRec:
               If (event.effect MOD 16 = 0) then
                 loopbck_table[chan] := current_line
-              else If (loopbck_table[chan] <> NULL) then
+              else If (loopbck_table[chan] <> NONE) then
                      begin
-                       If (loop_table[chan][current_line] = NULL) then
+                       If (loop_table[chan][current_line] = NONE) then
                          loop_table[chan][current_line] := event.effect MOD 16;
                        If (loop_table[chan][current_line] <> 0) then
                          begin
@@ -1449,7 +1449,7 @@ begin
                            next_line := pattern_loop_flag+chan;
                          end
                        else If (event.effect DIV 16 = ef_ex_PatternLoopRec) then
-                              loop_table[chan][current_line] := NULL;
+                              loop_table[chan][current_line] := NONE;
                      end;
 
             ef_ex_MacroKOffLoop:
@@ -1794,21 +1794,21 @@ begin
           end;
 
         ef_SetCarrierVol:
-          set_ins_volume(NULL,63-event.effect2,chan);
+          set_ins_volume(NONE,63-event.effect2,chan);
 
         ef_SetModulatorVol:
-          set_ins_volume(63-event.effect2,NULL,chan);
+          set_ins_volume(63-event.effect2,NONE,chan);
 
         ef_SetInsVolume:
           If percussion_mode and (chan in [17..20]) then
-            set_ins_volume(63-event.effect2,NULL,chan)
+            set_ins_volume(63-event.effect2,NONE,chan)
           else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
-                 set_ins_volume(NULL,63-event.effect2,chan)
+                 set_ins_volume(NONE,63-event.effect2,chan)
                else set_ins_volume(63-event.effect2,63-event.effect2,chan);
 
         ef_ForceInsVolume:
           If percussion_mode and (chan in [17..20]) then
-            set_ins_volume(63-event.effect2,NULL,chan)
+            set_ins_volume(63-event.effect2,NONE,chan)
           else set_ins_volume(scale_volume(ins_parameter(voice_table[chan],2) AND $3f,63-event.effect2),63-event.effect2,chan);
 
         ef_PositionJump:
@@ -1978,9 +1978,9 @@ begin
             ef_ex_PatternLoopRec:
               If (event.effect2 MOD 16 = 0) then
                 loopbck_table[chan] := current_line
-              else If (loopbck_table[chan] <> NULL) then
+              else If (loopbck_table[chan] <> NONE) then
                      begin
-                       If (loop_table[chan][current_line] = NULL) then
+                       If (loop_table[chan][current_line] = NONE) then
                          loop_table[chan][current_line] := event.effect2 MOD 16;
                        If (loop_table[chan][current_line] <> 0) then
                          begin
@@ -1988,7 +1988,7 @@ begin
                            next_line := pattern_loop_flag+chan;
                          end
                        else If (event.effect2 DIV 16 = ef_ex_PatternLoopRec) then
-                              loop_table[chan][current_line] := NULL;
+                              loop_table[chan][current_line] := NONE;
                      end;
 
             ef_ex_MacroKOffLoop:
@@ -2372,7 +2372,7 @@ begin
          vHi := HI(temp);
          If (vHi-slide >= limit1) then temp := concw(vLo,vHi-slide)
          else temp := concw(vLo,limit1);
-         set_ins_volume(NULL,HI(temp),chan);
+         set_ins_volume(NONE,HI(temp),chan);
          volume_table[chan] := temp;
          If (ins_parameter(voice_table[chan],10) AND 1 = 1) or
             (percussion_mode and (chan in [17..20])) then
@@ -2381,7 +2381,7 @@ begin
              vHi := HI(temp);
              If (vLo-slide >= limit2) then temp := concw(vLo-slide,vHi)
              else temp := concw(limit2,vHi);
-             set_ins_volume(LO(temp),NULL,chan);
+             set_ins_volume(LO(temp),NONE,chan);
              volume_table[chan] := temp;
            end;
        end;
@@ -2391,7 +2391,7 @@ begin
          vHi := HI(temp);
          If (vHi-slide >= limit1) then temp := concw(vLo,vHi-slide)
          else temp := concw(vLo,limit1);
-         set_ins_volume(NULL,HI(temp),chan);
+         set_ins_volume(NONE,HI(temp),chan);
          volume_table[chan] := temp;
        end;
     2:
@@ -2400,7 +2400,7 @@ begin
          vHi := HI(temp);
          If (vLo-slide >= limit2) then temp := concw(vLo-slide,vHi)
          else temp := concw(limit2,vHi);
-         set_ins_volume(LO(temp),NULL,chan);
+         set_ins_volume(LO(temp),NONE,chan);
          volume_table[chan] := temp;
        end;
     3: begin
@@ -2408,13 +2408,13 @@ begin
          vHi := HI(temp);
          If (vHi-slide >= limit1) then temp := concw(vLo,vHi-slide)
          else temp := concw(vLo,limit1);
-         set_ins_volume(NULL,HI(temp),chan);
+         set_ins_volume(NONE,HI(temp),chan);
          volume_table[chan] := temp;
          vLo := LO(temp);
          vHi := HI(temp);
          If (vLo-slide >= limit2) then temp := concw(vLo-slide,vHi)
          else temp := concw(limit2,vHi);
-         set_ins_volume(LO(temp),NULL,chan);
+         set_ins_volume(LO(temp),NONE,chan);
          volume_table[chan] := temp;
        end;
   end;
@@ -2434,7 +2434,7 @@ begin
          vHi := HI(temp);
          If (vHi+slide <= 63) then temp := concw(vLo,vHi+slide)
          else temp := concw(vLo,63);
-         set_ins_volume(NULL,HI(temp),chan);
+         set_ins_volume(NONE,HI(temp),chan);
          volume_table[chan] := temp;
          If (ins_parameter(voice_table[chan],10) AND 1 = 1) or
             (percussion_mode and (chan in [17..20])) then
@@ -2443,7 +2443,7 @@ begin
              vHi := HI(temp);
              If (vLo+slide <= 63) then temp := concw(vLo+slide,vHi)
              else temp := concw(63,vHi);
-             set_ins_volume(LO(temp),NULL,chan);
+             set_ins_volume(LO(temp),NONE,chan);
              volume_table[chan] := temp;
            end;
        end;
@@ -2453,7 +2453,7 @@ begin
          vHi := HI(temp);
          If (vHi+slide <= 63) then temp := concw(vLo,vHi+slide)
          else temp := concw(vLo,63);
-         set_ins_volume(NULL,HI(temp),chan);
+         set_ins_volume(NONE,HI(temp),chan);
          volume_table[chan] := temp;
        end;
     2:
@@ -2462,7 +2462,7 @@ begin
          vHi := HI(temp);
          If (vLo+slide <= 63) then temp := concw(vLo+slide,vHi)
          else temp := concw(63,vHi);
-         set_ins_volume(LO(temp),NULL,chan);
+         set_ins_volume(LO(temp),NONE,chan);
          volume_table[chan] := temp;
        end;
     3: begin
@@ -2470,13 +2470,13 @@ begin
          vHi := HI(temp);
          If (vHi+slide <= 63) then temp := concw(vLo,vHi+slide)
          else temp := concw(vLo,63);
-         set_ins_volume(NULL,HI(temp),chan);
+         set_ins_volume(NONE,HI(temp),chan);
          volume_table[chan] := temp;
          vLo := LO(temp);
          vHi := HI(temp);
          If (vLo+slide <= 63) then temp := concw(vLo+slide,vHi)
          else temp := concw(63,vHi);
-         set_ins_volume(LO(temp),NULL,chan);
+         set_ins_volume(LO(temp),NONE,chan);
          volume_table[chan] := temp;
        end;
   end;
@@ -2490,9 +2490,9 @@ end;
 
 procedure global_volume_slide(up_speed,down_speed: Byte);
 begin
-  If (up_speed <> NULL) then
+  If (up_speed <> NONE) then
     global_volume := max(global_volume+up_speed,63);
-  If (down_speed <> NULL) then
+  If (down_speed <> NONE) then
     If (global_volume >= down_speed) then Dec(global_volume,down_speed)
     else global_volume := 0;
   set_global_volume;
@@ -2769,7 +2769,7 @@ begin
         ef_extended2+ef_fix2+ef_ex2_NoteDelay:
           If (notedel_table[chan] = 0) then
             begin
-              notedel_table[chan] := NULL;
+              notedel_table[chan] := NONE;
               output_note(event_table[chan].note,
                           event_table[chan].instr_def,chan,TRUE);
             end
@@ -2778,16 +2778,16 @@ begin
         ef_extended2+ef_fix2+ef_ex2_NoteCut:
           If (notecut_table[chan] = 0) then
             begin
-              notecut_table[chan] := NULL;
+              notecut_table[chan] := NONE;
               key_off(chan);
             end
           else Dec(notecut_table[chan]);
 
         ef_extended2+ef_fix2+ef_ex2_GlVolSlideUp:
-          global_volume_slide(eHi,NULL);
+          global_volume_slide(eHi,NONE);
 
         ef_extended2+ef_fix2+ef_ex2_GlVolSlideDn:
-          global_volume_slide(NULL,eHi);
+          global_volume_slide(NONE,eHi);
       end;
 
       Case eLo2 of
@@ -2933,7 +2933,7 @@ begin
         ef_extended2+ef_fix2+ef_ex2_NoteDelay:
           If (notedel_table[chan] = 0) then
             begin
-              notedel_table[chan] := NULL;
+              notedel_table[chan] := NONE;
               output_note(event_table[chan].note,
                           event_table[chan].instr_def,chan,TRUE);
             end
@@ -2942,16 +2942,16 @@ begin
         ef_extended2+ef_fix2+ef_ex2_NoteCut:
           If (notecut_table[chan] = 0) then
             begin
-              notecut_table[chan] := NULL;
+              notecut_table[chan] := NONE;
               key_off(chan);
             end
           else Dec(notecut_table[chan]);
 
         ef_extended2+ef_fix2+ef_ex2_GlVolSlideUp:
-          global_volume_slide(eHi2,NULL);
+          global_volume_slide(eHi2,NONE);
 
         ef_extended2+ef_fix2+ef_ex2_GlVolSlideDn:
-          global_volume_slide(NULL,eHi2);
+          global_volume_slide(NONE,eHi2);
       end;
     end;
 end;
@@ -3028,10 +3028,10 @@ begin
       volume_slide(chan,eHi DIV 16,eHi MOD 16);
 
     ef_extended2+ef_fix2+ef_ex2_GlVolSlideUpF:
-      global_volume_slide(eHi,NULL);
+      global_volume_slide(eHi,NONE);
 
     ef_extended2+ef_fix2+ef_ex2_GlVolSlideDnF:
-      global_volume_slide(NULL,eHi);
+      global_volume_slide(NONE,eHi);
   end;
 
   Case eLo2 of
@@ -3094,10 +3094,10 @@ begin
       volume_slide(chan,eHi2 DIV 16,eHi2 MOD 16);
 
     ef_extended2+ef_fix2+ef_ex2_GlVolSlideUpF:
-      global_volume_slide(eHi2,NULL);
+      global_volume_slide(eHi2,NONE);
 
     ef_extended2+ef_fix2+ef_ex2_GlVolSlideDnF:
-      global_volume_slide(NULL,eHi2);
+      global_volume_slide(NONE,eHi2);
   end;
 end;
 
@@ -3117,10 +3117,10 @@ begin
 
       Case eLo of
         ef_extended2+ef_fix2+ef_ex2_GlVolSldUpXF:
-          global_volume_slide(eHi,NULL);
+          global_volume_slide(eHi,NONE);
 
         ef_extended2+ef_fix2+ef_ex2_GlVolSldDnXF:
-          global_volume_slide(NULL,eHi);
+          global_volume_slide(NONE,eHi);
 
         ef_extended2+ef_fix2+ef_ex2_VolSlideUpXF:
           volume_slide(chan,eHi,0);
@@ -3148,10 +3148,10 @@ begin
 
       Case eLo2 of
         ef_extended2+ef_fix2+ef_ex2_GlVolSldUpXF:
-          global_volume_slide(eHi2,NULL);
+          global_volume_slide(eHi2,NONE);
 
         ef_extended2+ef_fix2+ef_ex2_GlVolSldDnXF:
-          global_volume_slide(NULL,eHi2);
+          global_volume_slide(NONE,eHi2);
 
         ef_extended2+ef_fix2+ef_ex2_VolSlideUpXF:
           volume_slide(chan,eHi2,0);
@@ -3233,8 +3233,8 @@ begin
          If NOT (pattern_break and (next_line AND $0f0 = pattern_loop_flag)) and
                 (current_order < $7f) then
            begin
-             FillChar(loopbck_table,SizeOf(loopbck_table),NULL);
-             FillChar(loop_table,SizeOf(loop_table),NULL);
+             FillChar(loopbck_table,SizeOf(loopbck_table),NONE);
+             FillChar(loop_table,SizeOf(loop_table),NONE);
              Inc(current_order);
            end;
 
@@ -3436,10 +3436,10 @@ begin
 
                                If NOT songdata.dis_fmreg_col[fmreg_table][5] then
                                  set_ins_volume(63-fm_data.KSL_VOLUM_modulator AND $3f,
-                                                NULL,chan);
+                                                NONE,chan);
 
                                If NOT songdata.dis_fmreg_col[fmreg_table][17] then
-                                 set_ins_volume(NULL,
+                                 set_ins_volume(NONE,
                                                 63-fm_data.KSL_VOLUM_carrier AND $3f,chan);
 
                                update_modulator_adsrw(chan);
@@ -3614,11 +3614,11 @@ begin
   FillChar(last_effect2,SizeOf(last_effect2),0);
   FillChar(voice_table,SizeOf(voice_table),0);
   FillChar(event_new,SizeOf(event_new),0);
-  FillChar(notedel_table,SizeOf(notedel_table),NULL);
-  FillChar(notecut_table,SizeOf(notecut_table),NULL);
+  FillChar(notedel_table,SizeOf(notedel_table),NONE);
+  FillChar(notecut_table,SizeOf(notecut_table),NONE);
   FillChar(ftune_table,SizeOf(ftune_table),0);
-  FillChar(loopbck_table,SizeOf(loopbck_table),NULL);
-  FillChar(loop_table,SizeOf(loop_table),NULL);
+  FillChar(loopbck_table,SizeOf(loopbck_table),NONE);
+  FillChar(loop_table,SizeOf(loop_table),NONE);
   FillChar(reset_chan,SizeOf(reset_chan),BYTE(FALSE));
   FillChar(keyoff_loop,SizeOf(keyoff_loop),BYTE(FALSE));
   FillChar(macro_table,SizeOf(macro_table),0);
@@ -3645,8 +3645,8 @@ begin
   opl2out($01,0);
 
   For temp := 1 to 18 do opl2out($0b0+_chan_n[temp],0);
-  For temp := $080 to $08d do opl2out(temp,NULL);
-  For temp := $090 to $095 do opl2out(temp,NULL);
+  For temp := $080 to $08d do opl2out(temp,NONE);
+  For temp := $090 to $095 do opl2out(temp,NONE);
 
   misc_register := tremolo_depth SHL 7+
                    vibrato_depth SHL 6+
