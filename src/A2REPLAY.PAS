@@ -34,7 +34,7 @@ const
   current_line: Byte = 0;
   tempo: Byte = 50;
   speed: Byte = 6;
-  macro_speedup: Word = 1;
+  macrospeedup: Word = 1;
   irq_mode: Boolean = FALSE;
 
 procedure start_playing(var data; size: Word);
@@ -149,12 +149,12 @@ type
                       pattern_order: array[0..$7f] of Byte;
                       tempo:         Byte;
                       speed:         Byte;
-                      common_flag:   Byte;
-                      patt_len:      Word;
-                      nm_tracks:     Byte;
-                      macro_speedup: Word;
-                      flag_4op:      Byte;
-                      lock_flags:    array[1..20]  of Byte;
+                      flags:   Byte;
+                      pattlen:      Word;
+                      noftracks:     Byte;
+                      macrospeedup: Word;
+                      op4flags:      Byte;
+                      lockflags:    array[1..20]  of Byte;
                       dis_fmreg_col: array[1..255] of tDIS_FMREG_COL;
                     end;
 type
@@ -622,7 +622,7 @@ end;
 function _macro_speedup: Word;
 begin
 asm
-        mov     ax,macro_speedup
+        mov     ax,macrospeedup
         or      ax,ax
         jnz     @@1
         inc     ax
@@ -779,7 +779,7 @@ begin
 
       If NOT pan_lock[chan] then
         panning_table[chan] := ins_parameter(ins,11)
-      else panning_table[chan] := songdata.lock_flags[chan] AND 3;
+      else panning_table[chan] := songdata.lockflags[chan] AND 3;
 
       opl3out(_instr[00]+_chan_m[chan],ins_parameter(ins,0));
       opl3out(_instr[01]+_chan_c[chan],ins_parameter(ins,1));
@@ -985,7 +985,7 @@ begin
 end;
 
 begin
-  For chan := 1 to songdata.nm_tracks do
+  For chan := 1 to songdata.noftracks do
     begin
       event := pattdata^[current_pattern DIV 8]
                         [current_pattern MOD 8][chan][current_line];
@@ -1283,7 +1283,7 @@ begin
           If no_loop(chan,current_line) then
             begin
               pattern_break := TRUE;
-              next_line := max(event.effect,PRED(songdata.patt_len));
+              next_line := max(event.effect,PRED(songdata.pattlen));
             end;
 
         ef_SetSpeed:
@@ -3228,7 +3228,7 @@ var
   temp: Byte;
 
 begin
-  If (current_line < PRED(songdata.patt_len)) and NOT pattern_break then Inc(current_line)
+  If (current_line < PRED(songdata.pattlen)) and NOT pattern_break then Inc(current_line)
   else begin
          If NOT (pattern_break and (next_line AND $0f0 = pattern_loop_flag)) and
                 (current_order < $7f) then
@@ -3624,16 +3624,16 @@ begin
   FillChar(macro_table,SizeOf(macro_table),0);
 
   If NOT lockvol then FillChar(volume_lock,SizeOf(volume_lock),0)
-  else For temp := 1 to 20 do volume_lock[temp] := BOOLEAN(songdata.lock_flags[temp] SHR 4 AND 1);
+  else For temp := 1 to 20 do volume_lock[temp] := BOOLEAN(songdata.lockflags[temp] SHR 4 AND 1);
 
   If NOT panlock then FillChar(panning_table,SizeOf(panning_table),0)
-  else For temp := 1 to 20 do panning_table[temp] := songdata.lock_flags[temp] AND 3;
+  else For temp := 1 to 20 do panning_table[temp] := songdata.lockflags[temp] AND 3;
 
   If NOT lockVP then FillChar(peak_lock,SizeOf(peak_lock),0)
-  else For temp := 1 to 20 do peak_lock[temp] := BOOLEAN(songdata.lock_flags[temp] SHR 5 AND 1);
+  else For temp := 1 to 20 do peak_lock[temp] := BOOLEAN(songdata.lockflags[temp] SHR 5 AND 1);
 
   For temp := 1 to 20 do
-    volslide_type[temp] := songdata.lock_flags[temp] SHR 2 AND 3;
+    volslide_type[temp] := songdata.lockflags[temp] SHR 2 AND 3;
 end;
 
 procedure init_player;
@@ -3655,7 +3655,7 @@ begin
   opl2out($01,$20);
   opl2out($08,$40);
   opl3exp($0105);
-  opl3exp($04+songdata.flag_4op SHL 8);
+  opl3exp($04+songdata.op4flags SHL 8);
 
   key_off(17);
   key_off(18);
@@ -3713,7 +3713,7 @@ begin
   ticklooper := 0;
   macro_ticklooper := 0;
   speed := songdata.speed;
-  macro_speedup := songdata.macro_speedup;
+  macrospeedup := songdata.macrospeedup;
   update_timer(songdata.tempo);
 end;
 
@@ -3752,11 +3752,11 @@ begin
   FillChar(songdata.pattern_order,SizeOf(songdata.pattern_order),$080);
   FillChar(pattdata^,PATTERN_SIZE*max_patterns,0);
 
-  songdata.patt_len := 64;
-  songdata.nm_tracks := 18;
+  songdata.pattlen := 64;
+  songdata.noftracks := 18;
   songdata.tempo := tempo;
   songdata.speed := speed;
-  songdata.macro_speedup := 1;
+  songdata.macrospeedup := 1;
   speed_update := FALSE;
   lockvol := FALSE;
   panlock := FALSE;
@@ -3765,7 +3765,7 @@ begin
   vibrato_depth := 0;
   volume_scaling := FALSE;
 
-  If (songdata.nm_tracks <= 18) then
+  If (songdata.noftracks <= 18) then
     begin
       percussion_mode := FALSE;
       _chan_n := _chmm_n;
@@ -3998,12 +3998,12 @@ begin
 
   songdata.tempo := tHEADER(data).tempo;
   songdata.speed := tHEADER(data).speed;
-  songdata.common_flag := tHEADER(data).cflag;
-  songdata.patt_len := tHEADER(data).patln;
-  songdata.nm_tracks := tHEADER(data).nmtrk;
-  songdata.macro_speedup := tHEADER(data).mcspd;
-  songdata.flag_4op:= tHEADER(data).is4op;
-  Move(tHEADER(data).locks,songdata.lock_flags,SizeOf(songdata.lock_flags));
+  songdata.flags := tHEADER(data).cflag;
+  songdata.pattlen := tHEADER(data).patln;
+  songdata.noftracks := tHEADER(data).nmtrk;
+  songdata.macrospeedup := tHEADER(data).mcspd;
+  songdata.op4flags:= tHEADER(data).is4op;
+  Move(tHEADER(data).locks,songdata.lockflags,SizeOf(songdata.lockflags));
 
   temp := APACK_decompress(tDUMMY_BUFF(data)[SizeOf(tHEADER)],
                            songdata.instr_data);
@@ -4063,14 +4063,14 @@ begin
   tempo := songdata.tempo;
   speed := songdata.speed;
 
-  speed_update    := BOOLEAN(songdata.common_flag AND 1);
-  lockvol         := BOOLEAN(songdata.common_flag SHR 1 AND 1);
-  lockVP          := BOOLEAN(songdata.common_flag SHR 2 AND 1);
-  tremolo_depth   :=         songdata.common_flag SHR 3 AND 1;
-  vibrato_depth   :=         songdata.common_flag SHR 4 AND 1;
-  panlock         := BOOLEAN(songdata.common_flag SHR 5 AND 1);
-  percussion_mode := BOOLEAN(songdata.common_flag SHR 6 AND 1);
-  volume_scaling  := BOOLEAN(songdata.common_flag SHR 7 AND 1);
+  speed_update    := BOOLEAN(songdata.flags AND 1);
+  lockvol         := BOOLEAN(songdata.flags SHR 1 AND 1);
+  lockVP          := BOOLEAN(songdata.flags SHR 2 AND 1);
+  tremolo_depth   :=         songdata.flags SHR 3 AND 1;
+  vibrato_depth   :=         songdata.flags SHR 4 AND 1;
+  panlock         := BOOLEAN(songdata.flags SHR 5 AND 1);
+  percussion_mode := BOOLEAN(songdata.flags SHR 6 AND 1);
+  volume_scaling  := BOOLEAN(songdata.flags SHR 7 AND 1);
 end;
 
 var
