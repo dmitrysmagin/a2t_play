@@ -1,10 +1,11 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <string.h>
 
-#include "depack.h"
+#include "depacks.h"
 #include "ymf262.h"
 #include "a2t.h"
 
@@ -21,7 +22,7 @@
 typedef signed char bool;
 #endif
 
-typedef struct {
+typedef struct PACK {
 	uint8_t AM_VIB_EG_modulator;
 	uint8_t AM_VIB_EG_carrier;
 	uint8_t KSL_VOLUM_modulator;
@@ -33,25 +34,25 @@ typedef struct {
 	uint8_t WAVEFORM_modulator;
 	uint8_t WAVEFORM_carrier;
 	uint8_t FEEDBACK_FM;
-} PACK tFM_INST_DATA;
+} tFM_INST_DATA;
 
-typedef struct {
+typedef struct PACK {
 	tFM_INST_DATA fm_data;
 	uint8_t panning;
 	int8_t  fine_tune;
 	uint8_t perc_voice;
-} PACK tADTRACK2_INS;
+} tADTRACK2_INS;
 
-typedef struct {
+typedef struct PACK {
 	uint8_t length;
 	uint8_t speed;
 	uint8_t loop_begin;
 	uint8_t loop_length;
 	uint8_t keyoff_pos;
 	uint8_t data[255]; // array[1..255] of Byte;
-} PACK tARPEGGIO_TABLE;
+} tARPEGGIO_TABLE;
 
-typedef struct {
+typedef struct PACK {
 	uint8_t length;
 	uint8_t speed;
 	uint8_t delay;
@@ -59,16 +60,16 @@ typedef struct {
 	uint8_t loop_length;
 	uint8_t keyoff_pos;
 	int8_t data[255]; // array[1..255] of Shortint;
-} PACK tVIBRATO_TABLE;
+} tVIBRATO_TABLE;
 
-typedef struct {
+typedef struct PACK {
 	tFM_INST_DATA fm_data;
 	int16_t freq_slide;
 	uint8_t panning;
 	uint8_t duration;
-} PACK tREGISTER_TABLE_DEF;
+} tREGISTER_TABLE_DEF;
 
-typedef struct {
+typedef struct PACK {
 	uint8_t length;
 	uint8_t loop_begin;
 	uint8_t loop_length;
@@ -76,14 +77,14 @@ typedef struct {
 	uint8_t arpeggio_table;
 	uint8_t vibrato_table;
 	tREGISTER_TABLE_DEF data[255]; // array[1..255] of tREGISTER_TABLE_DEF;
-} PACK tREGISTER_TABLE;
+} tREGISTER_TABLE;
 
-typedef struct {
+typedef struct PACK {
 	tARPEGGIO_TABLE arpeggio;
 	tVIBRATO_TABLE vibrato;
-} PACK tMACRO_TABLE;
+} tMACRO_TABLE;
 
-typedef struct {
+typedef struct PACK {
 	uint8_t adsrw_car;
 	struct {
 		uint8_t attck,dec,sustn,rel,
@@ -93,34 +94,34 @@ typedef struct {
 	uint8_t feedb;
 	uint8_t multipM,kslM,tremM,vibrM,ksrM,sustM;
 	uint8_t multipC,kslC,tremC,vibrC,ksrC,sustC;
-} PACK tFM_PARAMETER_TABLE;
+} tFM_PARAMETER_TABLE;
 
-typedef struct {
+typedef struct PACK {
 	uint8_t note;
 	uint8_t instr_def;
 	uint8_t effect_def;
 	uint8_t effect;
 	uint8_t effect_def2;
 	uint8_t effect2;
-} PACK tADTRACK2_EVENT;
+} tADTRACK2_EVENT;
 
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
 
-typedef struct {
+typedef struct PACK {
 	tADTRACK2_INS   instr_data[255];     // array[1..255] of tADTRACK2_INS;
 	tREGISTER_TABLE instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
 	tMACRO_TABLE    macro_table[255];    // array[1..255] of tMACRO_TABLE;
 	uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
 	uint8_t         tempo;
 	uint8_t         speed;
-	uint8_t         common_flag;
-	uint16_t        patt_len;
-	uint8_t         nm_tracks;
-	uint16_t        macro_speedup;
-	uint8_t         flag_4op;
-	uint8_t         lock_flags[20];      // array[1..20]  of Byte;
+	uint8_t         flags;
+	uint16_t        pattlen;
+	uint8_t         noftracks;
+	uint16_t        macrospeedup;
+	uint8_t         op4flags;
+	uint8_t         lockflags[20];      // array[1..20]  of Byte;
 	tDIS_FMREG_COL  dis_fmreg_col[255];  // array[1..255] of tDIS_FMREG_COL;
-} PACK tFIXED_SONGDATA;
+} tFIXED_SONGDATA;
 
 typedef enum {
 	isPlaying = 0, isPaused, isStopped
@@ -144,7 +145,6 @@ typedef uint16_t tTRACK_ADDR[20]; // array[1..20] of Word;
 #define CHUNK_SIZE sizeof(tADTRACK2_EVENT)
 #define PATTERN_SIZE (20*256*CHUNK_SIZE)
 #define NONE 0xFF
-
 
 const tTRACK_ADDR _chmm_n = {
 	0x003,0x000,0x004,0x001,0x005,0x002,0x006,0x007,0x008,0x103,
@@ -174,116 +174,6 @@ const tTRACK_ADDR _chpm_c = {
 
 tTRACK_ADDR _chan_n, _chan_m, _chan_c;
 
-#if 0
-const
-  ef_Arpeggio          = 0;
-  ef_FSlideUp          = 1;
-  ef_FSlideDown        = 2;
-  ef_TonePortamento    = 3;
-  ef_Vibrato           = 4;
-  ef_TPortamVolSlide   = 5;
-  ef_VibratoVolSlide   = 6;
-  ef_FSlideUpFine      = 7;
-  ef_FSlideDownFine    = 8;
-  ef_SetModulatorVol   = 9;
-  ef_VolSlide          = 10;
-  ef_PositionJump      = 11;
-  ef_SetInsVolume      = 12;
-  ef_PatternBreak      = 13;
-  ef_SetTempo          = 14;
-  ef_SetSpeed          = 15;
-  ef_TPortamVSlideFine = 16;
-  ef_VibratoVSlideFine = 17;
-  ef_SetCarrierVol     = 18;
-  ef_SetWaveform       = 19;
-  ef_VolSlideFine      = 20;
-  ef_RetrigNote        = 21;
-  ef_Tremolo           = 22;
-  ef_Tremor            = 23;
-  ef_ArpggVSlide       = 24;
-  ef_ArpggVSlideFine   = 25;
-  ef_MultiRetrigNote   = 26;
-  ef_FSlideUpVSlide    = 27;
-  ef_FSlideDownVSlide  = 28;
-  ef_FSlUpFineVSlide   = 29;
-  ef_FSlDownFineVSlide = 30;
-  ef_FSlUpVSlF         = 31;
-  ef_FSlDownVSlF       = 32;
-  ef_FSlUpFineVSlF     = 33;
-  ef_FSlDownFineVSlF   = 34;
-  ef_Extended          = 35;
-  ef_Extended2         = 36;
-  ef_SetGlobalVolume   = 37;
-  ef_SwapArpeggio      = 38;
-  ef_SwapVibrato       = 39;
-  ef_ForceInsVolume    = 40;
-  ef_Extended3         = 41;
-  ef_ExtraFineArpeggio = 42;
-  ef_ExtraFineVibrato  = 43;
-  ef_ExtraFineTremolo  = 44;
-  ef_ex_SetTremDepth   = 0;
-  ef_ex_SetVibDepth    = 1;
-  ef_ex_SetAttckRateM  = 2;
-  ef_ex_SetDecayRateM  = 3;
-  ef_ex_SetSustnLevelM = 4;
-  ef_ex_SetRelRateM    = 5;
-  ef_ex_SetAttckRateC  = 6;
-  ef_ex_SetDecayRateC  = 7;
-  ef_ex_SetSustnLevelC = 8;
-  ef_ex_SetRelRateC    = 9;
-  ef_ex_SetFeedback    = 10;
-  ef_ex_SetPanningPos  = 11;
-  ef_ex_PatternLoop    = 12;
-  ef_ex_PatternLoopRec = 13;
-  ef_ex_MacroKOffLoop  = 14;
-  ef_ex_ExtendedCmd    = 15;
-  ef_ex_cmd_RSS        = 0;
-  ef_ex_cmd_ResetVol   = 1;
-  ef_ex_cmd_LockVol    = 2;
-  ef_ex_cmd_UnlockVol  = 3;
-  ef_ex_cmd_LockVP     = 4;
-  ef_ex_cmd_UnlockVP   = 5;
-  ef_ex_cmd_VSlide_mod = 6;
-  ef_ex_cmd_VSlide_car = 7;
-  ef_ex_cmd_VSlide_def = 8;
-  ef_ex_cmd_LockPan    = 9;
-  ef_ex_cmd_UnlockPan  = 10;
-  ef_ex_cmd_VibrOff    = 11;
-  ef_ex_cmd_TremOff    = 12;
-  ef_ex_cmd_FineVibr   = 13;
-  ef_ex_cmd_FineTrem   = 14;
-  ef_ex_cmd_NoRestart  = 15;
-  ef_ex2_PatDelayFrame = 0;
-  ef_ex2_PatDelayRow   = 1;
-  ef_ex2_NoteDelay     = 2;
-  ef_ex2_NoteCut       = 3;
-  ef_ex2_FineTuneUp    = 4;
-  ef_ex2_FineTuneDown  = 5;
-  ef_ex2_GlVolSlideUp  = 6;
-  ef_ex2_GlVolSlideDn  = 7;
-  ef_ex2_GlVolSlideUpF = 8;
-  ef_ex2_GlVolSlideDnF = 9;
-  ef_ex2_GlVolSldUpXF  = 10;
-  ef_ex2_GlVolSldDnXF  = 11;
-  ef_ex2_VolSlideUpXF  = 12;
-  ef_ex2_VolSlideDnXF  = 13;
-  ef_ex2_FreqSlideUpXF = 14;
-  ef_ex2_FreqSlideDnXF = 15;
-  ef_ex3_SetConnection = 0;
-  ef_ex3_SetMultipM    = 1;
-  ef_ex3_SetKslM       = 2;
-  ef_ex3_SetTremoloM   = 3;
-  ef_ex3_SetVibratoM   = 4;
-  ef_ex3_SetKsrM       = 5;
-  ef_ex3_SetSustainM   = 6;
-  ef_ex3_SetMultipC    = 7;
-  ef_ex3_SetKslC       = 8;
-  ef_ex3_SetTremoloC   = 9;
-  ef_ex3_SetVibratoC   = 10;
-  ef_ex3_SetKsrC       = 11;
-  ef_ex3_SetSustainC   = 12;
-#endif
-
 const uint8_t ef_fix1 = 0x80;
 const uint8_t ef_fix2 = 0x90;
 const uint8_t keyoff_flag        = 0x80;
@@ -292,9 +182,282 @@ const uint8_t pattern_loop_flag  = 0xe0;
 const uint8_t pattern_break_flag = 0xf0;
 
 
-int main(void)
+// FIXME: this will be used by actual player
+typedef struct {
+	uint8_t         order[128];
+	uint8_t         tempo;
+	uint8_t         speed;
+	uint8_t         flags;
+	uint16_t        pattlen;
+	uint8_t         noftracks;
+	uint16_t        macrospeedup;
+	uint8_t         op4flags;
+	uint8_t         lockflags[20];      // array[1..20]  of Byte;
+} SONGDATA;
+
+SONGDATA _songdata, *songdata = &_songdata;
+
+/* Data for importing A2T format */
+typedef struct PACK {
+	char id[15];	// '_a2tiny_module_'
+	uint32_t crc;
+	uint8_t ffver;
+	uint8_t npatt;
+	uint8_t tempo;
+	uint8_t speed;
+
+	union PACK {
+		struct PACK {
+			uint16_t len[6];
+		} v1234;
+
+		struct {
+			uint8_t flags;
+			uint16_t len[10];
+		} v5678;
+
+		struct PACK {
+			uint8_t flags;
+			uint16_t pattlen;
+			uint8_t noftracks;
+			uint16_t macrospeedup;
+			uint32_t len[20];
+		} v9;
+
+		struct PACK {
+			uint8_t flags;
+			uint16_t pattlen;
+			uint8_t noftracks;
+			uint16_t macrospeedup;
+			uint8_t op4flags;
+			uint8_t lockflags[20];
+			uint32_t len[20];
+		} v10;
+
+		struct PACK {
+			uint8_t flags;
+			uint16_t pattlen;
+			uint8_t noftracks;
+			uint16_t macrospeedup;
+			uint8_t op4flags;
+			uint8_t lockflags[20];
+			uint32_t len[21];
+		} v11;
+	};
+} A2T_HEADER;
+
+struct A2M_HEADER {
+	char id[10];	// '_a2module_'
+	uint32_t crc;
+	uint8_t ffver;
+	uint8_t npatt;
+};
+
+/*
+a2m
+1,2,3,4 - uint16_t len[5];
+5,6,7,8 - uint16_t len[9];
+9,10,11 - uint32_t len[17];
+a2t
+1,2,3,4 - uint16_t len[6];
+5,6,7,8 - uint8_t flags; uint16_t len[10];
+9       - uint8_t flags; uint16_t pattlen; uint8_t noftracks; uint16_t macrospeedup; uint32_t len[20];
+10      - uint8_t flags; uint16_t pattlen; uint8_t noftracks; uint16_t macrospeedup; uint8_t op4ext; uint8_t lockflags[20]; uint32_t len[20];
+11      - uint8_t flags; uint16_t pattlen; uint8_t noftracks; uint16_t macrospeedup; uint8_t op4ext; uint8_t lockflags[20]; uint32_t len[21];
+*/
+
+// a2m songdata (block 0)
+struct A2M_SONGDATA_V1234 {
+	char songname[43];
+	char composer[43];
+	char instnames[250][33];
+	uint8_t inst[250][13];
+	uint8_t pattorder[128];
+	uint8_t tempo;
+	uint8_t speed;
+	uint8_t flags;		// A2M_SONGDATA_V5678
+};
+
+struct A2M_SONGDATA_V9 {
+	char songname[43];
+	char composer[43];
+	char instnames[255][33];
+	uint8_t inst[255][14];
+	uint8_t macrodef[255][3831];
+	uint8_t arpvibmacro[255][521];
+	uint8_t pattorder[128];
+	uint8_t tempo;
+	uint8_t speed;
+	uint8_t flags;
+	uint16_t pattlength;
+	uint8_t numoftracks;
+	uint16_t macrospeedup;
+};
+
+struct A2M_SONGDATA_V10 {
+	char songname[43];
+	char composer[43];
+	char instnames[255][43];
+	uint8_t inst[255][14];
+	uint8_t macrodef[255][3831];
+	uint8_t arpvibmacro[255][521];
+	uint8_t pattorder[128];
+	uint8_t tempo;
+	uint8_t speed;
+	uint8_t flags;
+	uint16_t pattlength;
+	uint8_t numoftracks;
+	uint16_t macrospeedup;
+	uint8_t op4ext;
+	uint8_t initlocks[20];
+	char pattnames[128][43];	// A2M_SONGDATA_V11
+	uint8_t fm_disregs[255][28];	// A2M_SONGDATA_V11
+};
+
+char *a2t_load(char *name)
 {
-	_chan_n[2] = 0;
+	FILE *fh;
+	int fsize;
+	void *p;
+
+	fh = fopen(name, "rb");
+	if(!fh) return NULL;
+
+	fseek(fh, 0, SEEK_END);
+	fsize = ftell(fh) ;
+	fseek(fh, 0, SEEK_SET);
+	p = (void *)malloc(fsize);
+	fread(p, 1, fsize, fh);
+	fclose(fh);
+
+	return p;
+}
+
+// read the variable part of the header
+static int a2t_read_varheader(char *tune, int len[])
+{
+	A2T_HEADER *header = (A2T_HEADER *)tune;
+
+	switch (header->ffver) {
+	case 1 ... 4:
+		for (int i = 0; i < 6; i++)
+			len[i] = header->v1234.len[i];
+		break;
+	case 5 ... 8:
+		songdata->flags = header->v5678.flags;
+		for (int i = 0; i < 10; i++)
+			len[i] = header->v5678.len[i];
+		break;
+	case 9:
+		songdata->flags = header->v9.flags;
+		songdata->pattlen = header->v9.pattlen;
+		songdata->noftracks = header->v9.noftracks;
+		songdata->macrospeedup = header->v9.macrospeedup;
+		for (int i = 0; i < 20; i++)
+			len[i] = header->v9.len[i];
+		break;
+	case 10:
+		songdata->flags = header->v10.flags;
+		songdata->pattlen = header->v10.pattlen;
+		songdata->noftracks = header->v10.noftracks;
+		songdata->macrospeedup = header->v10.macrospeedup;
+		songdata->op4flags = header->v10.op4flags;
+		for (int i = 0; i < 20; i++)
+			songdata->lockflags[i] = header->v10.lockflags[i];
+		for (int i = 0; i < 20; i++)
+			len[i] = header->v10.len[i];
+		break;
+	case 11:
+		songdata->flags = header->v11.flags;
+		songdata->pattlen = header->v11.pattlen;
+		songdata->noftracks = header->v11.noftracks;
+		songdata->macrospeedup = header->v11.macrospeedup;
+		songdata->op4flags = header->v11.op4flags;
+		for (int i = 0; i < 20; i++)
+			songdata->lockflags[i] = header->v10.lockflags[i];
+		for (int i = 0; i < 21; i++)
+			len[i] = header->v11.len[i];
+		break;
+	}
+}
+
+void a2t_import(char *tune)
+{
+	A2T_HEADER *header = (A2T_HEADER *)tune;
+	int ffver; // FIXME: move to global or songdata
+	int maxlengths[11] = {6, 6, 6, 6, 10, 10, 10, 10, 20, 20, 21};
+	int len[21], maxlen; // max possible blocks
+	int blockoffsets[11] = {
+		0x23, 0x23, 0x23, 0x23, 0x2c, 0x2c, 0x2c, 0x2c, 0x6d, 0x82, 0x86
+	};
+	char *blockptr;
+
+	if(strncmp(header->id, "_A2tiny_module_", 15))
+		return;
+
+	memset(songdata, 0, sizeof(*songdata));
+	memset(len, 0, sizeof(len));
+
+	ffver = header->ffver;
+	songdata->tempo = header->tempo;
+	songdata->speed = header->speed;
+	songdata->pattlen = 64;
+	songdata->noftracks = 18;
+	songdata->macrospeedup = 1;
+
+	printf("Version: %d\n", header->ffver);
+	printf("Number of patterns: %d\n", header->npatt);
+	printf("Tempo: %d\n", header->tempo);
+	printf("Speed: %d\n", header->speed);
+
+	a2t_read_varheader(tune, len);
+
+	// Roll thru blocks
+	maxlen = maxlengths[ffver - 1];
+	blockptr = tune + blockoffsets[ffver - 1];
+
+	// Read instruments; all versions
+	int instrsize = ffver < 9 ? 250 * 13 : 255 * 14;
+	char *p = (char *)malloc(instrsize);
+
+	if (!aP_depack_safe(blockptr, len[0], p, instrsize)) {
+		printf("Error\n");
+	}
+
+	FILE *f = fopen("inst.dmp", "w");
+	fwrite(p, 1, instrsize, f);
+	fclose(f);
+	free(p);
+
+	// Read instrument macro (v >= 9,10,11)
+	if (ffver >= 9) {
+
+	}
+
+	for (int i = 0; i < maxlen; i++) {
+		printf("Block %d, offset: %x, size: %d\n", i, blockptr - tune, len[i]);
+
+		blockptr += len[i];
+	}
+}
+
+int main(int argc, char *argv[])
+{
+	char *a2t;
+
+	// if no arguments
+	if(argc == 1) {
+		printf("Usage: a2t_play.exe *.a2t\n");
+		return 1;
+	}
+
+	a2t = a2t_load(argv[1]);
+	if(a2t == NULL) {
+		printf("Error reading %s\n", argv[1]);
+		return 1;
+	}
+
+	a2t_import(a2t);
 
 	return 0;
 }
