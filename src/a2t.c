@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "depack.h"
-#include "depacks.h"
 #include "ymf262.h"
 #include "a2t.h"
 
@@ -257,25 +256,13 @@ typedef struct PACK {
 	uint8_t speed;
 } A2T_HEADER;
 
-struct A2M_HEADER {
+typedef struct PACK {
 	char id[10];	// '_a2module_'
 	uint32_t crc;
 	uint8_t ffver;
 	uint8_t npatt;
-};
+} A2M_HEADER;
 
-/*
-a2m
-1,2,3,4 - uint16_t len[5];
-5,6,7,8 - uint16_t len[9];
-9,10,11 - uint32_t len[17];
-a2t
-1,2,3,4 - uint16_t len[6];
-5,6,7,8 - uint8_t flags; uint16_t len[10];
-9       - uint8_t flags; uint16_t pattlen; uint8_t noftracks; uint16_t macrospeedup; uint32_t len[20];
-10      - uint8_t flags; uint16_t pattlen; uint8_t noftracks; uint16_t macrospeedup; uint8_t op4ext; uint8_t lockflags[20]; uint32_t len[20];
-11      - uint8_t flags; uint16_t pattlen; uint8_t noftracks; uint16_t macrospeedup; uint8_t op4ext; uint8_t lockflags[20]; uint32_t len[21];
-*/
 
 // a2m songdata (block 0)
 struct A2M_SONGDATA_V1234 {
@@ -345,17 +332,15 @@ char *a2t_load(char *name)
 }
 
 // read the variable part of the header
-static int a2t_read_varheader(char *tune, int len[], int *maxlen)
+static int a2t_read_varheader(int ffver, char *blockptr, int len[])
 {
-	int maxlengths[11] = {6, 6, 6, 6, 10, 10, 10, 10, 20, 20, 21};
 	int blockoffsets[11] = {
 		0x23, 0x23, 0x23, 0x23, 0x2c, 0x2c, 0x2c, 0x2c, 0x6d, 0x82, 0x86
 	};
 
-	A2T_HEADER *header = (A2T_HEADER *)tune;
-	A2T_VARHEADER *varheader = (A2T_VARHEADER *)(tune + sizeof(A2T_HEADER));
+	A2T_VARHEADER *varheader = (A2T_VARHEADER *)blockptr;
 
-	switch (header->ffver) {
+	switch (ffver) {
 	case 1 ... 4:
 		for (int i = 0; i < 6; i++)
 			len[i] = varheader->v1234.len[i];
@@ -397,9 +382,7 @@ static int a2t_read_varheader(char *tune, int len[], int *maxlen)
 		break;
 	}
 
-	*maxlen = maxlengths[header->ffver - 1];
-
-	return blockoffsets[header->ffver - 1];
+	return blockoffsets[ffver - 1];
 }
 
 int a2t_read_instruments(int ffver, char *src, int len[])
@@ -537,8 +520,8 @@ void a2t_import(char *tune)
 	A2T_HEADER *header = (A2T_HEADER *)tune;
 	int ffver; // FIXME: move to global or songdata
 
-	int len[21], maxlen; // max possible blocks
-	char *blockptr = tune;
+	int len[21]; // FIXME: move to global or songdata
+	char *blockptr = tune + sizeof(A2T_HEADER);
 
 	if(strncmp(header->id, "_A2tiny_module_", 15))
 		return;
@@ -554,13 +537,13 @@ void a2t_import(char *tune)
 	songdata->noftracks = 18;
 	songdata->macrospeedup = 1;
 
-	printf("Version: %d\n", header->ffver);
+	printf("A2T version: %d\n", header->ffver);
 	printf("Number of patterns: %d\n", header->npatt);
 	printf("Tempo: %d\n", header->tempo);
 	printf("Speed: %d\n", header->speed);
 
-	// Read variable part after header (fill len[] and maxlen with values
-	blockptr += a2t_read_varheader(tune, len, &maxlen);
+	// Read variable part after header, fill len[] with values
+	blockptr += a2t_read_varheader(ffver, blockptr, len);
 
 	// Read instruments; all versions
 	blockptr += a2t_read_instruments(ffver, blockptr, len);
@@ -581,6 +564,75 @@ void a2t_import(char *tune)
 	a2t_read_patterns(ffver, blockptr, len);
 }
 
+/*
+a2m
+1,2,3,4 - uint16_t len[5];
+5,6,7,8 - uint16_t len[9];
+9,10,11 - uint32_t len[17];
+*/
+
+static int a2m_read_varheader(int ffver, char *blockptr, int len[])
+{
+	int lensize;
+	uint16_t *src16 = (uint16_t *)blockptr;
+	uint32_t *src32 = (uint32_t *)blockptr;
+
+	if (ffver < 5) lensize = 5;
+	else if (ffver < 9) lensize = 9;
+	else lensize = 17;
+
+	switch (ffver) {
+	case 1 ... 8:
+		for (int i = 0; i < lensize; i++)
+			len[i] = src16[i];
+
+		return lensize * sizeof(uint16_t);
+	case 9 ... 11:
+
+		for (int i = 0; i < lensize; i++)
+			len[i] = src32[i];
+
+		return lensize * sizeof(uint32_t);
+	}
+
+	return 0;
+}
+
+void a2m_import(char *tune)
+{
+	A2M_HEADER *header = (A2M_HEADER *)tune;
+	int ffver; // FIXME: move to global or songdata
+
+	int len[17]; // FIXME: move to global or songdata
+	char *blockptr = tune + sizeof(A2M_HEADER);
+
+	if(strncmp(header->id, "_A2module_", 10))
+		return;
+
+	memset(songdata, 0, sizeof(*songdata));
+	memset(pattdata, 0, sizeof(*pattdata));
+	memset(len, 0, sizeof(len));
+
+	ffver = header->ffver;
+	//songdata->tempo = header->tempo;
+	//songdata->speed = header->speed;
+	songdata->pattlen = 64;
+	songdata->noftracks = 18;
+	songdata->macrospeedup = 1;
+
+	printf("A2M version: %d\n", header->ffver);
+	printf("Number of patterns: %d\n", header->npatt);
+	//printf("Tempo: %d\n", header->tempo);
+	//printf("Speed: %d\n", header->speed);
+
+	// Read variable part after header, fill len[] with values
+	blockptr += a2m_read_varheader(ffver, blockptr, len);
+
+	for (int i = 0; i < 17; i++) {
+		printf("Block %d size %x\n", i, len[i]);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	char *a2t;
@@ -598,6 +650,7 @@ int main(int argc, char *argv[])
 	}
 
 	a2t_import(a2t);
+	a2m_import(a2t);
 
 	return 0;
 }
