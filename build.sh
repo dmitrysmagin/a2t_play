@@ -1,0 +1,3 @@
+#!/bin/sh
+
+gcc src/a2t.c src/depack.c -o a2t -std=c99 -Wall -Wextra
