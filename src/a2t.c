@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <string.h>
 
+#include "depack.h"
 #include "depacks.h"
 #include "ymf262.h"
 #include "a2t.h"
@@ -127,10 +128,7 @@ typedef enum {
 	isPlaying = 0, isPaused, isStopped
 } tPLAY_STATUS;
 
-typedef tADTRACK2_EVENT tVARIABLE_DATA[8][20][256];
-// array[0..7] of array[1..20] of array[0..0x0ff] of tADTRACK2_EVENT;
-
-typedef tVARIABLE_DATA tPATTERN_DATA[16];
+typedef tADTRACK2_EVENT tPATTERN_DATA[16][8][20][256];
 // array[0..15] of tVARIABLE_DATA;
 
 const uint8_t _panning[3] = {0x30, 0x10, 0x20};
@@ -187,6 +185,7 @@ typedef struct {
 	uint8_t         instr_data[255][14];
 	uint8_t         instr_macros[255][3831];
 	uint8_t         macro_table[255][521];
+	uint8_t         fm_disregs[255][28];
 	uint8_t         order[128];
 	uint8_t         tempo;
 	uint8_t         speed;
@@ -198,7 +197,10 @@ typedef struct {
 	uint8_t         lockflags[20];      // array[1..20]  of Byte;
 } SONGDATA;
 
+// This would be later moved to class or struct
 SONGDATA _songdata, *songdata = &_songdata;
+//tPATTERN_DATA _pattdata, *pattdata = &_pattdata;
+uint8_t _pattdata[16*8*20*256*6], *pattdata = _pattdata;
 
 /* Data for importing A2T format */
 typedef struct PACK {
@@ -406,13 +408,13 @@ int a2t_read_instruments(int ffver, char *src, int len[])
 	int dstsize = ffver < 9 ? 250 * 13 : 255 * 14;
 	char *p = (char *)malloc(dstsize);
 
-	if (!aP_depack_safe(src, len[0], p, dstsize)) {
+	if (!aP_depack(src, p)) {
 		printf("Error\n");
 		free(p);
 		return 0;
 	}
 
-	FILE *f = fopen("inst.dmp", "w");
+	FILE *f = fopen("0_inst.dmp", "w");
 	fwrite(p, 1, dstsize, f);
 	fclose(f);
 
@@ -429,13 +431,13 @@ int a2t_read_instmacros(int ffver, char *src, int len[])
 {
 	if (ffver < 9) return 0;
 
-	if (!aP_depack_safe(src, len[1], songdata->instr_macros, sizeof(songdata->instr_macros))) {
+	if (!aP_depack(src, songdata->instr_macros)) {
 		printf("Error\n");
 
 		return 0;
 	}
 
-	FILE *f = fopen("inst_m.dmp", "w");
+	FILE *f = fopen("1_inst_macro.dmp", "w");
 	fwrite(songdata->instr_macros, 1, sizeof(songdata->instr_macros), f);
 	fclose(f);
 
@@ -446,17 +448,88 @@ int a2t_read_macrotable(int ffver, char *src, int len[])
 {
 	if (ffver < 9) return 0;
 
-	if (!aP_depack_safe(src, len[2], songdata->macro_table, sizeof(songdata->macro_table))) {
+	if (!aP_depack(src, songdata->macro_table)) {
 		printf("Error\n");
 
 		return 0;
 	}
 
-	FILE *f = fopen("inst_macro.dmp", "w");
-	fwrite(songdata->instr_macros, 1, sizeof(songdata->macro_table), f);
+	FILE *f = fopen("2_macrotable.dmp", "w");
+	fwrite(songdata->macro_table, 1, sizeof(songdata->macro_table), f);
 	fclose(f);
 
 	return len[2];
+}
+
+int a2t_read_disabled_fmregs(int ffver, char *src, int len[])
+{
+	if (ffver < 11) return 0;
+
+	if (!aP_depack(src, songdata->fm_disregs)) {
+		printf("Error\n");
+
+		return 0;
+	}
+
+	FILE *f = fopen("3_fm_disregs.dmp", "w");
+	fwrite(songdata->fm_disregs, 1, sizeof(songdata->fm_disregs), f);
+	fclose(f);
+
+	return len[3];
+}
+
+int a2t_read_order(int ffver, char *src, int len[])
+{
+	int blocknum[11] = {1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4};
+	int i = blocknum[ffver - 1];
+
+	if (!aP_depack(src, songdata->order)) {
+		printf("Error\n");
+
+		return 0;
+	}
+
+	FILE *f = fopen("4_order.dmp", "w");
+	fwrite(songdata->order, 1, sizeof(songdata->order), f);
+	fclose(f);
+
+	return len[i];
+}
+
+int a2t_read_patterns(int ffver, char *src, int len[])
+{
+	int blockstart[11] = {2, 2, 2, 2, 2, 2, 2, 2, 4, 4, 5};
+	int blockend[11] = {5, 5, 5, 5, 9, 9, 9, 9, 19, 19, 20};
+	int s, e;
+
+	s = blockstart[ffver - 1];
+	e = blockend[ffver - 1];
+
+	for (int i = s; i <= e; i++) {
+		if (!len[i]) continue;
+
+		switch (ffver) {
+		case 1 ... 4:
+		case 5 ... 8:
+			// FIXME: add loading for old formats
+			break;
+		case 9 ... 11:
+			printf("Block %d, len %d\n", i, len[i]);
+			printf("Pattern: %x\n", (i-s) * 8*20*256*6);
+			if (!aP_depack(src, pattdata + (i-s)* 8*20*256*6)) {
+				printf("Pattern unpack error\n");
+			}
+			break;
+		}
+
+		src += len[i];
+	}
+
+	FILE *f = fopen("5_patterns.dmp", "w");
+	fwrite(pattdata, 1, 16*8*20*256*6, f);
+	fclose(f);
+
+	return 0;
 }
 
 void a2t_import(char *tune)
@@ -471,6 +544,7 @@ void a2t_import(char *tune)
 		return;
 
 	memset(songdata, 0, sizeof(*songdata));
+	memset(pattdata, 0, sizeof(*pattdata));
 	memset(len, 0, sizeof(len));
 
 	ffver = header->ffver;
@@ -494,9 +568,17 @@ void a2t_import(char *tune)
 	// Read instrument macro (v >= 9,10,11)
 	blockptr += a2t_read_instmacros(ffver, blockptr, len);
 
-	// Rad arpeggio/vibrato macro table
+	// Read arpeggio/vibrato macro table (v >= 9,10,11)
 	blockptr += a2t_read_macrotable(ffver, blockptr, len);
 
+	// Read disabled fm regs (v == 11)
+	blockptr += a2t_read_disabled_fmregs(ffver, blockptr, len);
+
+	// Read order
+	blockptr += a2t_read_order(ffver, blockptr, len);
+
+	// Read patterns
+	a2t_read_patterns(ffver, blockptr, len);
 }
 
 int main(int argc, char *argv[])
