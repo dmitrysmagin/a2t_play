@@ -200,6 +200,8 @@ typedef struct {
 SONGDATA _songdata, *songdata = &_songdata;
 //tPATTERN_DATA _pattdata, *pattdata = &_pattdata;
 uint8_t _pattdata[16*8*20*256*6], *pattdata = _pattdata;
+int ffver;
+int len[21];
 
 /* Data for importing A2T format */
 typedef struct PACK {
@@ -332,7 +334,7 @@ char *a2t_load(char *name)
 }
 
 // read the variable part of the header
-static int a2t_read_varheader(int ffver, char *blockptr, int len[])
+static int a2t_read_varheader(char *blockptr)
 {
 	int blockoffsets[11] = {
 		0x23, 0x23, 0x23, 0x23, 0x2c, 0x2c, 0x2c, 0x2c, 0x6d, 0x82, 0x86
@@ -385,7 +387,7 @@ static int a2t_read_varheader(int ffver, char *blockptr, int len[])
 	return blockoffsets[ffver - 1];
 }
 
-int a2t_read_instruments(int ffver, char *src, int len[])
+int a2t_read_instruments(char *src)
 {
 	int instsize = (ffver < 9 ? 13 : 14);
 	int dstsize = ffver < 9 ? 250 * 13 : 255 * 14;
@@ -410,7 +412,7 @@ int a2t_read_instruments(int ffver, char *src, int len[])
 	return len[0];
 }
 
-int a2t_read_instmacros(int ffver, char *src, int len[])
+int a2t_read_instmacros(char *src)
 {
 	if (ffver < 9) return 0;
 
@@ -427,7 +429,7 @@ int a2t_read_instmacros(int ffver, char *src, int len[])
 	return len[1];
 }
 
-int a2t_read_macrotable(int ffver, char *src, int len[])
+int a2t_read_macrotable(char *src)
 {
 	if (ffver < 9) return 0;
 
@@ -444,7 +446,7 @@ int a2t_read_macrotable(int ffver, char *src, int len[])
 	return len[2];
 }
 
-int a2t_read_disabled_fmregs(int ffver, char *src, int len[])
+int a2t_read_disabled_fmregs(char *src)
 {
 	if (ffver < 11) return 0;
 
@@ -461,7 +463,7 @@ int a2t_read_disabled_fmregs(int ffver, char *src, int len[])
 	return len[3];
 }
 
-int a2t_read_order(int ffver, char *src, int len[])
+int a2t_read_order(char *src)
 {
 	int blocknum[11] = {1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4};
 	int i = blocknum[ffver - 1];
@@ -479,7 +481,7 @@ int a2t_read_order(int ffver, char *src, int len[])
 	return len[i];
 }
 
-int a2t_read_patterns(int ffver, char *src, int len[])
+int a2t_read_patterns(char *src)
 {
 	int blockstart[11] = {2, 2, 2, 2, 2, 2, 2, 2, 4, 4, 5};
 	int blockend[11] = {5, 5, 5, 5, 9, 9, 9, 9, 19, 19, 20};
@@ -518,9 +520,6 @@ int a2t_read_patterns(int ffver, char *src, int len[])
 void a2t_import(char *tune)
 {
 	A2T_HEADER *header = (A2T_HEADER *)tune;
-	int ffver; // FIXME: move to global or songdata
-
-	int len[21]; // FIXME: move to global or songdata
 	char *blockptr = tune + sizeof(A2T_HEADER);
 
 	if(strncmp(header->id, "_A2tiny_module_", 15))
@@ -543,25 +542,25 @@ void a2t_import(char *tune)
 	printf("Speed: %d\n", header->speed);
 
 	// Read variable part after header, fill len[] with values
-	blockptr += a2t_read_varheader(ffver, blockptr, len);
+	blockptr += a2t_read_varheader(blockptr);
 
 	// Read instruments; all versions
-	blockptr += a2t_read_instruments(ffver, blockptr, len);
+	blockptr += a2t_read_instruments(blockptr);
 
 	// Read instrument macro (v >= 9,10,11)
-	blockptr += a2t_read_instmacros(ffver, blockptr, len);
+	blockptr += a2t_read_instmacros(blockptr);
 
 	// Read arpeggio/vibrato macro table (v >= 9,10,11)
-	blockptr += a2t_read_macrotable(ffver, blockptr, len);
+	blockptr += a2t_read_macrotable(blockptr);
 
 	// Read disabled fm regs (v == 11)
-	blockptr += a2t_read_disabled_fmregs(ffver, blockptr, len);
+	blockptr += a2t_read_disabled_fmregs(blockptr);
 
 	// Read order
-	blockptr += a2t_read_order(ffver, blockptr, len);
+	blockptr += a2t_read_order(blockptr);
 
 	// Read patterns
-	a2t_read_patterns(ffver, blockptr, len);
+	a2t_read_patterns(blockptr);
 }
 
 /*
@@ -571,7 +570,7 @@ a2m
 9,10,11 - uint32_t len[17];
 */
 
-static int a2m_read_varheader(int ffver, char *blockptr, int len[])
+static int a2m_read_varheader(char *blockptr)
 {
 	int lensize;
 	uint16_t *src16 = (uint16_t *)blockptr;
@@ -601,9 +600,6 @@ static int a2m_read_varheader(int ffver, char *blockptr, int len[])
 void a2m_import(char *tune)
 {
 	A2M_HEADER *header = (A2M_HEADER *)tune;
-	int ffver; // FIXME: move to global or songdata
-
-	int len[17]; // FIXME: move to global or songdata
 	char *blockptr = tune + sizeof(A2M_HEADER);
 
 	if(strncmp(header->id, "_A2module_", 10))
@@ -614,19 +610,15 @@ void a2m_import(char *tune)
 	memset(len, 0, sizeof(len));
 
 	ffver = header->ffver;
-	//songdata->tempo = header->tempo;
-	//songdata->speed = header->speed;
 	songdata->pattlen = 64;
 	songdata->noftracks = 18;
 	songdata->macrospeedup = 1;
 
 	printf("A2M version: %d\n", header->ffver);
 	printf("Number of patterns: %d\n", header->npatt);
-	//printf("Tempo: %d\n", header->tempo);
-	//printf("Speed: %d\n", header->speed);
 
 	// Read variable part after header, fill len[] with values
-	blockptr += a2m_read_varheader(ffver, blockptr, len);
+	blockptr += a2m_read_varheader(blockptr);
 
 	for (int i = 0; i < 17; i++) {
 		printf("Block %d size %x\n", i, len[i]);
