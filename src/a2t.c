@@ -265,9 +265,8 @@ typedef struct PACK {
 	uint8_t npatt;
 } A2M_HEADER;
 
-
-// a2m songdata (block 0)
-struct A2M_SONGDATA_V1234 {
+/* Data for importing A2M format */
+typedef struct PACK {
 	char songname[43];
 	char composer[43];
 	char instnames[250][33];
@@ -276,9 +275,9 @@ struct A2M_SONGDATA_V1234 {
 	uint8_t tempo;
 	uint8_t speed;
 	uint8_t flags;		// A2M_SONGDATA_V5678
-};
+} A2M_SONGDATA_V1234;
 
-struct A2M_SONGDATA_V9 {
+typedef struct PACK {
 	char songname[43];
 	char composer[43];
 	char instnames[255][33];
@@ -292,9 +291,9 @@ struct A2M_SONGDATA_V9 {
 	uint16_t pattlength;
 	uint8_t numoftracks;
 	uint16_t macrospeedup;
-};
+} A2M_SONGDATA_V9;
 
-struct A2M_SONGDATA_V10 {
+typedef struct PACK {
 	char songname[43];
 	char composer[43];
 	char instnames[255][43];
@@ -312,7 +311,7 @@ struct A2M_SONGDATA_V10 {
 	uint8_t initlocks[20];
 	char pattnames[128][43];	// A2M_SONGDATA_V11
 	uint8_t fm_disregs[255][28];	// A2M_SONGDATA_V11
-};
+} A2M_SONGDATA_V10;
 
 char *a2t_load(char *name)
 {
@@ -337,9 +336,7 @@ static inline void a2t_depack(void *src, int srcsize, void *dst, int dstsize)
 {
 	switch (ffver) {
 	case 1:
-	case 5:
-	case 9 ... 11:	// sixpack
-		aP_depack(src, dst);
+	case 5:		// FIXME: sixpack
 		break;
 	case 2:
 	case 6:		// FIXME: lzw
@@ -350,6 +347,9 @@ static inline void a2t_depack(void *src, int srcsize, void *dst, int dstsize)
 	case 4:
 	case 8:		// unpacked
 		memcpy(dst, src, srcsize);
+		break;
+	case 9 ... 11:	// apack (aPlib)
+		aP_depack(src, dst);
 		break;
 	}
 }
@@ -497,11 +497,7 @@ int a2t_read_patterns(char *src)
 			// FIXME: add loading for old formats
 			break;
 		case 9 ... 11:
-			printf("Block %d, len %d\n", i, len[i]);
-			printf("Pattern: %x\n", (i-s) * 8*20*256*6);
-			if (!aP_depack(src, pattdata + (i-s)* 8*20*256*6)) {
-				printf("Pattern unpack error\n");
-			}
+			a2t_depack(src, len[i], pattdata + (i-s)* 8*20*256*6, 8*20*256*6);
 			break;
 		}
 
@@ -588,6 +584,24 @@ static int a2m_read_varheader(char *blockptr)
 	return 0;
 }
 
+static int a2m_read_songdata(char *src)
+{
+	if (ffver < 9) {		// 1,2,3,4,5,6,7,8
+	} else if (ffver == 9) {	// 9
+	} else {			// 10,11
+		A2M_SONGDATA_V10 *data =
+			malloc(sizeof(*data));
+		a2t_depack(src, len[0], data, 0);
+
+		FILE *f = fopen("songdata.dmp", "w");
+		fwrite(data, 1, sizeof(*data), f);
+		fclose(f);
+		free(data);
+	}
+
+	return len[0];
+}
+
 void a2m_import(char *tune)
 {
 	A2M_HEADER *header = (A2M_HEADER *)tune;
@@ -611,9 +625,8 @@ void a2m_import(char *tune)
 	// Read variable part after header, fill len[] with values
 	blockptr += a2m_read_varheader(blockptr);
 
-	for (int i = 0; i < 17; i++) {
-		printf("Block %d size %x\n", i, len[i]);
-	}
+	// Read songdata
+	blockptr += a2m_read_songdata(blockptr);
 }
 
 int main(int argc, char *argv[])
