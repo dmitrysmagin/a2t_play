@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "depack.h"
-#include "depacks.h"
 #include "ymf262.h"
 #include "a2t.h"
 
@@ -341,7 +340,6 @@ static inline void a2t_depack(void *src, int srcsize, void *dst, int dstsize)
 	case 5:
 	case 9 ... 11:	// sixpack
 		aP_depack(src, dst);
-		//aP_depack_safe(src, srcsize, dst, dstsize);
 		break;
 	case 2:
 	case 6:		// FIXME: lzw
