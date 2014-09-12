@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "depack.h"
+#include "depacks.h"
 #include "ymf262.h"
 #include "a2t.h"
 
@@ -180,7 +181,7 @@ const uint8_t pattern_break_flag = 0xf0;
 
 
 // FIXME: this will be used by actual player
-typedef struct {
+typedef struct PACK {
 	uint8_t         instr_data[255][14];
 	uint8_t         instr_macros[255][3831];
 	uint8_t         macro_table[255][521];
@@ -200,7 +201,7 @@ typedef struct {
 SONGDATA _songdata, *songdata = &_songdata;
 //tPATTERN_DATA _pattdata, *pattdata = &_pattdata;
 uint8_t _pattdata[16*8*20*256*6], *pattdata = _pattdata;
-int ffver;
+int ffver = 1;
 int len[21];
 
 /* Data for importing A2T format */
@@ -333,25 +334,43 @@ char *a2t_load(char *name)
 	return p;
 }
 
+static inline void a2t_depack(void *src, int srcsize, void *dst, int dstsize)
+{
+	switch (ffver) {
+	case 1:
+	case 5:
+	case 9 ... 11:	// sixpack
+		aP_depack(src, dst);
+		//aP_depack_safe(src, srcsize, dst, dstsize);
+		break;
+	case 2:
+	case 6:		// FIXME: lzw
+		break;
+	case 3:
+	case 7:		// FIXME: lzss
+		break;
+	case 4:
+	case 8:		// unpacked
+		memcpy(dst, src, srcsize);
+		break;
+	}
+}
+
 // read the variable part of the header
 static int a2t_read_varheader(char *blockptr)
 {
-	int blockoffsets[11] = {
-		0x23, 0x23, 0x23, 0x23, 0x2c, 0x2c, 0x2c, 0x2c, 0x6d, 0x82, 0x86
-	};
-
 	A2T_VARHEADER *varheader = (A2T_VARHEADER *)blockptr;
 
 	switch (ffver) {
 	case 1 ... 4:
 		for (int i = 0; i < 6; i++)
 			len[i] = varheader->v1234.len[i];
-		break;
+		return sizeof(A2T_VARHEADER_V1234);
 	case 5 ... 8:
 		songdata->flags = varheader->v5678.flags;
 		for (int i = 0; i < 10; i++)
 			len[i] = varheader->v5678.len[i];
-		break;
+		return sizeof(A2T_VARHEADER_V5678);
 	case 9:
 		songdata->flags = varheader->v9.flags;
 		songdata->pattlen = varheader->v9.pattlen;
@@ -359,7 +378,7 @@ static int a2t_read_varheader(char *blockptr)
 		songdata->macrospeedup = varheader->v9.macrospeedup;
 		for (int i = 0; i < 20; i++)
 			len[i] = varheader->v9.len[i];
-		break;
+		return sizeof(A2T_VARHEADER_V9);
 	case 10:
 		songdata->flags = varheader->v10.flags;
 		songdata->pattlen = varheader->v10.pattlen;
@@ -370,7 +389,7 @@ static int a2t_read_varheader(char *blockptr)
 			songdata->lockflags[i] = varheader->v10.lockflags[i];
 		for (int i = 0; i < 20; i++)
 			len[i] = varheader->v10.len[i];
-		break;
+		return sizeof(A2T_VARHEADER_V10);
 	case 11:
 		songdata->flags = varheader->v11.flags;
 		songdata->pattlen = varheader->v11.pattlen;
@@ -381,33 +400,30 @@ static int a2t_read_varheader(char *blockptr)
 			songdata->lockflags[i] = varheader->v10.lockflags[i];
 		for (int i = 0; i < 21; i++)
 			len[i] = varheader->v11.len[i];
-		break;
+		return sizeof(A2T_VARHEADER_V11);
 	}
 
-	return blockoffsets[ffver - 1];
+	return 0;
 }
 
 int a2t_read_instruments(char *src)
 {
 	int instsize = (ffver < 9 ? 13 : 14);
 	int dstsize = ffver < 9 ? 250 * 13 : 255 * 14;
-	char *p = (char *)malloc(dstsize);
+	char *dst = (char *)malloc(dstsize);
+	memset(dst, 0, dstsize);
 
-	if (!aP_depack(src, p)) {
-		printf("Error\n");
-		free(p);
-		return 0;
+	a2t_depack(src, len[0], dst, dstsize);
+
+	for (int i = 0; i < (ffver < 9 ? 250 : 255); i++) {
+		memcpy(songdata->instr_data[i], dst + i * instsize, instsize);
 	}
 
 	FILE *f = fopen("0_inst.dmp", "w");
-	fwrite(p, 1, dstsize, f);
+	fwrite(songdata->instr_data, 1, sizeof(songdata->instr_data), f);
 	fclose(f);
 
-	for (int i = 0; i < (ffver < 9 ? 250 : 255); i++) {
-		memcpy(songdata->instr_data, src + i * instsize, instsize);
-	}
-
-	free(p);
+	free(dst);
 
 	return len[0];
 }
@@ -416,11 +432,7 @@ int a2t_read_instmacros(char *src)
 {
 	if (ffver < 9) return 0;
 
-	if (!aP_depack(src, songdata->instr_macros)) {
-		printf("Error\n");
-
-		return 0;
-	}
+	a2t_depack(src, len[1], songdata->instr_macros, sizeof(songdata->instr_macros));
 
 	FILE *f = fopen("1_inst_macro.dmp", "w");
 	fwrite(songdata->instr_macros, 1, sizeof(songdata->instr_macros), f);
@@ -433,11 +445,7 @@ int a2t_read_macrotable(char *src)
 {
 	if (ffver < 9) return 0;
 
-	if (!aP_depack(src, songdata->macro_table)) {
-		printf("Error\n");
-
-		return 0;
-	}
+	a2t_depack(src, len[2], songdata->macro_table, sizeof(songdata->macro_table));
 
 	FILE *f = fopen("2_macrotable.dmp", "w");
 	fwrite(songdata->macro_table, 1, sizeof(songdata->macro_table), f);
@@ -450,11 +458,7 @@ int a2t_read_disabled_fmregs(char *src)
 {
 	if (ffver < 11) return 0;
 
-	if (!aP_depack(src, songdata->fm_disregs)) {
-		printf("Error\n");
-
-		return 0;
-	}
+	a2t_depack(src, len[3], songdata->fm_disregs, sizeof(songdata->fm_disregs));
 
 	FILE *f = fopen("3_fm_disregs.dmp", "w");
 	fwrite(songdata->fm_disregs, 1, sizeof(songdata->fm_disregs), f);
@@ -468,11 +472,7 @@ int a2t_read_order(char *src)
 	int blocknum[11] = {1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4};
 	int i = blocknum[ffver - 1];
 
-	if (!aP_depack(src, songdata->order)) {
-		printf("Error\n");
-
-		return 0;
-	}
+	a2t_depack(src, len[i], songdata->order, sizeof(songdata->order));
 
 	FILE *f = fopen("4_order.dmp", "w");
 	fwrite(songdata->order, 1, sizeof(songdata->order), f);
@@ -525,8 +525,8 @@ void a2t_import(char *tune)
 	if(strncmp(header->id, "_A2tiny_module_", 15))
 		return;
 
-	memset(songdata, 0, sizeof(*songdata));
-	memset(pattdata, 0, sizeof(*pattdata));
+	memset(songdata, 0, sizeof(_songdata));
+	memset(pattdata, 0, sizeof(_pattdata));
 	memset(len, 0, sizeof(len));
 
 	ffver = header->ffver;
@@ -563,22 +563,15 @@ void a2t_import(char *tune)
 	a2t_read_patterns(blockptr);
 }
 
-/*
-a2m
-1,2,3,4 - uint16_t len[5];
-5,6,7,8 - uint16_t len[9];
-9,10,11 - uint32_t len[17];
-*/
-
 static int a2m_read_varheader(char *blockptr)
 {
 	int lensize;
 	uint16_t *src16 = (uint16_t *)blockptr;
 	uint32_t *src32 = (uint32_t *)blockptr;
 
-	if (ffver < 5) lensize = 5;
-	else if (ffver < 9) lensize = 9;
-	else lensize = 17;
+	if (ffver < 5) lensize = 5;		// 1,2,3,4 - uint16_t len[5];
+	else if (ffver < 9) lensize = 9;	// 5,6,7,8 - uint16_t len[9];
+	else lensize = 17;			// 9,10,11 - uint32_t len[17];
 
 	switch (ffver) {
 	case 1 ... 8:
