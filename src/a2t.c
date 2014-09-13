@@ -332,7 +332,7 @@ char *a2t_load(char *name)
 	return p;
 }
 
-static inline void a2t_depack(void *src, int srcsize, void *dst, int dstsize)
+static inline void a2t_depack(void *src, int srcsize, void *dst)
 {
 	switch (ffver) {
 	case 1:
@@ -411,7 +411,7 @@ int a2t_read_instruments(char *src)
 	char *dst = (char *)malloc(dstsize);
 	memset(dst, 0, dstsize);
 
-	a2t_depack(src, len[0], dst, dstsize);
+	a2t_depack(src, len[0], dst);
 
 	for (int i = 0; i < (ffver < 9 ? 250 : 255); i++) {
 		memcpy(songdata->instr_data[i], dst + i * instsize, instsize);
@@ -430,7 +430,7 @@ int a2t_read_instmacros(char *src)
 {
 	if (ffver < 9) return 0;
 
-	a2t_depack(src, len[1], songdata->instr_macros, sizeof(songdata->instr_macros));
+	a2t_depack(src, len[1], songdata->instr_macros);
 
 	FILE *f = fopen("1_inst_macro.dmp", "w");
 	fwrite(songdata->instr_macros, 1, sizeof(songdata->instr_macros), f);
@@ -443,7 +443,7 @@ int a2t_read_macrotable(char *src)
 {
 	if (ffver < 9) return 0;
 
-	a2t_depack(src, len[2], songdata->macro_table, sizeof(songdata->macro_table));
+	a2t_depack(src, len[2], songdata->macro_table);
 
 	FILE *f = fopen("2_macrotable.dmp", "w");
 	fwrite(songdata->macro_table, 1, sizeof(songdata->macro_table), f);
@@ -456,7 +456,7 @@ int a2t_read_disabled_fmregs(char *src)
 {
 	if (ffver < 11) return 0;
 
-	a2t_depack(src, len[3], songdata->fm_disregs, sizeof(songdata->fm_disregs));
+	a2t_depack(src, len[3], songdata->fm_disregs);
 
 	FILE *f = fopen("3_fm_disregs.dmp", "w");
 	fwrite(songdata->fm_disregs, 1, sizeof(songdata->fm_disregs), f);
@@ -470,7 +470,7 @@ int a2t_read_order(char *src)
 	int blocknum[11] = {1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4};
 	int i = blocknum[ffver - 1];
 
-	a2t_depack(src, len[i], songdata->order, sizeof(songdata->order));
+	a2t_depack(src, len[i], songdata->order);
 
 	FILE *f = fopen("4_order.dmp", "w");
 	fwrite(songdata->order, 1, sizeof(songdata->order), f);
@@ -497,7 +497,7 @@ int a2t_read_patterns(char *src)
 			// FIXME: add loading for old formats
 			break;
 		case 9 ... 11:
-			a2t_depack(src, len[i], pattdata + (i-s)* 8*20*256*6, 8*20*256*6);
+			a2t_depack(src, len[i], pattdata + (i-s)* 8*20*256*6);
 			break;
 		}
 
@@ -588,10 +588,18 @@ static int a2m_read_songdata(char *src)
 {
 	if (ffver < 9) {		// 1,2,3,4,5,6,7,8
 	} else if (ffver == 9) {	// 9
+		A2M_SONGDATA_V9 *data =
+			malloc(sizeof(*data));
+		a2t_depack(src, len[0], data);
+
+		FILE *f = fopen("songdata.dmp", "w");
+		fwrite(data, 1, sizeof(*data), f);
+		fclose(f);
+		free(data);
 	} else {			// 10,11
 		A2M_SONGDATA_V10 *data =
 			malloc(sizeof(*data));
-		a2t_depack(src, len[0], data, 0);
+		a2t_depack(src, len[0], data);
 
 		FILE *f = fopen("songdata.dmp", "w");
 		fwrite(data, 1, sizeof(*data), f);
