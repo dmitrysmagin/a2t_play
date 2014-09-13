@@ -55,7 +55,7 @@ static unsigned int aP_getgamma(struct APDSTATE *ud)
 unsigned int aP_depack(const void *source, void *destination)
 {
 	struct APDSTATE ud;
-	unsigned int offs, len, R0, LWM;
+	unsigned int offs, len, R0/*, LWM*/;
 	int done;
 	int i;
 
@@ -64,7 +64,7 @@ unsigned int aP_depack(const void *source, void *destination)
 	ud.bitcount = 0;
 
 	R0 = (unsigned int) -1;
-	LWM = 0;
+	//LWM = 0;
 	done = 0;
 
 	/* first byte verbatim */
@@ -89,9 +89,8 @@ unsigned int aP_depack(const void *source, void *destination)
 						*ud.destination++ = 0x00;
 					}
 
-					LWM = 0;
-				}
-				else {
+					//LWM = 0;
+				} else {
 					offs = *ud.source++;
 
 					len = 2 + (offs & 0x0001);
@@ -109,15 +108,14 @@ unsigned int aP_depack(const void *source, void *destination)
 					}
 
 					R0 = offs;
-					LWM = 1;
+					//LWM = 1;
 				}
-			}
-			else {
+			} else {
 				offs = aP_getgamma(&ud);
 
 				//if ((LWM == 0) && (offs == 2)) {
-                if (offs == 2) {
-                //-------------------
+				if (offs == 2) {
+					//-------------------
 					offs = R0;
 
 					len = aP_getgamma(&ud);
@@ -126,19 +124,18 @@ unsigned int aP_depack(const void *source, void *destination)
 						*ud.destination = *(ud.destination - offs);
 						ud.destination++;
 					}
-				}
-				else {
-                    /*
+				} else {
+					/*
 					if (LWM == 0) {
 						offs -= 2;
 					}
 					else {
 						offs -= 2;
 					}
-                    */
-                    offs -= 3;
-                    //-------------------
-                    
+					*/
+					offs -= 3;
+					//-------------------
+
 					offs <<= 8;
 					offs += *ud.source++;
 
@@ -162,12 +159,12 @@ unsigned int aP_depack(const void *source, void *destination)
 					R0 = offs;
 				}
 
-				LWM = 1;
+				//LWM = 1;
 			}
 		}
 		else {
 			*ud.destination++ = *ud.source++;
-			LWM = 0;
+			//LWM = 0;
 		}
 	}
 
