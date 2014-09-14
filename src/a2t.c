@@ -610,6 +610,39 @@ static int a2m_read_songdata(char *src)
 	return len[0];
 }
 
+int a2m_read_patterns(char *src)
+{
+	int lensize;
+
+	if (ffver < 5) lensize = 5;		// 1,2,3,4 - uint16_t len[5];
+	else if (ffver < 9) lensize = 9;	// 5,6,7,8 - uint16_t len[9];
+	else lensize = 17;			// 9,10,11 - uint32_t len[17];
+
+	for (int i = 1; i < lensize; i++) {
+		if (!len[i]) continue;
+
+		switch (ffver) {
+		case 1 ... 4:
+			// [4][16][64][9][4]
+		case 5 ... 8:
+			// [8][8][18][64][4]
+			// FIXME: add loading for old formats
+			break;
+		case 9 ... 11:
+			a2t_depack(src, len[i], pattdata + (i-1)* 8*20*256*6);
+			break;
+		}
+
+		src += len[i];
+	}
+
+	FILE *f = fopen("patterns.dmp", "w");
+	fwrite(pattdata, 1, 16*8*20*256*6, f);
+	fclose(f);
+
+	return 0;
+}
+
 void a2m_import(char *tune)
 {
 	A2M_HEADER *header = (A2M_HEADER *)tune;
@@ -635,6 +668,9 @@ void a2m_import(char *tune)
 
 	// Read songdata
 	blockptr += a2m_read_songdata(blockptr);
+
+	// Read patterns
+	a2m_read_patterns(blockptr);
 }
 
 int main(int argc, char *argv[])
