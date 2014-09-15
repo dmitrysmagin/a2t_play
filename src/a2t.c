@@ -106,6 +106,14 @@ typedef struct PACK {
 	uint8_t effect2;
 } tADTRACK2_EVENT;
 
+// only for importing versions 1 ... 4
+typedef struct PACK {
+	uint8_t note;
+	uint8_t instr_def;
+	uint8_t effect_def;
+	uint8_t effect;
+} tADTRACK2_EVENT_V1234;
+
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
 
 typedef struct PACK {
@@ -130,6 +138,33 @@ typedef enum {
 
 typedef tADTRACK2_EVENT tPATTERN_DATA[16][8][20][256];
 // array[0..15] of tVARIABLE_DATA;
+
+// pattdata[1].ch[2].row[3].ev.note;
+typedef struct PACK {
+  struct PACK {
+    struct PACK {
+      tADTRACK2_EVENT ev;
+    } row[256];
+  } ch[20];
+} tPATTERN_DATA_NEW;
+
+// for importing v 1,2,3,4 patterns
+typedef struct PACK {
+  struct PACK {
+    struct PACK {
+      tADTRACK2_EVENT_V1234 ev;
+    } ch[9];
+  } row[64];
+} tPATTERN_DATA_V1234;
+
+// for importing v 5,6,7,8 patterns
+typedef struct PACK {
+  struct PACK {
+    struct PACK {
+      tADTRACK2_EVENT_V1234 ev;
+    } row[64];
+  } ch[18];
+} tPATTERN_DATA_V5678;
 
 const uint8_t _panning[3] = {0x30, 0x10, 0x20};
 
@@ -199,8 +234,8 @@ typedef struct PACK {
 
 // This would be later moved to class or struct
 SONGDATA _songdata, *songdata = &_songdata;
-//tPATTERN_DATA _pattdata, *pattdata = &_pattdata;
-uint8_t _pattdata[16*8*20*256*6], *pattdata = _pattdata;
+tPATTERN_DATA_NEW _pattdata[128], *pattdata = _pattdata;
+
 int ffver = 1;
 int len[21];
 
@@ -337,9 +372,8 @@ static inline void a2t_depack(void *src, int srcsize, void *dst)
 {
 	switch (ffver) {
 	case 1:
-	case 5:		// FIXME: sixpack
-		;int outs_ = sixdepak(src, dst, srcsize);
-		printf("Output size: %d\n", outs_);
+	case 5:		// sixpack
+		sixdepak(src, dst, srcsize);
 		break;
 	case 2:
 	case 6:		// FIXME: lzw
@@ -500,7 +534,7 @@ int a2t_read_patterns(char *src)
 			// FIXME: add loading for old formats
 			break;
 		case 9 ... 11:
-			a2t_depack(src, len[i], pattdata + (i-s)* 8*20*256*6);
+			a2t_depack(src, len[i], &pattdata[i-s]);
 			break;
 		}
 
@@ -623,32 +657,30 @@ static int a2m_read_songdata(char *src)
 
 int a2m_read_patterns(char *src)
 {
-	int lensize;
-
-	if (ffver < 5) lensize = 5;		// 1,2,3,4 - uint16_t len[5];
-	else if (ffver < 9) lensize = 9;	// 5,6,7,8 - uint16_t len[9];
-	else lensize = 17;			// 9,10,11 - uint32_t len[17];
-
-	for (int i = 1; i < lensize; i++) {
-		if (!len[i]) continue;
-
-		switch (ffver) {
-		case 1 ... 4:
-			// [4][16][64][9][4]
-		case 5 ... 8:
-			// [8][8][18][64][4]
-			// FIXME: add loading for old formats
-			break;
-		case 9 ... 11:
-			a2t_depack(src, len[i], pattdata + (i-1)* 8*20*256*6);
-			break;
+	switch (ffver) {
+	case 1 ... 4:	// [4][16][64][9][4]
+		for (int i = 0; i < 4; i++) {
+			if (!len[i+1]) continue;
+			src += len[i+1];
 		}
-
-		src += len[i];
+		break;
+	case 5 ... 8:	// [8][8][18][64][4]
+		for (int i = 0; i < 8; i++) {
+			if (!len[i+1]) continue;
+			src += len[i+1];
+		}
+		break;
+	case 9 ... 11:	// [16][8][20][256][6]
+		for (int i = 0; i < 16; i++) {
+			if (!len[i+1]) continue;
+			a2t_depack(src, len[i+1], &pattdata[i]);
+			src += len[i+1];
+		}
+		break;
 	}
 
 	FILE *f = fopen("patterns.dmp", "w");
-	fwrite(pattdata, 1, 16*8*20*256*6, f);
+	fwrite(pattdata, 1, sizeof(_pattdata), f);
 	fclose(f);
 
 	return 0;
@@ -662,8 +694,8 @@ void a2m_import(char *tune)
 	if(strncmp(header->id, "_A2module_", 10))
 		return;
 
-	memset(songdata, 0, sizeof(*songdata));
-	memset(pattdata, 0, sizeof(*pattdata));
+	memset(songdata, 0, sizeof(_songdata));
+	memset(pattdata, 0, sizeof(_pattdata));
 	memset(len, 0, sizeof(len));
 
 	ffver = header->ffver;
