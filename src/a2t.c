@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "depack.h"
+#include "sixpack.h"
 #include "ymf262.h"
 #include "a2t.h"
 
@@ -337,6 +338,8 @@ static inline void a2t_depack(void *src, int srcsize, void *dst)
 	switch (ffver) {
 	case 1:
 	case 5:		// FIXME: sixpack
+		;int outs_ = sixdepak(src, dst, srcsize);
+		printf("Output size: %d\n", outs_);
 		break;
 	case 2:
 	case 6:		// FIXME: lzw
@@ -587,6 +590,14 @@ static int a2m_read_varheader(char *blockptr)
 static int a2m_read_songdata(char *src)
 {
 	if (ffver < 9) {		// 1,2,3,4,5,6,7,8
+		A2M_SONGDATA_V1234 *data =
+			malloc(sizeof(*data));
+		a2t_depack(src, len[0], data);
+
+		FILE *f = fopen("songdata.dmp", "w");
+		fwrite(data, 1, sizeof(*data), f);
+		fclose(f);
+		free(data);
 	} else if (ffver == 9) {	// 9
 		A2M_SONGDATA_V9 *data =
 			malloc(sizeof(*data));
