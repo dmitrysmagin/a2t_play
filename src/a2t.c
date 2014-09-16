@@ -117,18 +117,22 @@ typedef struct PACK {
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
 
 typedef struct PACK {
+	char            songname[43];        // pascal String[42];
+	char            composer[43];        // pascal String[42];
+	char            instr_names[255][43];// array[1..255] of String[42];
 	tADTRACK2_INS   instr_data[255];     // array[1..255] of tADTRACK2_INS;
 	tREGISTER_TABLE instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
 	tMACRO_TABLE    macro_table[255];    // array[1..255] of tMACRO_TABLE;
 	uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
 	uint8_t         tempo;
 	uint8_t         speed;
-	uint8_t         flags;
-	uint16_t        pattlen;
-	uint8_t         noftracks;
-	uint16_t        macrospeedup;
-	uint8_t         op4flags;
-	uint8_t         lockflags[20];      // array[1..20]  of Byte;
+	uint8_t         common_flag;
+	uint16_t        patt_len;
+	uint8_t         nm_tracks;
+	uint16_t        macro_speedup;
+	uint8_t         flag_4op;
+	uint8_t         lock_flags[20];
+	char            pattern_names[128][43];  // array[0..$7f] of String[42];
 	tDIS_FMREG_COL  dis_fmreg_col[255];  // array[1..255] of tDIS_FMREG_COL;
 } tFIXED_SONGDATA;
 
@@ -224,12 +228,12 @@ typedef struct PACK {
 	uint8_t         order[128];
 	uint8_t         tempo;
 	uint8_t         speed;
-	uint8_t         flags;
-	uint16_t        pattlen;
-	uint8_t         noftracks;
-	uint16_t        macrospeedup;
-	uint8_t         op4flags;
-	uint8_t         lockflags[20];      // array[1..20]  of Byte;
+	uint8_t         common_flag;
+	uint16_t        patt_len;
+	uint8_t         nm_tracks;
+	uint16_t        macro_speedup;
+	uint8_t         flag_4op;
+	uint8_t         lock_flags[20];      // array[1..20]  of Byte;
 } SONGDATA;
 
 // This would be later moved to class or struct
@@ -245,35 +249,35 @@ typedef struct PACK {
 } A2T_VARHEADER_V1234;
 
 typedef struct {
-	uint8_t flags;
+	uint8_t common_flag;
 	uint16_t len[10];
 } A2T_VARHEADER_V5678;
 
 typedef struct PACK {
-	uint8_t flags;
-	uint16_t pattlen;
-	uint8_t noftracks;
-	uint16_t macrospeedup;
+	uint8_t common_flag;
+	uint16_t patt_len;
+	uint8_t nm_tracks;
+	uint16_t macro_speedup;
 	uint32_t len[20];
 } A2T_VARHEADER_V9;
 
 typedef struct PACK {
-	uint8_t flags;
-	uint16_t pattlen;
-	uint8_t noftracks;
-	uint16_t macrospeedup;
-	uint8_t op4flags;
-	uint8_t lockflags[20];
+	uint8_t common_flag;
+	uint16_t patt_len;
+	uint8_t nm_tracks;
+	uint16_t macro_speedup;
+	uint8_t flag_4op;
+	uint8_t lock_flags[20];
 	uint32_t len[20];
 } A2T_VARHEADER_V10;
 
 typedef struct PACK {
-	uint8_t flags;
-	uint16_t pattlen;
-	uint8_t noftracks;
-	uint16_t macrospeedup;
-	uint8_t op4flags;
-	uint8_t lockflags[20];
+	uint8_t common_flag;
+	uint16_t patt_len;
+	uint8_t nm_tracks;
+	uint16_t macro_speedup;
+	uint8_t flag_4op;
+	uint8_t lock_flags[20];
 	uint32_t len[21];
 } A2T_VARHEADER_V11;
 
@@ -310,7 +314,7 @@ typedef struct PACK {
 	uint8_t pattorder[128];
 	uint8_t tempo;
 	uint8_t speed;
-	uint8_t flags;		// A2M_SONGDATA_V5678
+	uint8_t common_flag;		// A2M_SONGDATA_V5678
 } A2M_SONGDATA_V1234;
 
 typedef struct PACK {
@@ -323,10 +327,10 @@ typedef struct PACK {
 	uint8_t pattorder[128];
 	uint8_t tempo;
 	uint8_t speed;
-	uint8_t flags;
+	uint8_t common_flag;
 	uint16_t pattlength;
 	uint8_t numoftracks;
-	uint16_t macrospeedup;
+	uint16_t macro_speedup;
 } A2M_SONGDATA_V9;
 
 typedef struct PACK {
@@ -339,10 +343,10 @@ typedef struct PACK {
 	uint8_t pattorder[128];
 	uint8_t tempo;
 	uint8_t speed;
-	uint8_t flags;
+	uint8_t common_flag;
 	uint16_t pattlength;
 	uint8_t numoftracks;
-	uint16_t macrospeedup;
+	uint16_t macro_speedup;
 	uint8_t op4ext;
 	uint8_t initlocks[20];
 	char pattnames[128][43];	// A2M_SONGDATA_V11
@@ -402,37 +406,37 @@ static int a2t_read_varheader(char *blockptr)
 			len[i] = varheader->v1234.len[i];
 		return sizeof(A2T_VARHEADER_V1234);
 	case 5 ... 8:
-		songdata->flags = varheader->v5678.flags;
+		songdata->common_flag = varheader->v5678.common_flag;
 		for (int i = 0; i < 10; i++)
 			len[i] = varheader->v5678.len[i];
 		return sizeof(A2T_VARHEADER_V5678);
 	case 9:
-		songdata->flags = varheader->v9.flags;
-		songdata->pattlen = varheader->v9.pattlen;
-		songdata->noftracks = varheader->v9.noftracks;
-		songdata->macrospeedup = varheader->v9.macrospeedup;
+		songdata->common_flag = varheader->v9.common_flag;
+		songdata->patt_len = varheader->v9.patt_len;
+		songdata->nm_tracks = varheader->v9.nm_tracks;
+		songdata->macro_speedup = varheader->v9.macro_speedup;
 		for (int i = 0; i < 20; i++)
 			len[i] = varheader->v9.len[i];
 		return sizeof(A2T_VARHEADER_V9);
 	case 10:
-		songdata->flags = varheader->v10.flags;
-		songdata->pattlen = varheader->v10.pattlen;
-		songdata->noftracks = varheader->v10.noftracks;
-		songdata->macrospeedup = varheader->v10.macrospeedup;
-		songdata->op4flags = varheader->v10.op4flags;
+		songdata->common_flag = varheader->v10.common_flag;
+		songdata->patt_len = varheader->v10.patt_len;
+		songdata->nm_tracks = varheader->v10.nm_tracks;
+		songdata->macro_speedup = varheader->v10.macro_speedup;
+		songdata->flag_4op = varheader->v10.flag_4op;
 		for (int i = 0; i < 20; i++)
-			songdata->lockflags[i] = varheader->v10.lockflags[i];
+			songdata->lock_flags[i] = varheader->v10.lock_flags[i];
 		for (int i = 0; i < 20; i++)
 			len[i] = varheader->v10.len[i];
 		return sizeof(A2T_VARHEADER_V10);
 	case 11:
-		songdata->flags = varheader->v11.flags;
-		songdata->pattlen = varheader->v11.pattlen;
-		songdata->noftracks = varheader->v11.noftracks;
-		songdata->macrospeedup = varheader->v11.macrospeedup;
-		songdata->op4flags = varheader->v11.op4flags;
+		songdata->common_flag = varheader->v11.common_flag;
+		songdata->patt_len = varheader->v11.patt_len;
+		songdata->nm_tracks = varheader->v11.nm_tracks;
+		songdata->macro_speedup = varheader->v11.macro_speedup;
+		songdata->flag_4op = varheader->v11.flag_4op;
 		for (int i = 0; i < 20; i++)
-			songdata->lockflags[i] = varheader->v10.lockflags[i];
+			songdata->lock_flags[i] = varheader->v10.lock_flags[i];
 		for (int i = 0; i < 21; i++)
 			len[i] = varheader->v11.len[i];
 		return sizeof(A2T_VARHEADER_V11);
@@ -607,9 +611,9 @@ void a2t_import(char *tune)
 	ffver = header->ffver;
 	songdata->tempo = header->tempo;
 	songdata->speed = header->speed;
-	songdata->pattlen = 64;
-	songdata->noftracks = 18;
-	songdata->macrospeedup = 1;
+	songdata->patt_len = 64;
+	songdata->nm_tracks = 18;
+	songdata->macro_speedup = 1;
 
 	printf("A2T version: %d\n", header->ffver);
 	printf("Number of patterns: %d\n", header->npatt);
@@ -723,9 +727,9 @@ void a2m_import(char *tune)
 	memset(len, 0, sizeof(len));
 
 	ffver = header->ffver;
-	songdata->pattlen = 64;
-	songdata->noftracks = 18;
-	songdata->macrospeedup = 1;
+	songdata->patt_len = 64;
+	songdata->nm_tracks = 18;
+	songdata->macro_speedup = 1;
 
 	printf("A2M version: %d\n", header->ffver);
 	printf("Number of patterns: %d\n", header->npatt);
