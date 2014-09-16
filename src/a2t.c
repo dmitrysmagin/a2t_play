@@ -516,30 +516,74 @@ int a2t_read_order(char *src)
 	return len[i];
 }
 
+// common for both a2t/a2m
+static int a2_read_patterns(char *src, int s)
+{
+	switch (ffver) {
+	case 1 ... 4:	// [4][16][64][9][4]
+		{
+		tPATTERN_DATA_V1234 *old =
+			(tPATTERN_DATA_V1234 *)malloc(sizeof(*old) * 16);
+
+		for (int i = 0; i < 4; i++) {
+			if (!len[i+s]) continue;
+
+			a2t_depack(src, len[i+s], old);
+
+			for (int p = 0; p < 16; p++) // pattern
+			for (int r = 0; r < 64; r++) // row
+			for (int c = 0; c < 9; c++) { // channel
+				memcpy(&pattdata[i * 16 + p].ch[c].row[r].ev,
+					&old[p].row[r].ch[c].ev, 4);
+			}
+
+			src += len[i+s];
+		}
+
+		free(old);
+		break;
+		}
+	case 5 ... 8:	// [8][8][18][64][4]
+		{
+		tPATTERN_DATA_V5678 *old =
+			(tPATTERN_DATA_V5678 *)malloc(sizeof(*old) * 8);
+
+		for (int i = 0; i < 8; i++) {
+			if (!len[i+s]) continue;
+
+			a2t_depack(src, len[i+s], old);
+
+			for (int p = 0; p < 8; p++) // pattern
+			for (int c = 0; c < 18; c++) // channel
+			for (int r = 0; r < 64; r++) { // row
+				memcpy(&pattdata[i * 16 + p].ch[c].row[r].ev,
+					&old[p].ch[c].row[r].ev, 4);
+			}
+
+			src += len[i+s];
+		}
+
+		free(old);
+		break;
+		}
+	case 9 ... 11:	// [16][8][20][256][6]
+		for (int i = 0; i < 16; i++) {
+			if (!len[i+1]) continue;
+			a2t_depack(src, len[i+s], &pattdata[i]);
+			src += len[i+s];
+		}
+		break;
+	}
+
+	return 0;
+}
+
 int a2t_read_patterns(char *src)
 {
 	int blockstart[11] = {2, 2, 2, 2, 2, 2, 2, 2, 4, 4, 5};
-	int blockend[11] = {5, 5, 5, 5, 9, 9, 9, 9, 19, 19, 20};
-	int s, e;
+	int s = blockstart[ffver - 1];
 
-	s = blockstart[ffver - 1];
-	e = blockend[ffver - 1];
-
-	for (int i = s; i <= e; i++) {
-		if (!len[i]) continue;
-
-		switch (ffver) {
-		case 1 ... 4:
-		case 5 ... 8:
-			// FIXME: add loading for old formats
-			break;
-		case 9 ... 11:
-			a2t_depack(src, len[i], &pattdata[i-s]);
-			break;
-		}
-
-		src += len[i];
-	}
+	a2_read_patterns(src, s);
 
 	FILE *f = fopen("5_patterns.dmp", "w");
 	fwrite(pattdata, 1, 16*8*20*256*6, f);
@@ -657,27 +701,7 @@ static int a2m_read_songdata(char *src)
 
 int a2m_read_patterns(char *src)
 {
-	switch (ffver) {
-	case 1 ... 4:	// [4][16][64][9][4]
-		for (int i = 0; i < 4; i++) {
-			if (!len[i+1]) continue;
-			src += len[i+1];
-		}
-		break;
-	case 5 ... 8:	// [8][8][18][64][4]
-		for (int i = 0; i < 8; i++) {
-			if (!len[i+1]) continue;
-			src += len[i+1];
-		}
-		break;
-	case 9 ... 11:	// [16][8][20][256][6]
-		for (int i = 0; i < 16; i++) {
-			if (!len[i+1]) continue;
-			a2t_depack(src, len[i+1], &pattdata[i]);
-			src += len[i+1];
-		}
-		break;
-	}
+	a2_read_patterns(src, 1);
 
 	FILE *f = fopen("patterns.dmp", "w");
 	fwrite(pattdata, 1, sizeof(_pattdata), f);
