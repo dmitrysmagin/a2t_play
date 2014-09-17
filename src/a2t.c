@@ -220,12 +220,16 @@ const uint8_t pattern_break_flag = 0xf0;
 
 
 // FIXME: this will be used by actual player
+// ATTENTION: may not be packed in future!
 typedef struct PACK {
+	char            songname[43];
+	char            composer[43];
+	char            instr_names[255][43];
 	uint8_t         instr_data[255][14];
 	uint8_t         instr_macros[255][3831];
 	uint8_t         macro_table[255][521];
-	uint8_t         fm_disregs[255][28];
-	uint8_t         order[128];
+	uint8_t         dis_fmreg_col[255][28];
+	uint8_t         pattern_order[128];
 	uint8_t         tempo;
 	uint8_t         speed;
 	uint8_t         common_flag;
@@ -233,6 +237,7 @@ typedef struct PACK {
 	uint8_t         nm_tracks;
 	uint16_t        macro_speedup;
 	uint8_t         flag_4op;
+	char            pattern_names[128][43];  // array[0..$7f] of String[42];
 	uint8_t         lock_flags[20];      // array[1..20]  of Byte;
 } SONGDATA;
 
@@ -309,9 +314,9 @@ typedef struct PACK {
 typedef struct PACK {
 	char songname[43];
 	char composer[43];
-	char instnames[250][33];
-	uint8_t inst[250][13];
-	uint8_t pattorder[128];
+	char instr_names[250][33];
+	uint8_t instr_data[250][13];
+	uint8_t pattern_order[128];
 	uint8_t tempo;
 	uint8_t speed;
 	uint8_t common_flag;		// A2M_SONGDATA_V5678
@@ -320,37 +325,37 @@ typedef struct PACK {
 typedef struct PACK {
 	char songname[43];
 	char composer[43];
-	char instnames[255][33];
-	uint8_t inst[255][14];
-	uint8_t macrodef[255][3831];
-	uint8_t arpvibmacro[255][521];
-	uint8_t pattorder[128];
+	char instr_names[255][33];
+	uint8_t instr_data[255][14];
+	uint8_t instr_macros[255][3831];
+	uint8_t macro_table[255][521];
+	uint8_t pattern_order[128];
 	uint8_t tempo;
 	uint8_t speed;
 	uint8_t common_flag;
-	uint16_t pattlength;
-	uint8_t numoftracks;
+	uint16_t patt_len;
+	uint8_t nm_tracks;
 	uint16_t macro_speedup;
 } A2M_SONGDATA_V9;
 
 typedef struct PACK {
 	char songname[43];
 	char composer[43];
-	char instnames[255][43];
-	uint8_t inst[255][14];
-	uint8_t macrodef[255][3831];
-	uint8_t arpvibmacro[255][521];
-	uint8_t pattorder[128];
+	char instr_names[255][43];
+	uint8_t instr_data[255][14];
+	uint8_t instr_macros[255][3831];
+	uint8_t macro_table[255][521];
+	uint8_t pattern_order[128];
 	uint8_t tempo;
 	uint8_t speed;
 	uint8_t common_flag;
-	uint16_t pattlength;
-	uint8_t numoftracks;
+	uint16_t patt_len;
+	uint8_t nm_tracks;
 	uint16_t macro_speedup;
-	uint8_t op4ext;
-	uint8_t initlocks[20];
-	char pattnames[128][43];	// A2M_SONGDATA_V11
-	uint8_t fm_disregs[255][28];	// A2M_SONGDATA_V11
+	uint8_t flag_4op;
+	uint8_t lock_flags[20];
+	char pattern_names[128][43];	// A2M_SONGDATA_V11
+	uint8_t dis_fmreg_col[255][28];	// A2M_SONGDATA_V11
 } A2M_SONGDATA_V10;
 
 char *a2t_load(char *name)
@@ -497,10 +502,10 @@ int a2t_read_disabled_fmregs(char *src)
 {
 	if (ffver < 11) return 0;
 
-	a2t_depack(src, len[3], songdata->fm_disregs);
+	a2t_depack(src, len[3], songdata->dis_fmreg_col);
 
 	FILE *f = fopen("3_fm_disregs.dmp", "w");
-	fwrite(songdata->fm_disregs, 1, sizeof(songdata->fm_disregs), f);
+	fwrite(songdata->dis_fmreg_col, 1, sizeof(songdata->dis_fmreg_col), f);
 	fclose(f);
 
 	return len[3];
@@ -511,10 +516,10 @@ int a2t_read_order(char *src)
 	int blocknum[11] = {1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4};
 	int i = blocknum[ffver - 1];
 
-	a2t_depack(src, len[i], songdata->order);
+	a2t_depack(src, len[i], songdata->pattern_order);
 
 	FILE *f = fopen("4_order.dmp", "w");
-	fwrite(songdata->order, 1, sizeof(songdata->order), f);
+	fwrite(songdata->pattern_order, 1, sizeof(songdata->pattern_order), f);
 	fclose(f);
 
 	return len[i];
@@ -635,7 +640,7 @@ void a2t_import(char *tune)
 	// Read disabled fm regs (v == 11)
 	blockptr += a2t_read_disabled_fmregs(blockptr);
 
-	// Read order
+	// Read pattern_order
 	blockptr += a2t_read_order(blockptr);
 
 	// Read patterns
@@ -676,29 +681,106 @@ static int a2m_read_songdata(char *src)
 			malloc(sizeof(*data));
 		a2t_depack(src, len[0], data);
 
-		FILE *f = fopen("songdata.dmp", "w");
-		fwrite(data, 1, sizeof(*data), f);
-		fclose(f);
+		memcpy(songdata->songname, data->songname, 43);
+		memcpy(songdata->composer, data->composer, 43);
+
+		for (int i = 0; i < 250; i++) {
+			memcpy(songdata->instr_names[i],
+				data->instr_names[i], 33);
+			memcpy(songdata->instr_data[i],
+				data->instr_data[i], 13);
+		}
+
+		memcpy(songdata->pattern_order,
+			data->pattern_order, 128);
+
+		songdata->tempo = data->tempo;
+		songdata->speed = data->speed;
+
+		if (ffver > 4) { // 5,6,7,8
+			songdata->common_flag = data->common_flag;
+		}
+
 		free(data);
 	} else if (ffver == 9) {	// 9
 		A2M_SONGDATA_V9 *data =
 			malloc(sizeof(*data));
 		a2t_depack(src, len[0], data);
 
-		FILE *f = fopen("songdata.dmp", "w");
-		fwrite(data, 1, sizeof(*data), f);
-		fclose(f);
+		memcpy(songdata->songname, data->songname, 43);
+		memcpy(songdata->composer, data->composer, 43);
+
+		for (int i = 0; i < 255; i++) {
+			memcpy(songdata->instr_names[i],
+				data->instr_names[i], 33);
+			memcpy(songdata->instr_data[i],
+				data->instr_data[i], 14);
+		}
+
+		memcpy(songdata->instr_macros,
+			data->instr_macros, 255 * 3831);
+
+		memcpy(songdata->macro_table,
+			data->macro_table, 255 * 521);
+
+		memcpy(songdata->pattern_order,
+			data->pattern_order, 128);
+
+		songdata->tempo = data->tempo;
+		songdata->speed = data->speed;
+		songdata->common_flag = data->common_flag;
+		songdata->patt_len = data->patt_len;
+		songdata->nm_tracks = data->nm_tracks;
+		songdata->macro_speedup = data->macro_speedup;
+
 		free(data);
 	} else {			// 10,11
 		A2M_SONGDATA_V10 *data =
 			malloc(sizeof(*data));
 		a2t_depack(src, len[0], data);
 
-		FILE *f = fopen("songdata.dmp", "w");
-		fwrite(data, 1, sizeof(*data), f);
-		fclose(f);
+		memcpy(songdata->songname, data->songname, 43);
+		memcpy(songdata->composer, data->composer, 43);
+
+		for (int i = 0; i < 255; i++) {
+			memcpy(songdata->instr_names[i],
+				data->instr_names[i], 43);
+			memcpy(songdata->instr_data[i],
+				data->instr_data[i], 14);
+		}
+
+		memcpy(songdata->instr_macros,
+			data->instr_macros, 255 * 3831);
+
+		memcpy(songdata->macro_table,
+			data->macro_table, 255 * 521);
+
+		memcpy(songdata->pattern_order,
+			data->pattern_order, 128);
+
+		songdata->tempo = data->tempo;
+		songdata->speed = data->speed;
+		songdata->common_flag = data->common_flag;
+		songdata->patt_len = data->patt_len;
+		songdata->nm_tracks = data->nm_tracks;
+		songdata->macro_speedup = data->macro_speedup;
+
+		if (ffver == 11) {
+			memcpy(songdata->pattern_names,
+				data->pattern_names, 128 * 43);
+			memcpy(songdata->dis_fmreg_col,
+				data->dis_fmreg_col, 255 * 28);
+		}
+
 		free(data);
 	}
+
+	printf("Tempo: %d\n", songdata->tempo);
+	printf("Speed: %d\n", songdata->speed);
+
+	FILE *f = fopen("songdata.dmp", "w");
+	fwrite(songdata, 1, sizeof(*songdata), f);
+	fclose(f);
 
 	return len[0];
 }
