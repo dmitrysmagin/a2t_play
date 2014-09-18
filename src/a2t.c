@@ -97,32 +97,19 @@ typedef struct PACK {
 	uint8_t multipC,kslC,tremC,vibrC,ksrC,sustC;
 } tFM_PARAMETER_TABLE;
 
-typedef struct PACK {
-	uint8_t note;
-	uint8_t instr_def;
-	uint8_t effect_def;
-	uint8_t effect;
-	uint8_t effect_def2;
-	uint8_t effect2;
-} tADTRACK2_EVENT;
-
-// only for importing versions 1 ... 4
-typedef struct PACK {
-	uint8_t note;
-	uint8_t instr_def;
-	uint8_t effect_def;
-	uint8_t effect;
-} tADTRACK2_EVENT_V1234;
-
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
 
+// ATTENTION: may not be packed in future!
 typedef struct PACK {
 	char            songname[43];        // pascal String[42];
 	char            composer[43];        // pascal String[42];
 	char            instr_names[255][43];// array[1..255] of String[42];
-	tADTRACK2_INS   instr_data[255];     // array[1..255] of tADTRACK2_INS;
-	tREGISTER_TABLE instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
-	tMACRO_TABLE    macro_table[255];    // array[1..255] of tMACRO_TABLE;
+	//tADTRACK2_INS   instr_data[255];     // array[1..255] of tADTRACK2_INS;
+	uint8_t         instr_data[255][14];
+	//tREGISTER_TABLE instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
+	uint8_t         instr_macros[255][3831];
+	//tMACRO_TABLE    macro_table[255];    // array[1..255] of tMACRO_TABLE;
+	uint8_t         macro_table[255][521];
 	uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
 	uint8_t         tempo;
 	uint8_t         speed;
@@ -133,16 +120,31 @@ typedef struct PACK {
 	uint8_t         flag_4op;
 	uint8_t         lock_flags[20];
 	char            pattern_names[128][43];  // array[0..$7f] of String[42];
-	tDIS_FMREG_COL  dis_fmreg_col[255];  // array[1..255] of tDIS_FMREG_COL;
+	//tDIS_FMREG_COL  dis_fmreg_col[255];  // array[1..255] of tDIS_FMREG_COL;
+	int8_t          dis_fmreg_col[255][28];
 } tFIXED_SONGDATA;
 
 typedef enum {
 	isPlaying = 0, isPaused, isStopped
 } tPLAY_STATUS;
 
-typedef tADTRACK2_EVENT tPATTERN_DATA[16][8][20][256];
-// array[0..15] of tVARIABLE_DATA;
+typedef struct PACK {
+	uint8_t note;
+	uint8_t instr_def;
+	uint8_t effect_def;
+	uint8_t effect;
+	uint8_t effect_def2;
+	uint8_t effect2;
+} tADTRACK2_EVENT;
 
+//type
+//  tVARIABLE_DATA = array[0..7]    of
+//                   array[1..20]   of
+//                   array[0..$0ff] of tADTRACK2_EVENT;
+//type
+//  tPATTERN_DATA = array[0..15] of tVARIABLE_DATA;
+
+// as C doesn't support pointers to typedef'ed arrays, make a struct
 // pattdata[1].ch[2].row[3].ev.note;
 typedef struct PACK {
   struct PACK {
@@ -150,25 +152,7 @@ typedef struct PACK {
       tADTRACK2_EVENT ev;
     } row[256];
   } ch[20];
-} tPATTERN_DATA_NEW;
-
-// for importing v 1,2,3,4 patterns
-typedef struct PACK {
-  struct PACK {
-    struct PACK {
-      tADTRACK2_EVENT_V1234 ev;
-    } ch[9];
-  } row[64];
-} tPATTERN_DATA_V1234;
-
-// for importing v 5,6,7,8 patterns
-typedef struct PACK {
-  struct PACK {
-    struct PACK {
-      tADTRACK2_EVENT_V1234 ev;
-    } row[64];
-  } ch[18];
-} tPATTERN_DATA_V5678;
+} tPATTERN_DATA;
 
 const uint8_t _panning[3] = {0x30, 0x10, 0x20};
 
@@ -218,35 +202,70 @@ const uint8_t fixed_note_flag    = 0x90;
 const uint8_t pattern_loop_flag  = 0xe0;
 const uint8_t pattern_break_flag = 0xf0;
 
-
-// FIXME: this will be used by actual player
-// ATTENTION: may not be packed in future!
-typedef struct PACK {
-	char            songname[43];
-	char            composer[43];
-	char            instr_names[255][43];
-	uint8_t         instr_data[255][14];
-	uint8_t         instr_macros[255][3831];
-	uint8_t         macro_table[255][521];
-	uint8_t         dis_fmreg_col[255][28];
-	uint8_t         pattern_order[128];
-	uint8_t         tempo;
-	uint8_t         speed;
-	uint8_t         common_flag;
-	uint16_t        patt_len;
-	uint8_t         nm_tracks;
-	uint16_t        macro_speedup;
-	uint8_t         flag_4op;
-	char            pattern_names[128][43];  // array[0..$7f] of String[42];
-	uint8_t         lock_flags[20];      // array[1..20]  of Byte;
-} SONGDATA;
-
 // This would be later moved to class or struct
-SONGDATA _songdata, *songdata = &_songdata;
-tPATTERN_DATA_NEW _pattdata[128], *pattdata = _pattdata;
+tFIXED_SONGDATA _songdata, *songdata = &_songdata;
+tPATTERN_DATA _pattdata[128], *pattdata = _pattdata;
 
 int ffver = 1;
 int len[21];
+
+typedef struct PACK {
+	char id[15];	// '_a2tiny_module_'
+	uint32_t crc;
+	uint8_t ffver;
+	uint8_t npatt;
+	uint8_t tempo;
+	uint8_t speed;
+} A2T_HEADER;
+
+typedef struct PACK {
+	char id[10];	// '_a2module_'
+	uint32_t crc;
+	uint8_t ffver;
+	uint8_t npatt;
+} A2M_HEADER;
+
+char *a2t_load(char *name)
+{
+	FILE *fh;
+	int fsize;
+	void *p;
+
+	fh = fopen(name, "rb");
+	if(!fh) return NULL;
+
+	fseek(fh, 0, SEEK_END);
+	fsize = ftell(fh) ;
+	fseek(fh, 0, SEEK_SET);
+	p = (void *)malloc(fsize);
+	fread(p, 1, fsize, fh);
+	fclose(fh);
+
+	return p;
+}
+
+static inline void a2t_depack(void *src, int srcsize, void *dst)
+{
+	switch (ffver) {
+	case 1:
+	case 5:		// sixpack
+		sixdepak(src, dst, srcsize);
+		break;
+	case 2:
+	case 6:		// FIXME: lzw
+		break;
+	case 3:
+	case 7:		// FIXME: lzss
+		break;
+	case 4:
+	case 8:		// unpacked
+		memcpy(dst, src, srcsize);
+		break;
+	case 9 ... 11:	// apack (aPlib)
+		aP_depack(src, dst);
+		break;
+	}
+}
 
 /* Data for importing A2T format */
 typedef struct PACK {
@@ -293,112 +312,6 @@ typedef union PACK {
 	A2T_VARHEADER_V10   v10;
 	A2T_VARHEADER_V11   v11;
 } A2T_VARHEADER;
-
-typedef struct PACK {
-	char id[15];	// '_a2tiny_module_'
-	uint32_t crc;
-	uint8_t ffver;
-	uint8_t npatt;
-	uint8_t tempo;
-	uint8_t speed;
-} A2T_HEADER;
-
-typedef struct PACK {
-	char id[10];	// '_a2module_'
-	uint32_t crc;
-	uint8_t ffver;
-	uint8_t npatt;
-} A2M_HEADER;
-
-/* Data for importing A2M format */
-typedef struct PACK {
-	char songname[43];
-	char composer[43];
-	char instr_names[250][33];
-	uint8_t instr_data[250][13];
-	uint8_t pattern_order[128];
-	uint8_t tempo;
-	uint8_t speed;
-	uint8_t common_flag;		// A2M_SONGDATA_V5678
-} A2M_SONGDATA_V1234;
-
-typedef struct PACK {
-	char songname[43];
-	char composer[43];
-	char instr_names[255][33];
-	uint8_t instr_data[255][14];
-	uint8_t instr_macros[255][3831];
-	uint8_t macro_table[255][521];
-	uint8_t pattern_order[128];
-	uint8_t tempo;
-	uint8_t speed;
-	uint8_t common_flag;
-	uint16_t patt_len;
-	uint8_t nm_tracks;
-	uint16_t macro_speedup;
-} A2M_SONGDATA_V9;
-
-typedef struct PACK {
-	char songname[43];
-	char composer[43];
-	char instr_names[255][43];
-	uint8_t instr_data[255][14];
-	uint8_t instr_macros[255][3831];
-	uint8_t macro_table[255][521];
-	uint8_t pattern_order[128];
-	uint8_t tempo;
-	uint8_t speed;
-	uint8_t common_flag;
-	uint16_t patt_len;
-	uint8_t nm_tracks;
-	uint16_t macro_speedup;
-	uint8_t flag_4op;
-	uint8_t lock_flags[20];
-	char pattern_names[128][43];	// A2M_SONGDATA_V11
-	uint8_t dis_fmreg_col[255][28];	// A2M_SONGDATA_V11
-} A2M_SONGDATA_V10;
-
-char *a2t_load(char *name)
-{
-	FILE *fh;
-	int fsize;
-	void *p;
-
-	fh = fopen(name, "rb");
-	if(!fh) return NULL;
-
-	fseek(fh, 0, SEEK_END);
-	fsize = ftell(fh) ;
-	fseek(fh, 0, SEEK_SET);
-	p = (void *)malloc(fsize);
-	fread(p, 1, fsize, fh);
-	fclose(fh);
-
-	return p;
-}
-
-static inline void a2t_depack(void *src, int srcsize, void *dst)
-{
-	switch (ffver) {
-	case 1:
-	case 5:		// sixpack
-		sixdepak(src, dst, srcsize);
-		break;
-	case 2:
-	case 6:		// FIXME: lzw
-		break;
-	case 3:
-	case 7:		// FIXME: lzss
-		break;
-	case 4:
-	case 8:		// unpacked
-		memcpy(dst, src, srcsize);
-		break;
-	case 9 ... 11:	// apack (aPlib)
-		aP_depack(src, dst);
-		break;
-	}
-}
 
 // read the variable part of the header
 static int a2t_read_varheader(char *blockptr)
@@ -524,6 +437,32 @@ int a2t_read_order(char *src)
 
 	return len[i];
 }
+
+// only for importing v 1,2,3,4,5,6,7,8
+typedef struct PACK {
+	uint8_t note;
+	uint8_t instr_def;
+	uint8_t effect_def;
+	uint8_t effect;
+} tADTRACK2_EVENT_V1234;
+
+// for importing v 1,2,3,4 patterns
+typedef struct PACK {
+  struct PACK {
+    struct PACK {
+      tADTRACK2_EVENT_V1234 ev;
+    } ch[9];
+  } row[64];
+} tPATTERN_DATA_V1234;
+
+// for importing v 5,6,7,8 patterns
+typedef struct PACK {
+  struct PACK {
+    struct PACK {
+      tADTRACK2_EVENT_V1234 ev;
+    } row[64];
+  } ch[18];
+} tPATTERN_DATA_V5678;
 
 // common for both a2t/a2m
 static int a2_read_patterns(char *src, int s)
@@ -673,6 +612,54 @@ static int a2m_read_varheader(char *blockptr)
 
 	return 0;
 }
+
+/* Data for importing A2M format */
+typedef struct PACK {
+	char songname[43];
+	char composer[43];
+	char instr_names[250][33];
+	uint8_t instr_data[250][13];
+	uint8_t pattern_order[128];
+	uint8_t tempo;
+	uint8_t speed;
+	uint8_t common_flag;		// A2M_SONGDATA_V5678
+} A2M_SONGDATA_V1234;
+
+typedef struct PACK {
+	char songname[43];
+	char composer[43];
+	char instr_names[255][33];
+	uint8_t instr_data[255][14];
+	uint8_t instr_macros[255][3831];
+	uint8_t macro_table[255][521];
+	uint8_t pattern_order[128];
+	uint8_t tempo;
+	uint8_t speed;
+	uint8_t common_flag;
+	uint16_t patt_len;
+	uint8_t nm_tracks;
+	uint16_t macro_speedup;
+} A2M_SONGDATA_V9;
+
+typedef struct PACK {
+	char songname[43];
+	char composer[43];
+	char instr_names[255][43];
+	uint8_t instr_data[255][14];
+	uint8_t instr_macros[255][3831];
+	uint8_t macro_table[255][521];
+	uint8_t pattern_order[128];
+	uint8_t tempo;
+	uint8_t speed;
+	uint8_t common_flag;
+	uint16_t patt_len;
+	uint8_t nm_tracks;
+	uint16_t macro_speedup;
+	uint8_t flag_4op;
+	uint8_t lock_flags[20];
+	char pattern_names[128][43];	// A2M_SONGDATA_V11
+	int8_t dis_fmreg_col[255][28];	// A2M_SONGDATA_V11
+} A2M_SONGDATA_V10;
 
 static int a2m_read_songdata(char *src)
 {
