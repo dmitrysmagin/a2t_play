@@ -23,6 +23,11 @@
 typedef signed char bool;
 #endif
 
+#ifndef FALSE
+#define FALSE 0
+#define TRUE !FALSE
+#endif
+
 typedef struct PACK {
 	uint8_t AM_VIB_EG_modulator;
 	uint8_t AM_VIB_EG_carrier;
@@ -195,16 +200,303 @@ const tTRACK_ADDR _chpm_c = {
 
 tTRACK_ADDR _chan_n, _chan_m, _chan_c;
 
+/*
+  opl3port: Word = $388;
+  error_code: Integer = 0;
+  current_order: Byte = 0;
+  current_pattern: Byte = 0;
+  current_line: Byte = 0;
+*/
+uint8_t tempo = 50;
+uint8_t speed = 6;
+
+uint16_t macro_speedup = 1;
+bool irq_mode = FALSE;
+
 const uint8_t ef_fix1 = 0x80;
 const uint8_t ef_fix2 = 0x90;
+
+int16_t IRQ_freq = 50;
+bool irq_initialized = FALSE;
+const bool timer_fix = TRUE;
+const bool pattern_break = FALSE;
+const bool pattern_delay = FALSE;
+const uint8_t next_line = 0;
+const uint8_t max_patterns = 128;
+const tPLAY_STATUS play_status = isStopped;
+const uint8_t overall_volume = 63;
+const uint8_t global_volume = 63;
+
 const uint8_t keyoff_flag        = 0x80;
 const uint8_t fixed_note_flag    = 0x90;
 const uint8_t pattern_loop_flag  = 0xe0;
 const uint8_t pattern_break_flag = 0xf0;
 
+tFM_PARAMETER_TABLE fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
+bool volume_lock[20];			// array[1..20] of Boolean;
+uint16_t volume_table[20];		// array[1..20] of Word;
+uint16_t vscale_table[20];		// array[1..20] of Word;
+bool peak_lock[20];			// array[1..20] of Boolean;
+bool pan_lock[20];			// array[1..20] of Boolean;
+uint8_t modulator_vol[20];		// array[1..20] of Byte;
+uint8_t carrier_vol[20];		// array[1..20] of Byte;
+tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
+uint8_t voice_table[20];		// array[1..20] of Byte;
+uint16_t freq_table[20];		// array[1..20] of Word;
+uint16_t effect_table[20];		// array[1..20] of Word;
+uint16_t effect_table2[20];		// array[1..20] of Word;
+uint8_t fslide_table[20];		// array[1..20] of Byte;
+uint8_t fslide_table2[20];		// array[1..20] of Byte;
+struct PACK {
+	uint16_t freq;
+	uint8_t speed;
+} porta_table[20];	// array[1..20] of Record freq: Word; speed: Byte; end;
+struct PACK {
+	uint16_t freq;
+	uint8_t speed;
+} porta_table2[20];	// array[1..20] of Record freq: Word; speed: Byte; end;
+struct PACK {
+	uint8_t state, note, add1, add2;
+} arpgg_table[20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
+struct PACK {
+	uint8_t state, note, add1, add2;
+} arpgg_table2[20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
+struct PACK {
+	uint8_t pos, speed, depth;
+	bool fine;
+} vibr_table[20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
+struct PACK {
+	uint8_t pos, speed, depth;
+	bool fine;
+} vibr_table2[20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
+struct PACK {
+	uint8_t pos, speed, depth;
+	bool fine;
+} trem_table[20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
+struct PACK {
+	uint8_t pos, speed, depth;
+	bool fine;
+} trem_table2[20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
+uint8_t retrig_table[20];	// array[1..20] of Byte;
+uint8_t retrig_table2[20];	// array[1..20] of Byte;
+struct PACK {
+	int pos;
+	uint16_t volume;
+} tremor_table[20];		// array[1..20] of Record pos: Integer; volume: Word; end;
+struct PACK {
+	int pos;
+	uint16_t volume;
+} tremor_table2[20];		// array[1..20] of Record pos: Integer; volume: Word; end;
+uint8_t panning_table[20];	// array[1..20] of Byte;
+uint16_t last_effect[20];	// array[1..20] of Word;
+uint16_t last_effect2[20];	// array[1..20] of Word;
+uint8_t volslide_type[20];	// array[1..20] of Byte;
+bool event_new[20];		// array[1..20] of Boolean;
+uint8_t notedel_table[20];	// array[1..20] of Byte;
+uint8_t notecut_table[20];	// array[1..20] of Byte;
+int8_t ftune_table[20];		// array[1..20] of Shortint;
+bool keyoff_loop[20];		// array[1..20] of Boolean;
+struct PACK {
+	uint16_t fmreg_pos,
+		 arpg_pos,
+		 vib_pos;
+	uint8_t  fmreg_count,
+		 fmreg_duration,
+		 arpg_count,
+		 vib_count,
+		 vib_delay,
+		 fmreg_table,
+		 arpg_table,
+		 vib_table,
+		 arpg_note;
+	uint16_t vib_freq;
+} macro_table[20];		// array[1..20] of Record
+				//   fmreg_pos,arpg_pos,vib_pos: Word;
+				//   fmreg_count,fmreg_duration,arpg_count,
+				//   vib_count,vib_delay: Byte;
+				//   fmreg_table,arpg_table,vib_table: Byte;
+				//   arpg_note: Byte;
+				//   vib_freq: Word;
+				// end;
+
+uint8_t loopbck_table[20];	// array[1..20] of Byte;
+uint8_t loop_table[20][256];	// array[1..20,0..255] of Byte;
+uint8_t misc_register;
+
+const uint8_t current_tremolo_depth = 0;
+const uint8_t current_vibrato_depth = 0;
+
+bool speed_update, lockvol, panlock, lockVP;
+uint8_t tremolo_depth, vibrato_depth;
+bool volume_scaling, percussion_mode;
+uint8_t last_order;
+bool reset_chan[20];	// array[1..20] of Boolean;
+
 // This would be later moved to class or struct
 tFIXED_SONGDATA _songdata, *songdata = &_songdata;
 tPATTERN_DATA _pattdata[128], *pattdata = _pattdata;
+
+int ticks, tick0, tickD, tickXF;
+
+#define FreqStart 0x156
+#define FreqEnd   0x2ae
+#define FreqRange  (FreqEnd - FreqStart)
+
+/* PLAYER */
+void opl2out(uint16_t reg, uint16_t data) {}
+void opl3out(uint16_t reg, uint16_t data) {}
+void opl3exp(uint16_t data) {}
+
+static uint16_t nFreq(uint8_t note)
+{
+	static uint16_t Fnum[13] = {0x156,0x16b,0x181,0x198,0x1b0,0x1ca,0x1e5,
+				0x202,0x220,0x241,0x263,0x287,0x2ae};
+
+	if (note >= 12 * 8)
+		return (7 << 10) | FreqEnd;
+
+	return (note / 12 << 10) | Fnum[note % 12];
+}
+
+static uint16_t calc_freq_shift_up(uint16_t freq, uint16_t shift)
+{
+	uint16_t oc = (freq >> 10) & 7;
+	uint16_t fr = (freq & 0x3ff);
+
+	if (fr + shift >= FreqEnd) {
+		if (oc == 7) {
+			fr = FreqEnd;
+		} else {
+			oc++;
+			fr -= FreqRange;
+		}
+	}
+
+	return (uint16_t)((oc << 10) | fr);
+}
+
+static uint16_t calc_freq_shift_down(uint16_t freq, uint16_t shift)
+{
+	uint16_t oc = (freq >> 10) & 7;
+	uint16_t fr = (freq & 0x3ff);
+
+	if (fr - shift <= FreqStart) {
+		if (oc == 0) {
+			fr = FreqStart;
+		} else {
+			oc--;
+			fr += FreqRange;
+		}
+	}
+
+	return (uint16_t)((oc << 10) | fr);
+}
+
+static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
+{
+	uint8_t vibr[32] = {
+		0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,255,
+		253,250,244,235,224,212,197,180,161,141,120,97,74,49,24
+	};
+
+	uint16_t val;
+
+	val = vibr[position & 0x1f] * depth;
+	val = (val << 1) | (val >> 15); // xchg ah,al
+	val = (val & 0x1ff) << 1;
+
+	if (position != 32) val++;
+
+	return val;
+}
+
+#define LO(A) ((A) & 0xFF)
+#define HI(A) (((A) >> 8) & 0xFF)
+
+static void change_freq(uint8_t chan, uint16_t freq)
+{
+	freq_table[chan] = (freq & 0x1fff) +
+			   (freq_table[chan] & ~0x1fff);
+	opl3out(0xa0 + _chan_n[chan], LO(freq_table[chan]));
+	opl3out(0xb0 + _chan_n[chan], HI(freq_table[chan]));
+}
+
+// ins 1..FF
+static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
+{
+	return songdata->instr_data[ins-1][param];
+}
+
+static inline uint16_t max(uint16_t value, uint16_t maximum)
+{
+	return (value > maximum ? maximum : value);
+}
+
+static inline uint16_t concw(uint8_t lo, uint8_t hi)
+{
+	return (lo | (hi << 8));
+}
+
+static void change_frequency(uint8_t chan, uint16_t freq)
+{
+	change_freq(chan, freq);
+	macro_table[chan].vib_freq = freq;
+}
+
+static inline uint16_t _macro_speedup()
+{
+	if (!macro_speedup) return 1;
+
+	return macro_speedup;
+}
+
+static void set_clock_rate(uint8_t clock_rate)
+{
+}
+
+static void update_timer(int Hz)
+{
+	if (Hz == 0) {
+		set_clock_rate(0);
+		return;
+	} else {
+		tempo = Hz;
+	}
+
+	if (tempo == 18 && timer_fix) {
+		IRQ_freq = ((float)tempo + 0.2) * 20.0;
+	} else {
+		IRQ_freq = 250;
+	}
+
+	while (IRQ_freq % (tempo * _macro_speedup()) != 0) {
+		IRQ_freq++;
+	}
+
+	set_clock_rate(1193180 / IRQ_freq);
+}
+
+static void  init_irq()
+{
+	if (irq_initialized)
+		return;
+
+	irq_initialized = TRUE;
+	update_timer(50);
+}
+
+static void done_irq()
+{
+	if(!irq_initialized)
+		return;
+
+	irq_initialized = FALSE;
+	irq_mode = TRUE;
+	update_timer(0);
+	irq_mode = FALSE;
+}
+
+/* LOADER FOR A2M/A2T */
 
 int ffver = 1;
 int len[21];
