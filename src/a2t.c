@@ -225,7 +225,7 @@ const uint8_t next_line = 0;
 const uint8_t max_patterns = 128;
 const tPLAY_STATUS play_status = isStopped;
 const uint8_t overall_volume = 63;
-const uint8_t global_volume = 63;
+uint8_t global_volume = 63;
 
 const uint8_t keyoff_flag        = 0x80;
 const uint8_t fixed_note_flag    = 0x90;
@@ -323,8 +323,8 @@ uint8_t loopbck_table[20];	// array[1..20] of Byte;
 uint8_t loop_table[20][256];	// array[1..20,0..255] of Byte;
 uint8_t misc_register;
 
-const uint8_t current_tremolo_depth = 0;
-const uint8_t current_vibrato_depth = 0;
+uint8_t current_tremolo_depth = 0;
+uint8_t current_vibrato_depth = 0;
 
 bool speed_update, lockvol, panlock, lockVP;
 uint8_t tremolo_depth, vibrato_depth;
@@ -476,7 +476,86 @@ static void update_timer(int Hz)
 	set_clock_rate(1193180 / IRQ_freq);
 }
 
-static void  init_irq()
+static void key_off(uint8_t chan)
+{
+	freq_table[chan] = LO(freq_table[chan]) +
+			  ((HI(freq_table[chan]) & ~0x20) << 8);
+	change_frequency(chan, freq_table[chan]);
+	event_table[chan].note = event_table[chan].note | keyoff_flag;
+}
+
+static void release_sustaining_sound(uint8_t chan)
+{
+	opl3out(_instr[02] + _chan_m[chan], 63);
+	opl3out(_instr[03] + _chan_c[chan], 63);
+
+	memset(&fmpar_table[chan].adsrw_car, 0,
+		sizeof(fmpar_table[chan].adsrw_car));
+	memset(&fmpar_table[chan].adsrw_mod, 0,
+		sizeof(fmpar_table[chan].adsrw_mod));
+
+	opl3out(0xb0 + _chan_n[chan], 0);
+	opl3out(_instr[04] + _chan_m[chan], NONE);
+	opl3out(_instr[05] + _chan_c[chan], NONE);
+	opl3out(_instr[06] + _chan_m[chan], NONE);
+	opl3out(_instr[07] + _chan_c[chan], NONE);
+
+	key_off(chan);
+	event_table[chan].instr_def = 0;
+	reset_chan[chan] = TRUE;
+}
+
+static uint8_t scale_volume(uint8_t volume, uint8_t scale_factor)
+{
+	return 63 - ((63 - volume) *
+		(63 - scale_factor) / 63);
+}
+
+static void set_ins_volume(uint8_t modulator,uint8_t  carrier,uint8_t  chan)
+{
+	uint8_t temp;
+
+	if (modulator != NONE) {
+		temp = modulator;
+
+		if (volume_scaling)
+			if (((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
+			    (percussion_mode && (chan >= 17 && chan <= 20)))
+				modulator = scale_volume(ins_parameter(voice_table[chan], 2) & 0x3f, modulator);
+
+		if (((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
+		    (percussion_mode && (chan >= 17 && chan <= 20)))
+			opl3out(_instr[02] + _chan_m[chan],
+				scale_volume(scale_volume(modulator, 63 - global_volume),
+					     63 - overall_volume) + LO(vscale_table[chan]));
+		else
+			opl3out(_instr[02] + _chan_m[chan],
+				temp + LO(vscale_table[chan]));
+
+		volume_table[chan] = concw(temp, HI(volume_table[chan]));
+
+		if (((ins_parameter(voice_table[chan],10) & 1) == 1) ||
+		    (percussion_mode && (chan >= 17 && chan <= 20)))
+			modulator_vol[chan] = 63 - scale_volume(modulator, 63 - global_volume);
+		else
+			modulator_vol[chan] = 63 - modulator;
+	}
+
+	if (carrier != NONE) {
+	      temp = carrier;
+	      if (volume_scaling)
+		carrier = scale_volume(ins_parameter(voice_table[chan], 3) & 0x3f, carrier);
+
+	      opl3out(_instr[03] + _chan_c[chan],
+		      scale_volume(scale_volume(carrier, 63 - global_volume),
+				   63 - overall_volume) + HI(vscale_table[chan]));
+
+	      volume_table[chan] = concw(LO(volume_table[chan]), temp);
+	      carrier_vol[chan] = 63 - scale_volume(carrier, 63 - global_volume);
+	}
+}
+
+static void init_irq()
 {
 	if (irq_initialized)
 		return;
@@ -494,6 +573,119 @@ static void done_irq()
 	irq_mode = TRUE;
 	update_timer(0);
 	irq_mode = FALSE;
+}
+
+static void init_buffers()
+{
+	memset(fmpar_table, 0, sizeof(fmpar_table));
+	memset(pan_lock, panlock, sizeof(pan_lock));
+	memset(volume_table, 0, sizeof(volume_table));
+	memset(vscale_table, 0, sizeof(vscale_table));
+	memset(modulator_vol, 0, sizeof(modulator_vol));
+	memset(carrier_vol, 0, sizeof(carrier_vol));
+	memset(event_table, 0, sizeof(event_table));
+	memset(freq_table, 0, sizeof(freq_table));
+	memset(effect_table, 0, sizeof(effect_table));
+	memset(effect_table2, 0, sizeof(effect_table2));
+	memset(fslide_table, 0, sizeof(fslide_table));
+	memset(fslide_table2, 0, sizeof(fslide_table2));
+	memset(porta_table, 0, sizeof(porta_table));
+	memset(porta_table2, 0, sizeof(porta_table2));
+	memset(arpgg_table, 0, sizeof(arpgg_table));
+	memset(arpgg_table2, 0, sizeof(arpgg_table2));
+	memset(vibr_table, 0, sizeof(vibr_table));
+	memset(vibr_table2, 0, sizeof(vibr_table2));
+	memset(trem_table, 0, sizeof(trem_table));
+	memset(trem_table2, 0, sizeof(trem_table2));
+	memset(retrig_table, 0, sizeof(retrig_table));
+	memset(retrig_table2, 0, sizeof(retrig_table2));
+	memset(tremor_table, 0, sizeof(tremor_table));
+	memset(tremor_table2, 0, sizeof(tremor_table2));
+	memset(panning_table, 0, sizeof(panning_table));
+	memset(last_effect, 0, sizeof(last_effect));
+	memset(last_effect2, 0, sizeof(last_effect2));
+	memset(voice_table, 0, sizeof(voice_table));
+	memset(event_new, 0, sizeof(event_new));
+	memset(notedel_table, NONE, sizeof(notedel_table));
+	memset(notecut_table, NONE, sizeof(notecut_table));
+	memset(ftune_table, 0, sizeof(ftune_table));
+	memset(loopbck_table, NONE, sizeof(loopbck_table));
+	memset(loop_table, NONE, sizeof(loop_table));
+	memset(reset_chan, FALSE, sizeof(reset_chan));
+	memset(keyoff_loop, FALSE, sizeof(keyoff_loop));
+	memset(macro_table, 0, sizeof(macro_table));
+
+	if (!lockvol) {
+		memset(volume_lock, 0, sizeof(volume_lock));
+	} else {
+		for (int i = 0; i < 20; i++)
+			  volume_lock[i] = (bool)((songdata->lock_flags[i] >> 4) & 1);
+	}
+
+	if (!panlock) {
+		memset(panning_table, 0, sizeof(panning_table));
+	} else {
+		for (int i = 0; i < 20; i++)
+			  panning_table[i] = songdata->lock_flags[i] & 3;
+	}
+
+	if (!lockVP) {
+	    memset(peak_lock, 0, sizeof(peak_lock));
+	} else {
+		for (int i = 0; i < 20; i++)
+			  peak_lock[i] = (bool)((songdata->lock_flags[i] >> 5) & 1);
+	}
+
+	for (int i = 0; i < 20; i++)
+		volslide_type[i] = (songdata->lock_flags[i] >> 2) & 3;
+}
+
+static void init_player()
+{
+	opl2out(0x01, 0);
+
+	for (int i = 0; i < 18; i++)
+		opl2out(0xb0 + _chan_n[i], 0);
+
+	for (int i = 0x80; i <= 0x8d; i++)
+		opl2out(i, NONE);
+
+	for (int i = 0x90; i <= 0x95; i++)
+		opl2out(i, NONE);
+
+	misc_register = (tremolo_depth << 7) +
+			(vibrato_depth << 6) +
+			(percussion_mode << 5);
+
+	opl2out(0x01, 0x20);
+	opl2out(0x08, 0x40);
+	opl3exp(0x0105);
+	opl3exp(0x04 + (songdata->flag_4op << 8));
+
+	key_off(17);
+	key_off(18);
+	opl2out(_instr[11], misc_register);
+
+	init_buffers();
+
+	if (!percussion_mode) {
+		memcpy(_chan_n, _chmm_n, sizeof(_chan_n));
+		memcpy(_chan_m, _chmm_m, sizeof(_chan_m));
+		memcpy(_chan_c, _chmm_c, sizeof(_chan_c));
+	} else {
+		memcpy(_chan_n, _chpm_n, sizeof(_chan_n));
+		memcpy(_chan_m, _chpm_m, sizeof(_chan_m));
+		memcpy(_chan_c, _chpm_c, sizeof(_chan_c));
+	}
+
+	current_tremolo_depth = tremolo_depth;
+	current_vibrato_depth = vibrato_depth;
+	global_volume = 63;
+
+	for (int i = 0; i < 20; i++) {
+		arpgg_table[i].state = 1;
+		voice_table[i] = i;
+	}
 }
 
 /* LOADER FOR A2M/A2T */
