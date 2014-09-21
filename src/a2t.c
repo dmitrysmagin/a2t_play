@@ -91,11 +91,10 @@ typedef struct PACK {
 } tMACRO_TABLE;
 
 typedef struct PACK {
-	uint8_t adsrw_car;
 	struct {
 		uint8_t attck,dec,sustn,rel,
 		wform;
-	} adsrw_mod;
+	} adsrw_car, adsrw_mod;
 	uint8_t connect;
 	uint8_t feedb;
 	uint8_t multipM,kslM,tremM,vibrM,ksrM,sustM;
@@ -111,10 +110,8 @@ typedef struct PACK {
 	char            instr_names[255][43];// array[1..255] of String[42];
 	//tADTRACK2_INS   instr_data[255];     // array[1..255] of tADTRACK2_INS;
 	uint8_t         instr_data[255][14];
-	//tREGISTER_TABLE instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
-	uint8_t         instr_macros[255][3831];
-	//tMACRO_TABLE    macro_table[255];    // array[1..255] of tMACRO_TABLE;
-	uint8_t         macro_table[255][521];
+	tREGISTER_TABLE instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
+	tMACRO_TABLE    macro_table[255];    // array[1..255] of tMACRO_TABLE;
 	uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
 	uint8_t         tempo;
 	uint8_t         speed;
@@ -200,6 +197,114 @@ const tTRACK_ADDR _chpm_c = {
 
 tTRACK_ADDR _chan_n, _chan_m, _chan_c;
 
+
+const uint8_t ef_Arpeggio          = 0;
+const uint8_t ef_FSlideUp          = 1;
+const uint8_t ef_FSlideDown        = 2;
+const uint8_t ef_TonePortamento    = 3;
+const uint8_t ef_Vibrato           = 4;
+const uint8_t ef_TPortamVolSlide   = 5;
+const uint8_t ef_VibratoVolSlide   = 6;
+const uint8_t ef_FSlideUpFine      = 7;
+const uint8_t ef_FSlideDownFine    = 8;
+const uint8_t ef_SetModulatorVol   = 9;
+const uint8_t ef_VolSlide          = 10;
+const uint8_t ef_PositionJump      = 11;
+const uint8_t ef_SetInsVolume      = 12;
+const uint8_t ef_PatternBreak      = 13;
+const uint8_t ef_SetTempo          = 14;
+const uint8_t ef_SetSpeed          = 15;
+const uint8_t ef_TPortamVSlideFine = 16;
+const uint8_t ef_VibratoVSlideFine = 17;
+const uint8_t ef_SetCarrierVol     = 18;
+const uint8_t ef_SetWaveform       = 19;
+const uint8_t ef_VolSlideFine      = 20;
+const uint8_t ef_RetrigNote        = 21;
+const uint8_t ef_Tremolo           = 22;
+const uint8_t ef_Tremor            = 23;
+const uint8_t ef_ArpggVSlide       = 24;
+const uint8_t ef_ArpggVSlideFine   = 25;
+const uint8_t ef_MultiRetrigNote   = 26;
+const uint8_t ef_FSlideUpVSlide    = 27;
+const uint8_t ef_FSlideDownVSlide  = 28;
+const uint8_t ef_FSlUpFineVSlide   = 29;
+const uint8_t ef_FSlDownFineVSlide = 30;
+const uint8_t ef_FSlUpVSlF         = 31;
+const uint8_t ef_FSlDownVSlF       = 32;
+const uint8_t ef_FSlUpFineVSlF     = 33;
+const uint8_t ef_FSlDownFineVSlF   = 34;
+const uint8_t ef_Extended          = 35;
+const uint8_t ef_Extended2         = 36;
+const uint8_t ef_SetGlobalVolume   = 37;
+const uint8_t ef_SwapArpeggio      = 38;
+const uint8_t ef_SwapVibrato       = 39;
+const uint8_t ef_ForceInsVolume    = 40;
+const uint8_t ef_Extended3         = 41;
+const uint8_t ef_ExtraFineArpeggio = 42;
+const uint8_t ef_ExtraFineVibrato  = 43;
+const uint8_t ef_ExtraFineTremolo  = 44;
+const uint8_t ef_ex_SetTremDepth   = 0;
+const uint8_t ef_ex_SetVibDepth    = 1;
+const uint8_t ef_ex_SetAttckRateM  = 2;
+const uint8_t ef_ex_SetDecayRateM  = 3;
+const uint8_t ef_ex_SetSustnLevelM = 4;
+const uint8_t ef_ex_SetRelRateM    = 5;
+const uint8_t ef_ex_SetAttckRateC  = 6;
+const uint8_t ef_ex_SetDecayRateC  = 7;
+const uint8_t ef_ex_SetSustnLevelC = 8;
+const uint8_t ef_ex_SetRelRateC    = 9;
+const uint8_t ef_ex_SetFeedback    = 10;
+const uint8_t ef_ex_SetPanningPos  = 11;
+const uint8_t ef_ex_PatternLoop    = 12;
+const uint8_t ef_ex_PatternLoopRec = 13;
+const uint8_t ef_ex_MacroKOffLoop  = 14;
+const uint8_t ef_ex_ExtendedCmd    = 15;
+const uint8_t ef_ex_cmd_RSS        = 0;
+const uint8_t ef_ex_cmd_ResetVol   = 1;
+const uint8_t ef_ex_cmd_LockVol    = 2;
+const uint8_t ef_ex_cmd_UnlockVol  = 3;
+const uint8_t ef_ex_cmd_LockVP     = 4;
+const uint8_t ef_ex_cmd_UnlockVP   = 5;
+const uint8_t ef_ex_cmd_VSlide_mod = 6;
+const uint8_t ef_ex_cmd_VSlide_car = 7;
+const uint8_t ef_ex_cmd_VSlide_def = 8;
+const uint8_t ef_ex_cmd_LockPan    = 9;
+const uint8_t ef_ex_cmd_UnlockPan  = 10;
+const uint8_t ef_ex_cmd_VibrOff    = 11;
+const uint8_t ef_ex_cmd_TremOff    = 12;
+const uint8_t ef_ex_cmd_FineVibr   = 13;
+const uint8_t ef_ex_cmd_FineTrem   = 14;
+const uint8_t ef_ex_cmd_NoRestart  = 15;
+const uint8_t ef_ex2_PatDelayFrame = 0;
+const uint8_t ef_ex2_PatDelayRow   = 1;
+const uint8_t ef_ex2_NoteDelay     = 2;
+const uint8_t ef_ex2_NoteCut       = 3;
+const uint8_t ef_ex2_FineTuneUp    = 4;
+const uint8_t ef_ex2_FineTuneDown  = 5;
+const uint8_t ef_ex2_GlVolSlideUp  = 6;
+const uint8_t ef_ex2_GlVolSlideDn  = 7;
+const uint8_t ef_ex2_GlVolSlideUpF = 8;
+const uint8_t ef_ex2_GlVolSlideDnF = 9;
+const uint8_t ef_ex2_GlVolSldUpXF  = 10;
+const uint8_t ef_ex2_GlVolSldDnXF  = 11;
+const uint8_t ef_ex2_VolSlideUpXF  = 12;
+const uint8_t ef_ex2_VolSlideDnXF  = 13;
+const uint8_t ef_ex2_FreqSlideUpXF = 14;
+const uint8_t ef_ex2_FreqSlideDnXF = 15;
+const uint8_t ef_ex3_SetConnection = 0;
+const uint8_t ef_ex3_SetMultipM    = 1;
+const uint8_t ef_ex3_SetKslM       = 2;
+const uint8_t ef_ex3_SetTremoloM   = 3;
+const uint8_t ef_ex3_SetVibratoM   = 4;
+const uint8_t ef_ex3_SetKsrM       = 5;
+const uint8_t ef_ex3_SetSustainM   = 6;
+const uint8_t ef_ex3_SetMultipC    = 7;
+const uint8_t ef_ex3_SetKslC       = 8;
+const uint8_t ef_ex3_SetTremoloC   = 9;
+const uint8_t ef_ex3_SetVibratoC   = 10;
+const uint8_t ef_ex3_SetKsrC       = 11;
+const uint8_t ef_ex3_SetSustainC   = 12;
+
 /*
   opl3port: Word = $388;
   error_code: Integer = 0;
@@ -224,7 +329,7 @@ const bool pattern_delay = FALSE;
 const uint8_t next_line = 0;
 const uint8_t max_patterns = 128;
 const tPLAY_STATUS play_status = isStopped;
-const uint8_t overall_volume = 63;
+uint8_t overall_volume = 63;
 uint8_t global_volume = 63;
 
 const uint8_t keyoff_flag        = 0x80;
@@ -421,10 +526,10 @@ static void change_freq(uint8_t chan, uint16_t freq)
 	opl3out(0xb0 + _chan_n[chan], HI(freq_table[chan]));
 }
 
-// ins 1..FF
+// FIXME: check ins
 static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
 {
-	return songdata->instr_data[ins-1][param];
+	return songdata->instr_data[ins][param];
 }
 
 static inline uint16_t max(uint16_t value, uint16_t maximum)
@@ -486,8 +591,8 @@ static void key_off(uint8_t chan)
 
 static void release_sustaining_sound(uint8_t chan)
 {
-	opl3out(_instr[02] + _chan_m[chan], 63);
-	opl3out(_instr[03] + _chan_c[chan], 63);
+	opl3out(_instr[2] + _chan_m[chan], 63);
+	opl3out(_instr[3] + _chan_c[chan], 63);
 
 	memset(&fmpar_table[chan].adsrw_car, 0,
 		sizeof(fmpar_table[chan].adsrw_car));
@@ -495,10 +600,10 @@ static void release_sustaining_sound(uint8_t chan)
 		sizeof(fmpar_table[chan].adsrw_mod));
 
 	opl3out(0xb0 + _chan_n[chan], 0);
-	opl3out(_instr[04] + _chan_m[chan], NONE);
-	opl3out(_instr[05] + _chan_c[chan], NONE);
-	opl3out(_instr[06] + _chan_m[chan], NONE);
-	opl3out(_instr[07] + _chan_c[chan], NONE);
+	opl3out(_instr[4] + _chan_m[chan], NONE);
+	opl3out(_instr[5] + _chan_c[chan], NONE);
+	opl3out(_instr[6] + _chan_m[chan], NONE);
+	opl3out(_instr[7] + _chan_c[chan], NONE);
 
 	key_off(chan);
 	event_table[chan].instr_def = 0;
@@ -511,7 +616,7 @@ static uint8_t scale_volume(uint8_t volume, uint8_t scale_factor)
 		(63 - scale_factor) / 63);
 }
 
-static void set_ins_volume(uint8_t modulator,uint8_t  carrier,uint8_t  chan)
+static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
 	uint8_t temp;
 
@@ -525,11 +630,11 @@ static void set_ins_volume(uint8_t modulator,uint8_t  carrier,uint8_t  chan)
 
 		if (((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
 		    (percussion_mode && (chan >= 17 && chan <= 20)))
-			opl3out(_instr[02] + _chan_m[chan],
+			opl3out(_instr[2] + _chan_m[chan],
 				scale_volume(scale_volume(modulator, 63 - global_volume),
 					     63 - overall_volume) + LO(vscale_table[chan]));
 		else
-			opl3out(_instr[02] + _chan_m[chan],
+			opl3out(_instr[2] + _chan_m[chan],
 				temp + LO(vscale_table[chan]));
 
 		volume_table[chan] = concw(temp, HI(volume_table[chan]));
@@ -546,12 +651,277 @@ static void set_ins_volume(uint8_t modulator,uint8_t  carrier,uint8_t  chan)
 	      if (volume_scaling)
 		carrier = scale_volume(ins_parameter(voice_table[chan], 3) & 0x3f, carrier);
 
-	      opl3out(_instr[03] + _chan_c[chan],
+	      opl3out(_instr[3] + _chan_c[chan],
 		      scale_volume(scale_volume(carrier, 63 - global_volume),
 				   63 - overall_volume) + HI(vscale_table[chan]));
 
 	      volume_table[chan] = concw(LO(volume_table[chan]), temp);
 	      carrier_vol[chan] = 63 - scale_volume(carrier, 63 - global_volume);
+	}
+}
+
+static void reset_ins_volume(uint8_t chan)
+{
+	if (!volume_scaling) {
+		set_ins_volume(ins_parameter(voice_table[chan], 2) & 0x3f,
+			       ins_parameter(voice_table[chan], 3) & 0x3f, chan);
+	} else {
+		if ((ins_parameter(voice_table[chan], 10) & 1) == 0) {
+			set_ins_volume(ins_parameter(voice_table[chan], 2) & 0x3f, 0, chan);
+		} else {
+			set_ins_volume(0, 0, chan);
+		}
+	}
+}
+
+static void set_global_volume()
+{
+	for (int chan = 0; chan < 20; chan++) {
+		if (!((carrier_vol[chan] == 0) &&
+		    (modulator_vol[chan] == 0))) {
+			if ((ins_parameter(voice_table[chan], 10) & 1) == 0) {
+				set_ins_volume(NONE, HI(volume_table[chan]), chan);
+			} else {
+				set_ins_volume(LO(volume_table[chan]), HI(volume_table[chan]), chan);
+			}
+		}
+	}
+}
+
+static void set_overall_volume(uint8_t level)
+{
+	overall_volume = max(level, 63);
+	set_global_volume();
+}
+
+// FIXME: check ins
+static void init_macro_table(uint8_t chan, uint8_t note, uint8_t ins, uint16_t freq)
+{
+	macro_table[chan].fmreg_count = 1;
+	macro_table[chan].fmreg_pos = 0;
+	macro_table[chan].fmreg_duration = 0;
+	macro_table[chan].fmreg_table = ins;
+	macro_table[chan].arpg_count = 1;
+	macro_table[chan].arpg_pos = 0;
+	macro_table[chan].arpg_table =
+		songdata->instr_macros[ins].arpeggio_table;
+	macro_table[chan].arpg_note = note;
+	macro_table[chan].vib_count = 1;
+	macro_table[chan].vib_pos = 0;
+	macro_table[chan].vib_table =
+		songdata->instr_macros[ins].vibrato_table;
+	macro_table[chan].vib_freq = freq;
+	macro_table[chan].vib_delay =
+		songdata->macro_table[macro_table[chan].vib_table].vibrato.delay;
+}
+
+static void set_ins_data(uint8_t ins, uint8_t chan)
+{
+	uint8_t old_ins;
+
+	if ((ins != event_table[chan].instr_def) || reset_chan[chan]) {
+		opl3out(_instr[2] + _chan_m[chan], 63);
+		opl3out(_instr[3] + _chan_c[chan], 63);
+
+		if (!pan_lock[chan]) {
+			panning_table[chan] = ins_parameter(ins, 11);
+		} else {
+			panning_table[chan] = songdata->lock_flags[chan] & 3;
+		}
+
+		opl3out(_instr[0] + _chan_m[chan], ins_parameter(ins, 0));
+		opl3out(_instr[1] + _chan_c[chan], ins_parameter(ins, 1));
+		opl3out(_instr[4] + _chan_m[chan], ins_parameter(ins, 4));
+		opl3out(_instr[5] + _chan_c[chan], ins_parameter(ins, 5));
+		opl3out(_instr[6] + _chan_m[chan], ins_parameter(ins, 6));
+		opl3out(_instr[7] + _chan_c[chan], ins_parameter(ins, 7));
+		opl3out(_instr[8] + _chan_m[chan], ins_parameter(ins, 8));
+		opl3out(_instr[9] + _chan_c[chan], ins_parameter(ins, 9));
+		opl3out(_instr[10] + _chan_n[chan], ins_parameter(ins, 10) |
+			_panning[panning_table[chan]]);
+
+		fmpar_table[chan].connect = ins_parameter(ins, 10) & 1;
+		fmpar_table[chan].feedb   = (ins_parameter(ins, 10) >> 1) & 7;
+		fmpar_table[chan].multipM = ins_parameter(ins, 0)  & 0x0f;
+		fmpar_table[chan].kslM    = ins_parameter(ins, 2)  >> 6;
+		fmpar_table[chan].tremM   = ins_parameter(ins, 0)  >> 7;
+		fmpar_table[chan].vibrM   = (ins_parameter(ins, 0)  >> 6) & 1;
+		fmpar_table[chan].ksrM    = (ins_parameter(ins, 0)  >> 4) & 1;
+		fmpar_table[chan].sustM   = (ins_parameter(ins, 0)  >> 5) & 1;
+		fmpar_table[chan].multipC = ins_parameter(ins, 1)  & 0x0f;
+		fmpar_table[chan].kslC    = ins_parameter(ins, 3)  >> 6;
+		fmpar_table[chan].tremC   = ins_parameter(ins, 1)  >> 7;
+		fmpar_table[chan].vibrC   = (ins_parameter(ins, 1)  >> 6) & 1;
+		fmpar_table[chan].ksrC    = (ins_parameter(ins, 1)  >> 4) & 1;
+		fmpar_table[chan].sustC   = (ins_parameter(ins, 1)  >> 5) & 1;
+
+		fmpar_table[chan].adsrw_car.attck = ins_parameter(ins, 5) >> 4;
+		fmpar_table[chan].adsrw_mod.attck = ins_parameter(ins, 4) >> 4;
+		fmpar_table[chan].adsrw_car.dec   = ins_parameter(ins, 5) & 0x0f;
+		fmpar_table[chan].adsrw_mod.dec   = ins_parameter(ins, 4) & 0x0f;
+		fmpar_table[chan].adsrw_car.sustn = ins_parameter(ins, 7) >> 4;
+		fmpar_table[chan].adsrw_mod.sustn = ins_parameter(ins, 6) >> 4;
+		fmpar_table[chan].adsrw_car.rel   = ins_parameter(ins, 7) & 0x0f;
+		fmpar_table[chan].adsrw_mod.rel   = ins_parameter(ins, 6) & 0x0f;
+		fmpar_table[chan].adsrw_car.wform = ins_parameter(ins, 9) & 0x07;
+		fmpar_table[chan].adsrw_mod.wform = ins_parameter(ins, 8) & 0x07;
+
+		if (!reset_chan[chan])
+			keyoff_loop[chan] = FALSE;
+
+		if (reset_chan[chan]) {
+			voice_table[chan] = ins;
+			reset_ins_volume(chan);
+			reset_chan[chan] = FALSE;
+		}
+
+		if ((event_table[chan].note & 0x7f) > 0 &&
+		    (event_table[chan].note & 0x7f) < 12 * 8 + 1) {
+			init_macro_table(chan, event_table[chan].note & 0x7f, ins, freq_table[chan]);
+		} else {
+			init_macro_table(chan, 0, ins, freq_table[chan]);
+		}
+
+	}
+
+	vscale_table[chan] = concw(fmpar_table[chan].kslM << 6,
+                              fmpar_table[chan].kslC << 6);
+	voice_table[chan] = ins;
+	old_ins = event_table[chan].instr_def;
+	event_table[chan].instr_def = ins;
+
+	if (!volume_lock[chan] || (ins != old_ins))
+		reset_ins_volume(chan);
+}
+
+static void update_modulator_adsrw(uint8_t chan)
+{
+	opl3out(_instr[4] + _chan_m[chan],
+		(fmpar_table[chan].adsrw_mod.attck << 4) +
+		fmpar_table[chan].adsrw_mod.dec);
+	opl3out(_instr[6] + _chan_m[chan],
+		(fmpar_table[chan].adsrw_mod.sustn << 4) +
+		fmpar_table[chan].adsrw_mod.rel);
+	opl3out(_instr[8] + _chan_m[chan],
+		fmpar_table[chan].adsrw_mod.wform);
+}
+
+static void update_carrier_adsrw(uint8_t chan)
+{
+	opl3out(_instr[5] + _chan_c[chan],
+		(fmpar_table[chan].adsrw_car.attck << 4) +
+		fmpar_table[chan].adsrw_car.dec);
+	opl3out(_instr[7] + _chan_c[chan],
+		(fmpar_table[chan].adsrw_car.sustn << 4) +
+		fmpar_table[chan].adsrw_car.rel);
+	opl3out(_instr[9] + _chan_c[chan],
+		fmpar_table[chan].adsrw_car.wform);
+}
+
+static void update_fmpar(uint8_t chan)
+{
+	opl3out(_instr[0] + _chan_m[chan],
+		fmpar_table[chan].multipM +
+		(fmpar_table[chan].ksrM << 4) +
+		(fmpar_table[chan].sustM << 5) +
+		(fmpar_table[chan].vibrM << 6) +
+		(fmpar_table[chan].tremM << 7));
+
+	opl3out(_instr[1] + _chan_c[chan],
+		fmpar_table[chan].multipC +
+		(fmpar_table[chan].ksrC << 4) +
+		(fmpar_table[chan].sustC << 5) +
+		(fmpar_table[chan].vibrC << 6) +
+		(fmpar_table[chan].tremC << 7));
+
+	opl3out(_instr[10] + _chan_n[chan],
+		(fmpar_table[chan].connect +
+		(fmpar_table[chan].feedb << 1)) |
+		_panning[panning_table[chan]]);
+
+	vscale_table[chan] = concw(fmpar_table[chan].kslM << 6,
+				   fmpar_table[chan].kslC << 6);
+
+	set_ins_volume(LO(volume_table[chan]),
+		       HI(volume_table[chan]), chan);
+}
+
+static void output_note(uint8_t note, uint8_t ins, uint8_t chan, bool restart_macro)
+{
+	uint16_t freq;
+
+	if ((note == 0) && (ftune_table[chan] == 0)) return;
+
+	if ((note == 0) || (note > 12*8+1)) { // If NOT (note in [1..12*8+1])
+		freq = freq_table[chan];
+	} else {
+		freq = nFreq(note - 1) + (int8_t)ins_parameter(ins, 12);
+		opl3out(0xb0 + _chan_n[chan], 0);
+		freq_table[chan] = concw(LO(freq_table[chan]),
+					  HI(freq_table[chan]) | 0x20);
+	}
+
+	if (ftune_table[chan] == -127)
+		ftune_table[chan] = 0;
+
+	freq = freq + ftune_table[chan];
+	change_frequency(chan, freq);
+
+	if (note != 0) {
+		event_table[chan].note = note;
+
+		if (restart_macro) {
+			if (!(((event_table[chan].effect_def == ef_Extended) &&
+			      (event_table[chan].effect / 16 == ef_ex_ExtendedCmd) &&
+			      (event_table[chan].effect % 16 == ef_ex_cmd_NoRestart)) ||
+			      ((event_table[chan].effect_def2 == ef_Extended) &&
+			      (event_table[chan].effect2 / 16 == ef_ex_ExtendedCmd) &&
+			      (event_table[chan].effect2 % 16 == ef_ex_cmd_NoRestart)))) {
+				init_macro_table(chan, note, ins, freq);
+			} else {
+				macro_table[chan].arpg_note = note;
+			}
+		}
+	}
+}
+
+
+static void output_note_NR(uint8_t note, uint8_t ins, uint8_t chan, bool restart_macro)
+{
+	uint16_t freq;
+
+	if ((note == 0) && (ftune_table[chan] == 0)) return;
+
+	if ((note == 0) || (note > 12*8+1)) { // If NOT (note in [1..12*8+1])
+		freq = freq_table[chan];
+	} else {
+		freq = nFreq(note - 1) + (int8_t)ins_parameter(ins, 12);
+		freq_table[chan] = concw(LO(freq_table[chan]),
+					  HI(freq_table[chan]) | 0x20);
+	}
+
+	if (ftune_table[chan] == -127)
+		ftune_table[chan] = 0;
+
+
+	freq = freq + ftune_table[chan];
+	change_frequency(chan, freq);
+
+	if (note != 0) {
+		event_table[chan].note = note;
+
+		if (restart_macro) {
+			if (!(((event_table[chan].effect_def == ef_Extended) &&
+			      (event_table[chan].effect / 16 == ef_ex_ExtendedCmd) &&
+			      (event_table[chan].effect % 16 == ef_ex_cmd_NoRestart)) ||
+			      ((event_table[chan].effect_def2 == ef_Extended) &&
+			      (event_table[chan].effect2 / 16 == ef_ex_ExtendedCmd) &&
+			      (event_table[chan].effect2 % 16 == ef_ex_cmd_NoRestart)))) {
+				init_macro_table(chan, note, ins, freq);
+			} else {
+				macro_table[chan].arpg_note = note;
+			}
+		}
 	}
 }
 
