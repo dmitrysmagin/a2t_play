@@ -198,120 +198,121 @@ const tTRACK_ADDR _chpm_c = {
 tTRACK_ADDR _chan_n, _chan_m, _chan_c;
 
 
-const uint8_t ef_Arpeggio          = 0;
-const uint8_t ef_FSlideUp          = 1;
-const uint8_t ef_FSlideDown        = 2;
-const uint8_t ef_TonePortamento    = 3;
-const uint8_t ef_Vibrato           = 4;
-const uint8_t ef_TPortamVolSlide   = 5;
-const uint8_t ef_VibratoVolSlide   = 6;
-const uint8_t ef_FSlideUpFine      = 7;
-const uint8_t ef_FSlideDownFine    = 8;
-const uint8_t ef_SetModulatorVol   = 9;
-const uint8_t ef_VolSlide          = 10;
-const uint8_t ef_PositionJump      = 11;
-const uint8_t ef_SetInsVolume      = 12;
-const uint8_t ef_PatternBreak      = 13;
-const uint8_t ef_SetTempo          = 14;
-const uint8_t ef_SetSpeed          = 15;
-const uint8_t ef_TPortamVSlideFine = 16;
-const uint8_t ef_VibratoVSlideFine = 17;
-const uint8_t ef_SetCarrierVol     = 18;
-const uint8_t ef_SetWaveform       = 19;
-const uint8_t ef_VolSlideFine      = 20;
-const uint8_t ef_RetrigNote        = 21;
-const uint8_t ef_Tremolo           = 22;
-const uint8_t ef_Tremor            = 23;
-const uint8_t ef_ArpggVSlide       = 24;
-const uint8_t ef_ArpggVSlideFine   = 25;
-const uint8_t ef_MultiRetrigNote   = 26;
-const uint8_t ef_FSlideUpVSlide    = 27;
-const uint8_t ef_FSlideDownVSlide  = 28;
-const uint8_t ef_FSlUpFineVSlide   = 29;
-const uint8_t ef_FSlDownFineVSlide = 30;
-const uint8_t ef_FSlUpVSlF         = 31;
-const uint8_t ef_FSlDownVSlF       = 32;
-const uint8_t ef_FSlUpFineVSlF     = 33;
-const uint8_t ef_FSlDownFineVSlF   = 34;
-const uint8_t ef_Extended          = 35;
-const uint8_t ef_Extended2         = 36;
-const uint8_t ef_SetGlobalVolume   = 37;
-const uint8_t ef_SwapArpeggio      = 38;
-const uint8_t ef_SwapVibrato       = 39;
-const uint8_t ef_ForceInsVolume    = 40;
-const uint8_t ef_Extended3         = 41;
-const uint8_t ef_ExtraFineArpeggio = 42;
-const uint8_t ef_ExtraFineVibrato  = 43;
-const uint8_t ef_ExtraFineTremolo  = 44;
-const uint8_t ef_ex_SetTremDepth   = 0;
-const uint8_t ef_ex_SetVibDepth    = 1;
-const uint8_t ef_ex_SetAttckRateM  = 2;
-const uint8_t ef_ex_SetDecayRateM  = 3;
-const uint8_t ef_ex_SetSustnLevelM = 4;
-const uint8_t ef_ex_SetRelRateM    = 5;
-const uint8_t ef_ex_SetAttckRateC  = 6;
-const uint8_t ef_ex_SetDecayRateC  = 7;
-const uint8_t ef_ex_SetSustnLevelC = 8;
-const uint8_t ef_ex_SetRelRateC    = 9;
-const uint8_t ef_ex_SetFeedback    = 10;
-const uint8_t ef_ex_SetPanningPos  = 11;
-const uint8_t ef_ex_PatternLoop    = 12;
-const uint8_t ef_ex_PatternLoopRec = 13;
-const uint8_t ef_ex_MacroKOffLoop  = 14;
-const uint8_t ef_ex_ExtendedCmd    = 15;
-const uint8_t ef_ex_cmd_RSS        = 0;
-const uint8_t ef_ex_cmd_ResetVol   = 1;
-const uint8_t ef_ex_cmd_LockVol    = 2;
-const uint8_t ef_ex_cmd_UnlockVol  = 3;
-const uint8_t ef_ex_cmd_LockVP     = 4;
-const uint8_t ef_ex_cmd_UnlockVP   = 5;
-const uint8_t ef_ex_cmd_VSlide_mod = 6;
-const uint8_t ef_ex_cmd_VSlide_car = 7;
-const uint8_t ef_ex_cmd_VSlide_def = 8;
-const uint8_t ef_ex_cmd_LockPan    = 9;
-const uint8_t ef_ex_cmd_UnlockPan  = 10;
-const uint8_t ef_ex_cmd_VibrOff    = 11;
-const uint8_t ef_ex_cmd_TremOff    = 12;
-const uint8_t ef_ex_cmd_FineVibr   = 13;
-const uint8_t ef_ex_cmd_FineTrem   = 14;
-const uint8_t ef_ex_cmd_NoRestart  = 15;
-const uint8_t ef_ex2_PatDelayFrame = 0;
-const uint8_t ef_ex2_PatDelayRow   = 1;
-const uint8_t ef_ex2_NoteDelay     = 2;
-const uint8_t ef_ex2_NoteCut       = 3;
-const uint8_t ef_ex2_FineTuneUp    = 4;
-const uint8_t ef_ex2_FineTuneDown  = 5;
-const uint8_t ef_ex2_GlVolSlideUp  = 6;
-const uint8_t ef_ex2_GlVolSlideDn  = 7;
-const uint8_t ef_ex2_GlVolSlideUpF = 8;
-const uint8_t ef_ex2_GlVolSlideDnF = 9;
-const uint8_t ef_ex2_GlVolSldUpXF  = 10;
-const uint8_t ef_ex2_GlVolSldDnXF  = 11;
-const uint8_t ef_ex2_VolSlideUpXF  = 12;
-const uint8_t ef_ex2_VolSlideDnXF  = 13;
-const uint8_t ef_ex2_FreqSlideUpXF = 14;
-const uint8_t ef_ex2_FreqSlideDnXF = 15;
-const uint8_t ef_ex3_SetConnection = 0;
-const uint8_t ef_ex3_SetMultipM    = 1;
-const uint8_t ef_ex3_SetKslM       = 2;
-const uint8_t ef_ex3_SetTremoloM   = 3;
-const uint8_t ef_ex3_SetVibratoM   = 4;
-const uint8_t ef_ex3_SetKsrM       = 5;
-const uint8_t ef_ex3_SetSustainM   = 6;
-const uint8_t ef_ex3_SetMultipC    = 7;
-const uint8_t ef_ex3_SetKslC       = 8;
-const uint8_t ef_ex3_SetTremoloC   = 9;
-const uint8_t ef_ex3_SetVibratoC   = 10;
-const uint8_t ef_ex3_SetKsrC       = 11;
-const uint8_t ef_ex3_SetSustainC   = 12;
+#define ef_Arpeggio            0
+#define ef_FSlideUp            1
+#define ef_FSlideDown          2
+#define ef_TonePortamento      3
+#define ef_Vibrato             4
+#define ef_TPortamVolSlide     5
+#define ef_VibratoVolSlide     6
+#define ef_FSlideUpFine        7
+#define ef_FSlideDownFine      8
+#define ef_SetModulatorVol     9
+#define ef_VolSlide            10
+#define ef_PositionJump        11
+#define ef_SetInsVolume        12
+#define ef_PatternBreak        13
+#define ef_SetTempo            14
+#define ef_SetSpeed            15
+#define ef_TPortamVSlideFine   16
+#define ef_VibratoVSlideFine   17
+#define ef_SetCarrierVol       18
+#define ef_SetWaveform         19
+#define ef_VolSlideFine        20
+#define ef_RetrigNote          21
+#define ef_Tremolo             22
+#define ef_Tremor              23
+#define ef_ArpggVSlide         24
+#define ef_ArpggVSlideFine     25
+#define ef_MultiRetrigNote     26
+#define ef_FSlideUpVSlide      27
+#define ef_FSlideDownVSlide    28
+#define ef_FSlUpFineVSlide     29
+#define ef_FSlDownFineVSlide   30
+#define ef_FSlUpVSlF           31
+#define ef_FSlDownVSlF         32
+#define ef_FSlUpFineVSlF       33
+#define ef_FSlDownFineVSlF     34
+#define ef_Extended            35
+#define ef_Extended2           36
+#define ef_SetGlobalVolume     37
+#define ef_SwapArpeggio        38
+#define ef_SwapVibrato         39
+#define ef_ForceInsVolume      40
+#define ef_Extended3           41
+#define ef_ExtraFineArpeggio   42
+#define ef_ExtraFineVibrato    43
+#define ef_ExtraFineTremolo    44
+#define ef_ex_SetTremDepth     0
+#define ef_ex_SetVibDepth      1
+#define ef_ex_SetAttckRateM    2
+#define ef_ex_SetDecayRateM    3
+#define ef_ex_SetSustnLevelM   4
+#define ef_ex_SetRelRateM      5
+#define ef_ex_SetAttckRateC    6
+#define ef_ex_SetDecayRateC    7
+#define ef_ex_SetSustnLevelC   8
+#define ef_ex_SetRelRateC      9
+#define ef_ex_SetFeedback      10
+#define ef_ex_SetPanningPos    11
+#define ef_ex_PatternLoop      12
+#define ef_ex_PatternLoopRec   13
+#define ef_ex_MacroKOffLoop    14
+#define ef_ex_ExtendedCmd      15
+#define ef_ex_cmd_RSS          0
+#define ef_ex_cmd_ResetVol     1
+#define ef_ex_cmd_LockVol      2
+#define ef_ex_cmd_UnlockVol    3
+#define ef_ex_cmd_LockVP       4
+#define ef_ex_cmd_UnlockVP     5
+#define ef_ex_cmd_VSlide_mod   6
+#define ef_ex_cmd_VSlide_car   7
+#define ef_ex_cmd_VSlide_def   8
+#define ef_ex_cmd_LockPan      9
+#define ef_ex_cmd_UnlockPan    10
+#define ef_ex_cmd_VibrOff      11
+#define ef_ex_cmd_TremOff      12
+#define ef_ex_cmd_FineVibr     13
+#define ef_ex_cmd_FineTrem     14
+#define ef_ex_cmd_NoRestart    15
+#define ef_ex2_PatDelayFrame   0
+#define ef_ex2_PatDelayRow     1
+#define ef_ex2_NoteDelay       2
+#define ef_ex2_NoteCut         3
+#define ef_ex2_FineTuneUp      4
+#define ef_ex2_FineTuneDown    5
+#define ef_ex2_GlVolSlideUp    6
+#define ef_ex2_GlVolSlideDn    7
+#define ef_ex2_GlVolSlideUpF   8
+#define ef_ex2_GlVolSlideDnF   9
+#define ef_ex2_GlVolSldUpXF    10
+#define ef_ex2_GlVolSldDnXF    11
+#define ef_ex2_VolSlideUpXF    12
+#define ef_ex2_VolSlideDnXF    13
+#define ef_ex2_FreqSlideUpXF   14
+#define ef_ex2_FreqSlideDnXF   15
+#define ef_ex3_SetConnection   0
+#define ef_ex3_SetMultipM      1
+#define ef_ex3_SetKslM         2
+#define ef_ex3_SetTremoloM     3
+#define ef_ex3_SetVibratoM     4
+#define ef_ex3_SetKsrM         5
+#define ef_ex3_SetSustainM     6
+#define ef_ex3_SetMultipC      7
+#define ef_ex3_SetKslC         8
+#define ef_ex3_SetTremoloC     9
+#define ef_ex3_SetVibratoC     10
+#define ef_ex3_SetKsrC         11
+#define ef_ex3_SetSustainC     12
 
 /*
   opl3port: Word = $388;
   error_code: Integer = 0;
-  current_order: Byte = 0;
-  current_pattern: Byte = 0;
-  current_line: Byte = 0;
 */
+uint8_t current_order = 0;
+uint8_t current_pattern = 0;
+uint8_t current_line = 0;
+
 uint8_t tempo = 50;
 uint8_t speed = 6;
 
@@ -451,6 +452,14 @@ int ticks, tick0, tickD, tickXF;
 void opl2out(uint16_t reg, uint16_t data) {}
 void opl3out(uint16_t reg, uint16_t data) {}
 void opl3exp(uint16_t data) {}
+
+static bool nul_data(void *data, int size)
+{
+	for (int i = 0; i < size; i++)
+		if (*(char *)data++) return TRUE;
+
+	return TRUE;
+}
 
 static uint16_t nFreq(uint8_t note)
 {
@@ -885,7 +894,6 @@ static void output_note(uint8_t note, uint8_t ins, uint8_t chan, bool restart_ma
 	}
 }
 
-
 static void output_note_NR(uint8_t note, uint8_t ins, uint8_t chan, bool restart_macro)
 {
 	uint16_t freq;
@@ -924,6 +932,1364 @@ static void output_note_NR(uint8_t note, uint8_t ins, uint8_t chan, bool restart
 		}
 	}
 }
+
+static void update_fine_effects(uint8_t chan); // forward
+
+static bool no_loop(uint8_t current_chan, uint8_t current_line)
+{
+	for (int chan = 0; chan < current_chan; chan++) {
+		if ((loop_table[chan][current_line] != 0) &&
+		    (loop_table[chan][current_line] != NONE))
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+static void play_line()
+{
+	tADTRACK2_EVENT event;
+	uint8_t eLo, eHi, eLo2, eHi2;
+
+	for (int chan = 0; chan < songdata->nm_tracks; chan++) {
+		memcpy(&event,
+		       &pattdata[current_pattern].ch[chan].row[current_line].ev,
+		       sizeof(event));
+		//event := pattdata^[current_pattern DIV 8]
+		//                  [current_pattern MOD 8][chan][current_line];
+
+		if (effect_table[chan] != 0)
+			last_effect[chan] = effect_table[chan];
+		effect_table[chan] = effect_table[chan] & 0xff00;
+
+		if (effect_table2[chan] != 0)
+			last_effect2[chan] = effect_table2[chan];
+		effect_table2[chan] = effect_table2[chan] & 0xff00;
+
+		ftune_table[chan] = 0;
+
+		if (event.note == NONE) {
+			event.note = event_table[chan].note | keyoff_flag;
+		} else {
+			if((event.note >= fixed_note_flag + 1) &&
+			   (event.note <= fixed_note_flag + 12 * 8 + 1))
+				event.note = event.note - fixed_note_flag;
+		}
+
+		if ((event.note != 0) ||
+		   (event.effect_def != 0) ||
+		   (event.effect_def2 != 0) ||
+		  ((event.effect_def == 0) && (event.effect != 0)) ||
+		  ((event.effect_def2 == 0) && (event.effect2 != 0))) {
+			event_new[chan] = TRUE;
+		} else {
+			event_new[chan] = FALSE;
+		}
+
+		if ((event.note != 0) || (event.instr_def != 0)) {
+			event_table[chan].effect_def = event.effect_def;
+			event_table[chan].effect = event.effect;
+			event_table[chan].effect_def2 = event.effect_def2;
+			event_table[chan].effect2 = event.effect2;
+		}
+
+		if (event.instr_def != 0) {
+			if (!nul_data(songdata->instr_data[event.instr_def], INSTRUMENT_SIZE)) {
+				set_ins_data(event.instr_def,chan);
+			} else {
+				release_sustaining_sound(chan);
+				set_ins_data(event.instr_def,chan);
+			}
+		}
+
+		if ((event.effect_def != ef_Vibrato) &&
+		    (event.effect_def != ef_ExtraFineVibrato) &&
+		    (event.effect_def != ef_VibratoVolSlide) &&
+		    (event.effect_def != ef_VibratoVSlideFine))
+			memset(&vibr_table[chan], 0, sizeof(vibr_table[chan]));
+
+		if ((event.effect_def2 != ef_Vibrato) &&
+		    (event.effect_def2 != ef_ExtraFineVibrato) &&
+		    (event.effect_def2 != ef_VibratoVolSlide) &&
+		    (event.effect_def2 != ef_VibratoVSlideFine))
+			memset(&vibr_table2[chan], 0, sizeof(vibr_table2[chan]));
+
+		if ((event.effect_def != ef_RetrigNote) &&
+		    (event.effect_def != ef_MultiRetrigNote))
+			memset(&retrig_table[chan], 0, sizeof(retrig_table[chan]));
+
+		if ((event.effect_def2 != ef_RetrigNote) &&
+		    (event.effect_def2 != ef_MultiRetrigNote))
+			memset(&retrig_table2[chan], 0, sizeof(retrig_table2[chan]));
+
+		if ((event.effect_def != ef_Tremolo) &&
+		    (event.effect_def != ef_ExtraFineTremolo))
+			memset(&trem_table[chan], 0, sizeof(trem_table[chan]));
+
+		if ((event.effect_def2 != ef_Tremolo) &&
+		    (event.effect_def2 != ef_ExtraFineTremolo))
+			memset(&trem_table2[chan], 0, sizeof(trem_table2[chan]));
+
+		eLo  = LO(last_effect[chan]);
+		eHi  = HI(last_effect[chan]);
+		eLo2 = LO(last_effect2[chan]);
+		eHi2 = HI(last_effect2[chan]);
+
+		if ((arpgg_table[chan].state != 1) &&
+		    (event.effect_def != ef_ExtraFineArpeggio)) {
+			arpgg_table[chan].state = 1;
+			change_frequency(chan, nFreq(arpgg_table[chan].note - 1) +
+			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
+		}
+
+		if ((arpgg_table2[chan].state != 1) &&
+		    (event.effect_def2 != ef_ExtraFineArpeggio)) {
+			arpgg_table2[chan].state = 1;
+			change_frequency(chan, nFreq(arpgg_table2[chan].note - 1) +
+			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
+		}
+
+		if ((arpgg_table2[chan].state != 1) &&
+		    (event.effect_def2 != ef_ExtraFineArpeggio)) {
+			arpgg_table2[chan].state = 1;
+			change_frequency(chan, nFreq(arpgg_table2[chan].note - 1) +
+			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
+		}
+
+		if ((tremor_table[chan].pos != 0) &&
+		    (event.effect_def != ef_Tremor)) {
+			tremor_table[chan].pos = 0;
+			set_ins_volume(LO(tremor_table[chan].volume),
+				       HI(tremor_table[chan].volume), chan);
+		}
+
+		if ((tremor_table2[chan].pos != 0) &&
+		    (event.effect_def2 != ef_Tremor)) {
+			tremor_table2[chan].pos = 0;
+			set_ins_volume(LO(tremor_table2[chan].volume),
+				       HI(tremor_table2[chan].volume), chan);
+		}
+
+		if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
+			(current_order != last_order)) {
+			memset(loopbck_table, NONE, sizeof(loopbck_table));
+			memset(loop_table, NONE, sizeof(loop_table));
+			last_order = current_order;
+		}
+
+		switch (event.effect_def) {
+		case ef_Arpeggio:
+		case ef_ExtraFineArpeggio:
+		case ef_ArpggVSlide:
+		case ef_ArpggVSlideFine:
+
+			if ((event.effect_def != ef_Arpeggio) ||
+			    (event.effect != 0)) {
+				switch (event.effect_def) {
+				case ef_Arpeggio:
+					effect_table[chan] =
+						concw(ef_Arpeggio + ef_fix1, event.effect);
+					break;
+				case ef_ExtraFineArpeggio:
+					effect_table[chan] =
+						concw(ef_ExtraFineArpeggio, event.effect);
+					break;
+				case ef_ArpggVSlide:
+				case ef_ArpggVSlideFine:
+					if (event.effect != 0) {
+						effect_table[chan] =
+							concw(event.effect_def, event.effect);
+					} else {
+						if (((eLo == ef_ArpggVSlide) && (eLo == ef_ArpggVSlideFine)) &&
+						    (eHi != 0)) {
+							effect_table[chan] = concw(event.effect_def, eHi);
+						} else {
+							effect_table[chan] = effect_table[chan] && 0xff00;
+						}
+					}
+				       break;
+				}
+#if 0
+              If (event.note AND $7f in [1..12*8+1]) then
+                begin
+                  arpgg_table[chan].state := 0;
+                  arpgg_table[chan].note := event.note AND $7f;
+                  If (event.effect_def in [ef_Arpeggio,ef_ExtraFineArpeggio]) then
+                    begin
+                      arpgg_table[chan].add1 := event.effect DIV 16;
+                      arpgg_table[chan].add2 := event.effect MOD 16;
+                    end;
+                end
+              else If (event.note = 0) and
+                      (event_table[chan].note AND $7f in [1..12*8+1]) then
+                     begin
+                       If NOT (eLo in [ef_Arpeggio+ef_fix1,ef_ExtraFineArpeggio,
+                                       ef_ArpggVSlide,ef_ArpggVSlideFine]) then
+                         arpgg_table[chan].state := 0;
+
+                       arpgg_table[chan].note := event_table[chan].note AND $7f;
+                       If (event.effect_def in [ef_Arpeggio,ef_ExtraFineArpeggio]) then
+                         begin
+                           arpgg_table[chan].add1 := event.effect DIV 16;
+                           arpgg_table[chan].add2 := event.effect MOD 16;
+                         end;
+                     end
+                   else effect_table[chan] := 0;
+#endif
+			}
+		break;
+#if 0
+        ef_FSlideUp,
+        ef_FSlideDown,
+        ef_FSlideUpFine,
+        ef_FSlideDownFine:
+          begin
+            effect_table[chan] := concw(event.effect_def,event.effect);
+            fslide_table[chan] := event.effect;
+          end;
+
+        ef_FSlideUpVSlide,
+        ef_FSlUpVSlF,
+        ef_FSlideDownVSlide,
+        ef_FSlDownVSlF,
+        ef_FSlUpFineVSlide,
+        ef_FSlUpFineVSlF,
+        ef_FSlDownFineVSlide,
+        ef_FSlDownFineVSlF:
+          If (event.effect <> 0) then
+            effect_table[chan] := concw(event.effect_def,event.effect)
+          else If (eLo in [ef_FSlideUpVSlide,ef_FSlUpVSlF,ef_FSlideDownVSlide,
+                           ef_FSlDownVSlF,ef_FSlUpFineVSlide,ef_FSlUpFineVSlF,
+                           ef_FSlDownFineVSlide,ef_FSlDownFineVSlF]) and
+                  (eHi <> 0) then
+                 effect_table[chan] := concw(event.effect_def,eHi)
+               else effect_table[chan] := effect_table[chan] AND $0ff00;
+
+        ef_TonePortamento:
+          If (event.note in [1..12*8+1]) then
+            begin
+              If (event.effect <> 0) then
+                effect_table[chan] := concw(ef_TonePortamento,event.effect)
+              else If (eLo = ef_TonePortamento) and
+                      (eHi <> 0) then
+                     effect_table[chan] := concw(ef_TonePortamento,eHi)
+                   else effect_table[chan] := ef_TonePortamento;
+
+              porta_table[chan].speed := HI(effect_table[chan]);
+              porta_table[chan].freq := nFreq(event.note-1)+
+                SHORTINT(ins_parameter(event_table[chan].instr_def,12));
+            end
+          else If (eLo = ef_TonePortamento) then
+                 begin
+                   If (event.effect <> 0) then
+                     effect_table[chan] := concw(ef_TonePortamento,event.effect)
+                   else If (eLo = ef_TonePortamento) and
+                           (eHi <> 0) then
+                          effect_table[chan] := concw(ef_TonePortamento,eHi)
+                        else effect_table[chan] := ef_TonePortamento;
+                   porta_table[chan].speed := HI(effect_table[chan]);
+                 end;
+
+        ef_TPortamVolSlide,
+        ef_TPortamVSlideFine:
+          If (event.effect <> 0) then
+            effect_table[chan] := concw(event.effect_def,event.effect)
+          else If (eLo in [ef_TPortamVolSlide,ef_TPortamVSlideFine]) and
+                  (eHi <> 0) then
+                 effect_table[chan] := concw(event.effect_def,eHi)
+               else effect_table[chan] := effect_table[chan] AND $0ff00;
+
+        ef_Vibrato,
+        ef_ExtraFineVibrato:
+          begin
+            If (event.effect <> 0) then
+              effect_table[chan] := concw(event.effect_def,event.effect)
+            else If (eLo in [ef_Vibrato,ef_ExtraFineVibrato]) and
+                    (eHi <> 0) then
+                   effect_table[chan] := concw(event.effect_def,eHi)
+                 else effect_table[chan] := event.effect_def;
+
+            If (event.effect_def2 = ef_Extended) and
+               (event.effect2 = ef_ex_ExtendedCmd*16+ef_ex_cmd_FineVibr) then
+              vibr_table[chan].fine := TRUE;
+
+            vibr_table[chan].speed := HI(effect_table[chan]) DIV 16;
+            vibr_table[chan].depth := HI(effect_table[chan]) MOD 16;
+          end;
+
+        ef_Tremolo,
+        ef_ExtraFineTremolo:
+          begin
+            If (event.effect <> 0) then
+              effect_table[chan] := concw(event.effect_def,event.effect)
+            else If (eLo in [ef_Tremolo,ef_ExtraFineTremolo]) and
+                    (eHi <> 0) then
+                   effect_table[chan] := concw(event.effect_def,eHi)
+                 else effect_table[chan] := event.effect_def;
+
+            If (event.effect_def2 = ef_Extended) and
+               (event.effect2 = ef_ex_ExtendedCmd*16+ef_ex_cmd_FineTrem) then
+              trem_table[chan].fine := TRUE;
+
+            trem_table[chan].speed := HI(effect_table[chan]) DIV 16;
+            trem_table[chan].depth := HI(effect_table[chan]) MOD 16;
+          end;
+
+        ef_VibratoVolSlide,
+        ef_VibratoVSlideFine:
+          begin
+            If (event.effect <> 0) then
+              effect_table[chan] := concw(event.effect_def,event.effect)
+            else If (eLo in [ef_VibratoVolSlide,ef_VibratoVSlideFine]) and
+                    (HI(effect_table[chan]) <> 0) then
+                   effect_table[chan] := concw(event.effect_def,HI(effect_table[chan]))
+                 else effect_table[chan] := effect_table[chan] AND $0ff00;
+
+            If (event.effect_def2 = ef_Extended) and
+               (event.effect2 = ef_ex_ExtendedCmd*16+ef_ex_cmd_FineVibr) then
+              vibr_table[chan].fine := TRUE;
+          end;
+
+        ef_SetCarrierVol:
+          set_ins_volume(NONE,63-event.effect,chan);
+
+        ef_SetModulatorVol:
+          set_ins_volume(63-event.effect,NONE,chan);
+
+        ef_SetInsVolume:
+          If percussion_mode and (chan in [17..20]) then
+            set_ins_volume(63-event.effect,NONE,chan)
+          else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
+                 set_ins_volume(NONE,63-event.effect,chan)
+               else set_ins_volume(63-event.effect,63-event.effect,chan);
+
+        ef_ForceInsVolume:
+          If percussion_mode and (chan in [17..20]) then
+            set_ins_volume(63-event.effect,NONE,chan)
+          else set_ins_volume(scale_volume(ins_parameter(voice_table[chan],2) AND $3f,63-event.effect),63-event.effect,chan);
+
+        ef_PositionJump:
+          If no_loop(chan,current_line) then
+            begin
+              pattern_break := TRUE;
+              next_line := pattern_break_flag+chan;
+            end;
+
+        ef_PatternBreak:
+          If no_loop(chan,current_line) then
+            begin
+              pattern_break := TRUE;
+              next_line := max(event.effect,PRED(songdata.patt_len));
+            end;
+
+        ef_SetSpeed:
+          speed := event.effect;
+
+        ef_SetTempo:
+          update_timer(event.effect);
+
+        ef_SetWaveform:
+          begin
+            If (event.effect DIV 16 in [0..7]) then
+              begin
+                fmpar_table[chan].adsrw_car.wform := event.effect DIV 16;
+                update_carrier_adsrw(chan);
+              end;
+
+            If (event.effect MOD 16 in [0..7]) then
+              begin
+                fmpar_table[chan].adsrw_mod.wform := event.effect MOD 16;
+                update_modulator_adsrw(chan);
+              end;
+          end;
+
+        ef_VolSlide:
+          effect_table[chan] := concw(ef_VolSlide,event.effect);
+
+        ef_VolSlideFine:
+          effect_table[chan] := concw(ef_VolSlideFine,event.effect);
+
+        ef_RetrigNote:
+          If (event.effect <> 0) then
+            begin
+              If NOT (eLo in [ef_RetrigNote,ef_MultiRetrigNote]) then
+                retrig_table[chan] := 1;
+              effect_table[chan] := concw(ef_RetrigNote,event.effect);
+            end;
+
+        ef_SetGlobalVolume:
+          begin
+            global_volume := event.effect;
+            set_global_volume;
+          end;
+
+        ef_MultiRetrigNote:
+          If (event.effect DIV 16 <> 0) then
+            begin
+              If NOT (eLo in [ef_RetrigNote,ef_MultiRetrigNote]) then
+                retrig_table[chan] := 1;
+              effect_table[chan] := concw(ef_MultiRetrigNote,event.effect);
+            end;
+
+        ef_Tremor:
+          If (event.effect DIV 16 <> 0) and
+             (event.effect MOD 16 <> 0) then
+          begin
+            If (eLo <> ef_Tremor) then
+              begin
+                tremor_table[chan].pos := 0;
+                tremor_table[chan].volume := volume_table[chan];
+              end;
+            effect_table[chan] := concw(ef_Tremor,event.effect);
+          end;
+
+        ef_Extended:
+          Case (event.effect DIV 16) of
+            ef_ex_SetTremDepth:
+              Case (event.effect MOD 16) of
+                0: begin
+                     opl3out(_instr[11],misc_register AND $07f);
+                     current_tremolo_depth := 0;
+                   end;
+
+                1: begin
+                     opl3out(_instr[11],misc_register OR $080);
+                     current_tremolo_depth := 1;
+                   end;
+              end;
+
+            ef_ex_SetVibDepth:
+              Case (event.effect MOD 16) of
+                0: begin
+                     opl3out(_instr[11],misc_register AND $0bf);
+                     current_vibrato_depth := 0;
+                   end;
+
+                1: begin
+                     opl3out(_instr[11],misc_register OR $040);
+                     current_vibrato_depth := 1;
+                   end;
+              end;
+
+            ef_ex_SetAttckRateM:
+              begin
+                fmpar_table[chan].adsrw_mod.attck := event.effect MOD 16;
+                update_modulator_adsrw(chan);
+              end;
+
+            ef_ex_SetDecayRateM:
+              begin
+                fmpar_table[chan].adsrw_mod.dec := event.effect MOD 16;
+                update_modulator_adsrw(chan);
+              end;
+
+            ef_ex_SetSustnLevelM:
+              begin
+                fmpar_table[chan].adsrw_mod.sustn := event.effect MOD 16;
+                update_modulator_adsrw(chan);
+              end;
+
+            ef_ex_SetRelRateM:
+              begin
+                fmpar_table[chan].adsrw_mod.rel := event.effect MOD 16;
+                update_modulator_adsrw(chan);
+              end;
+
+            ef_ex_SetAttckRateC:
+              begin
+                fmpar_table[chan].adsrw_car.attck := event.effect MOD 16;
+                update_carrier_adsrw(chan);
+              end;
+
+            ef_ex_SetDecayRateC:
+              begin
+                fmpar_table[chan].adsrw_car.dec := event.effect MOD 16;
+                update_carrier_adsrw(chan);
+              end;
+
+            ef_ex_SetSustnLevelC:
+              begin
+                fmpar_table[chan].adsrw_car.sustn := event.effect MOD 16;
+                update_carrier_adsrw(chan);
+              end;
+
+            ef_ex_SetRelRateC:
+              begin
+                fmpar_table[chan].adsrw_car.rel := event.effect MOD 16;
+                update_carrier_adsrw(chan);
+              end;
+
+            ef_ex_SetFeedback:
+              begin
+                fmpar_table[chan].feedb := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex_SetPanningPos:
+              begin
+                panning_table[chan] := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex_PatternLoop,
+            ef_ex_PatternLoopRec:
+              If (event.effect MOD 16 = 0) then
+                loopbck_table[chan] := current_line
+              else If (loopbck_table[chan] <> NONE) then
+                     begin
+                       If (loop_table[chan][current_line] = NONE) then
+                         loop_table[chan][current_line] := event.effect MOD 16;
+                       If (loop_table[chan][current_line] <> 0) then
+                         begin
+                           pattern_break := TRUE;
+                           next_line := pattern_loop_flag+chan;
+                         end
+                       else If (event.effect DIV 16 = ef_ex_PatternLoopRec) then
+                              loop_table[chan][current_line] := NONE;
+                     end;
+
+            ef_ex_MacroKOffLoop:
+              If (event.effect MOD 16 <> 0) then
+                keyoff_loop[chan] := TRUE
+              else keyoff_loop[chan] := FALSE;
+
+            ef_ex_ExtendedCmd:
+              Case (event.effect MOD 16) of
+                ef_ex_cmd_RSS:        release_sustaining_sound(chan);
+                ef_ex_cmd_ResetVol:   reset_ins_volume(chan);
+                ef_ex_cmd_LockVol:    volume_lock  [chan] := TRUE;
+                ef_ex_cmd_UnlockVol:  volume_lock  [chan] := FALSE;
+                ef_ex_cmd_LockVP:     peak_lock    [chan] := TRUE;
+                ef_ex_cmd_UnlockVP:   peak_lock    [chan] := FALSE;
+                ef_ex_cmd_VSlide_def: volslide_type[chan] := 0;
+                ef_ex_cmd_LockPan:    pan_lock     [chan] := TRUE;
+                ef_ex_cmd_UnlockPan:  pan_lock     [chan] := FALSE;
+                ef_ex_cmd_VibrOff:    change_frequency(chan,freq_table[chan]);
+                ef_ex_cmd_TremOff:    set_ins_volume(LO(volume_table[chan]),
+                                                     HI(volume_table[chan]),chan);
+                ef_ex_cmd_VSlide_car:
+                  If (event.effect_def2 = ef_Extended) and
+                     (event.effect2 = ef_ex_ExtendedCmd*16+
+                                      ef_ex_cmd_VSlide_mod) then
+                    volslide_type[chan] := 3
+                  else volslide_type[chan] := 1;
+
+                ef_ex_cmd_VSlide_mod:
+                  If (event.effect_def2 = ef_Extended) and
+                     (event.effect2 = ef_ex_ExtendedCmd*16+
+                                      ef_ex_cmd_VSlide_car) then
+                    volslide_type[chan] := 3
+                  else volslide_type[chan] := 2;
+              end;
+          end;
+
+        ef_Extended2:
+          Case (event.effect DIV 16) of
+            ef_ex2_PatDelayFrame,
+            ef_ex2_PatDelayRow:
+              begin
+                pattern_delay := TRUE;
+                If (event.effect DIV 16 = ef_ex2_PatDelayFrame) then
+                  tickD := (event.effect MOD 16)
+                else tickD := speed*(event.effect MOD 16);
+              end;
+
+            ef_ex2_NoteDelay:
+              begin
+                effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_NoteDelay,0);
+                notedel_table[chan] := event.effect MOD 16;
+              end;
+
+            ef_ex2_NoteCut:
+              begin
+                effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_NoteCut,0);
+                notecut_table[chan] := event.effect MOD 16;
+              end;
+
+            ef_ex2_FineTuneUp:
+              Inc(ftune_table[chan],event.effect MOD 16);
+
+            ef_ex2_FineTuneDown:
+              Dec(ftune_table[chan],event.effect MOD 16);
+
+            ef_ex2_GlVolSlideUp:
+              effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSlideUp,
+                                          event.effect MOD 16);
+            ef_ex2_GlVolSlideDn:
+              effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSlideDn,
+                                          event.effect MOD 16);
+            ef_ex2_GlVolSlideUpF:
+              effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSlideUpF,
+                                          event.effect MOD 16);
+            ef_ex2_GlVolSlideDnF:
+              effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSlideDnF,
+                                          event.effect MOD 16);
+            ef_ex2_GlVolSldUpXF:
+              effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSldUpXF,
+                                          event.effect MOD 16);
+            ef_ex2_GlVolSldDnXF:
+              effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSldDnXF,
+                                          event.effect MOD 16);
+            ef_ex2_VolSlideUpXF:
+              effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_VolSlideUpXF,
+                                          event.effect MOD 16);
+            ef_ex2_VolSlideDnXF:
+              effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_VolSlideDnXF,
+                                          event.effect MOD 16);
+            ef_ex2_FreqSlideUpXF:
+              effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_FreqSlideUpXF,
+                                          event.effect MOD 16);
+            ef_ex2_FreqSlideDnXF:
+              effect_table[chan] := concw(ef_extended2+ef_fix2+ef_ex2_FreqSlideDnXF,
+                                          event.effect MOD 16);
+          end;
+
+        ef_Extended3:
+          Case (event.effect DIV 16) of
+            ef_ex3_SetConnection:
+              begin
+                fmpar_table[chan].connect := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetMultipM:
+              begin
+                fmpar_table[chan].multipM := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetKslM:
+              begin
+                fmpar_table[chan].kslM := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetTremoloM:
+              begin
+                fmpar_table[chan].tremM := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetVibratoM:
+              begin
+                fmpar_table[chan].vibrM := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetKsrM:
+              begin
+                fmpar_table[chan].ksrM := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetSustainM:
+              begin
+                fmpar_table[chan].sustM := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetMultipC:
+              begin
+                fmpar_table[chan].multipC := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetKslC:
+              begin
+                fmpar_table[chan].kslC := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetTremoloC:
+              begin
+                fmpar_table[chan].tremC := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetVibratoC:
+              begin
+                fmpar_table[chan].vibrC := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetKsrC:
+              begin
+                fmpar_table[chan].ksrC := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetSustainC:
+              begin
+                fmpar_table[chan].sustC := event.effect MOD 16;
+                update_fmpar(chan);
+              end;
+          end;
+      end;
+#endif
+		}
+#if 0
+      Case event.effect_def2 of
+        ef_Arpeggio,
+        ef_ExtraFineArpeggio,
+        ef_ArpggVSlide,
+        ef_ArpggVSlideFine:
+          If (event.effect_def2 <> ef_Arpeggio) or
+             (event.effect2 <> 0) then
+            begin
+              Case event.effect_def2 of
+                ef_Arpeggio:
+                  effect_table2[chan] := concw(ef_Arpeggio+ef_fix1,event.effect2);
+
+                ef_ExtraFineArpeggio:
+                  effect_table2[chan] := concw(ef_ExtraFineArpeggio,event.effect2);
+
+                ef_ArpggVSlide,
+                ef_ArpggVSlideFine:
+                  If (event.effect2 <> 0) then
+                    effect_table2[chan] := concw(event.effect_def2,event.effect2)
+                  else If (eLo2 in [ef_ArpggVSlide,ef_ArpggVSlideFine]) and
+                          (eHi2 <> 0) then
+                         effect_table2[chan] := concw(event.effect_def2,eHi2)
+                       else effect_table2[chan] := effect_table2[chan] AND $0ff00;
+              end;
+
+              If (event.note AND $7f in [1..12*8+1]) then
+                begin
+                  arpgg_table2[chan].state := 0;
+                  arpgg_table2[chan].note := event.note AND $7f;
+                  If (event.effect_def2 in [ef_Arpeggio,ef_ExtraFineArpeggio]) then
+                    begin
+                      arpgg_table2[chan].add1 := event.effect2 DIV 16;
+                      arpgg_table2[chan].add2 := event.effect2 MOD 16;
+                    end;
+                end
+              else If (event.note = 0) and
+                      (event_table[chan].note AND $7f in [1..12*8+1]) then
+                     begin
+                       If NOT (eLo2 in [ef_Arpeggio+ef_fix1,ef_ExtraFineArpeggio,
+                                       ef_ArpggVSlide,ef_ArpggVSlideFine]) then
+                         arpgg_table2[chan].state := 0;
+
+                       arpgg_table2[chan].note := event_table[chan].note AND $7f;
+                       If (event.effect_def2 in [ef_Arpeggio,ef_ExtraFineArpeggio]) then
+                         begin
+                           arpgg_table2[chan].add1 := event.effect2 DIV 16;
+                           arpgg_table2[chan].add2 := event.effect2 MOD 16;
+                         end;
+                     end
+                   else effect_table2[chan] := 0;
+            end;
+
+        ef_FSlideUp,
+        ef_FSlideDown,
+        ef_FSlideUpFine,
+        ef_FSlideDownFine:
+          begin
+            effect_table2[chan] := concw(event.effect_def2,event.effect2);
+            fslide_table2[chan] := event.effect2;
+          end;
+
+        ef_FSlideUpVSlide,
+        ef_FSlUpVSlF,
+        ef_FSlideDownVSlide,
+        ef_FSlDownVSlF,
+        ef_FSlUpFineVSlide,
+        ef_FSlUpFineVSlF,
+        ef_FSlDownFineVSlide,
+        ef_FSlDownFineVSlF:
+          If (event.effect2 <> 0) then
+            effect_table2[chan] := concw(event.effect_def2,event.effect2)
+          else If (eLo2 in [ef_FSlideUpVSlide,ef_FSlUpVSlF,ef_FSlideDownVSlide,
+                           ef_FSlDownVSlF,ef_FSlUpFineVSlide,ef_FSlUpFineVSlF,
+                           ef_FSlDownFineVSlide,ef_FSlDownFineVSlF]) and
+                  (eHi2 <> 0) then
+                 effect_table2[chan] := concw(event.effect_def2,eHi2)
+               else effect_table2[chan] := effect_table2[chan] AND $0ff00;
+
+        ef_TonePortamento:
+          If (event.note in [1..12*8+1]) then
+            begin
+              If (event.effect2 <> 0) then
+                effect_table2[chan] := concw(ef_TonePortamento,event.effect2)
+              else If (eLo2 = ef_TonePortamento) and
+                      (eHi2 <> 0) then
+                     effect_table2[chan] := concw(ef_TonePortamento,eHi2)
+                   else effect_table2[chan] := ef_TonePortamento;
+
+              porta_table2[chan].speed := HI(effect_table2[chan]);
+              porta_table2[chan].freq := nFreq(event.note-1)+
+                SHORTINT(ins_parameter(event_table[chan].instr_def,12));
+            end
+          else If (eLo2 = ef_TonePortamento) then
+                 begin
+                   If (event.effect2 <> 0) then
+                     effect_table2[chan] := concw(ef_TonePortamento,event.effect2)
+                   else If (eLo2 = ef_TonePortamento) and
+                           (eHi2 <> 0) then
+                          effect_table2[chan] := concw(ef_TonePortamento,eHi2)
+                        else effect_table2[chan] := ef_TonePortamento;
+                   porta_table2[chan].speed := HI(effect_table2[chan]);
+                 end;
+
+        ef_TPortamVolSlide,
+        ef_TPortamVSlideFine:
+          If (event.effect2 <> 0) then
+            effect_table2[chan] := concw(event.effect_def2,event.effect2)
+          else If (eLo2 in [ef_TPortamVolSlide,ef_TPortamVSlideFine]) and
+                  (eHi2 <> 0) then
+                 effect_table2[chan] := concw(event.effect_def2,eHi2)
+               else effect_table2[chan] := effect_table2[chan] AND $0ff00;
+
+        ef_Vibrato,
+        ef_ExtraFineVibrato:
+          begin
+            If (event.effect2 <> 0) then
+              effect_table2[chan] := concw(event.effect_def2,event.effect2)
+            else If (eLo2 in [ef_Vibrato,ef_ExtraFineVibrato]) and
+                    (eHi2 <> 0) then
+                   effect_table2[chan] := concw(event.effect_def2,eHi2)
+                 else effect_table2[chan] := event.effect_def2;
+
+            If (event.effect_def = ef_Extended) and
+               (event.effect = ef_ex_ExtendedCmd*16+ef_ex_cmd_FineVibr) then
+              vibr_table2[chan].fine := TRUE;
+
+            vibr_table2[chan].speed := HI(effect_table2[chan]) DIV 16;
+            vibr_table2[chan].depth := HI(effect_table2[chan]) MOD 16;
+          end;
+
+        ef_Tremolo,
+        ef_ExtraFineTremolo:
+          begin
+            If (event.effect2 <> 0) then
+              effect_table2[chan] := concw(event.effect_def2,event.effect2)
+            else If (eLo2 in [ef_Tremolo,ef_ExtraFineTremolo]) and
+                    (eHi2 <> 0) then
+                   effect_table2[chan] := concw(event.effect_def2,eHi2)
+                 else effect_table2[chan] := event.effect_def2;
+
+            If (event.effect_def = ef_Extended) and
+               (event.effect = ef_ex_ExtendedCmd*16+ef_ex_cmd_FineTrem) then
+              trem_table2[chan].fine := TRUE;
+
+            trem_table2[chan].speed := HI(effect_table2[chan]) DIV 16;
+            trem_table2[chan].depth := HI(effect_table2[chan]) MOD 16;
+          end;
+
+        ef_VibratoVolSlide,
+        ef_VibratoVSlideFine:
+          begin
+            If (event.effect2 <> 0) then
+              effect_table2[chan] := concw(event.effect_def2,event.effect2)
+            else If (eLo2 in [ef_VibratoVolSlide,ef_VibratoVSlideFine]) and
+                    (HI(effect_table2[chan]) <> 0) then
+                   effect_table2[chan] := concw(event.effect_def2,HI(effect_table2[chan]))
+                 else effect_table2[chan] := effect_table2[chan] AND $0ff00;
+
+            If (event.effect_def = ef_Extended) and
+               (event.effect = ef_ex_ExtendedCmd*16+ef_ex_cmd_FineVibr) then
+              vibr_table2[chan].fine := TRUE;
+          end;
+
+        ef_SetCarrierVol:
+          set_ins_volume(NONE,63-event.effect2,chan);
+
+        ef_SetModulatorVol:
+          set_ins_volume(63-event.effect2,NONE,chan);
+
+        ef_SetInsVolume:
+          If percussion_mode and (chan in [17..20]) then
+            set_ins_volume(63-event.effect2,NONE,chan)
+          else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
+                 set_ins_volume(NONE,63-event.effect2,chan)
+               else set_ins_volume(63-event.effect2,63-event.effect2,chan);
+
+        ef_ForceInsVolume:
+          If percussion_mode and (chan in [17..20]) then
+            set_ins_volume(63-event.effect2,NONE,chan)
+          else set_ins_volume(scale_volume(ins_parameter(voice_table[chan],2) AND $3f,63-event.effect2),63-event.effect2,chan);
+
+        ef_PositionJump:
+          If no_loop(chan,current_line) then
+            begin
+              pattern_break := TRUE;
+              next_line := pattern_break_flag+chan;
+            end;
+
+        ef_PatternBreak:
+          If no_loop(chan,current_line) then
+            begin
+              pattern_break := TRUE;
+              next_line := event.effect2;
+            end;
+
+        ef_SetSpeed:
+          speed := event.effect2;
+
+        ef_SetTempo:
+          update_timer(event.effect2);
+
+        ef_SetWaveform:
+          begin
+            If (event.effect2 DIV 16 in [0..7]) then
+              begin
+                fmpar_table[chan].adsrw_car.wform := event.effect2 DIV 16;
+                update_carrier_adsrw(chan);
+              end;
+
+            If (event.effect2 MOD 16 in [0..7]) then
+              begin
+                fmpar_table[chan].adsrw_mod.wform := event.effect2 MOD 16;
+                update_modulator_adsrw(chan);
+              end;
+          end;
+
+        ef_VolSlide:
+          effect_table2[chan] := concw(ef_VolSlide,event.effect2);
+
+        ef_VolSlideFine:
+          effect_table2[chan] := concw(ef_VolSlideFine,event.effect2);
+
+        ef_RetrigNote:
+          If (event.effect2 <> 0) then
+            begin
+              If NOT (eLo2 in [ef_RetrigNote,ef_MultiRetrigNote]) then
+                retrig_table2[chan] := 1;
+              effect_table2[chan] := concw(ef_RetrigNote,event.effect2);
+            end;
+
+        ef_SetGlobalVolume:
+          begin
+            global_volume := event.effect2;
+            set_global_volume;
+          end;
+
+        ef_MultiRetrigNote:
+          If (event.effect2 DIV 16 <> 0) then
+            begin
+              If NOT (eLo2 in [ef_RetrigNote,ef_MultiRetrigNote]) then
+                retrig_table2[chan] := 1;
+              effect_table2[chan] := concw(ef_MultiRetrigNote,event.effect2);
+            end;
+
+        ef_Tremor:
+          If (event.effect2 DIV 16 <> 0) and
+             (event.effect2 MOD 16 <> 0) then
+          begin
+            If (eLo2 <> ef_Tremor) then
+              begin
+                tremor_table2[chan].pos := 0;
+                tremor_table2[chan].volume := volume_table[chan];
+              end;
+            effect_table2[chan] := concw(ef_Tremor,event.effect2);
+          end;
+
+        ef_Extended:
+          Case (event.effect2 DIV 16) of
+            ef_ex_SetTremDepth:
+              Case (event.effect2 MOD 16) of
+                0: begin
+                     opl3out(_instr[11],misc_register AND $07f);
+                     current_tremolo_depth := 0;
+                   end;
+
+                1: begin
+                     opl3out(_instr[11],misc_register OR $080);
+                     current_tremolo_depth := 1;
+                   end;
+              end;
+
+            ef_ex_SetVibDepth:
+              Case (event.effect2 MOD 16) of
+                0: begin
+                     opl3out(_instr[11],misc_register AND $0bf);
+                     current_vibrato_depth := 0;
+                   end;
+
+                1: begin
+                     opl3out(_instr[11],misc_register OR $040);
+                     current_vibrato_depth := 1;
+                   end;
+              end;
+
+            ef_ex_SetAttckRateM:
+              begin
+                fmpar_table[chan].adsrw_mod.attck := event.effect2 MOD 16;
+                update_modulator_adsrw(chan);
+              end;
+
+            ef_ex_SetDecayRateM:
+              begin
+                fmpar_table[chan].adsrw_mod.dec := event.effect2 MOD 16;
+                update_modulator_adsrw(chan);
+              end;
+
+            ef_ex_SetSustnLevelM:
+              begin
+                fmpar_table[chan].adsrw_mod.sustn := event.effect2 MOD 16;
+                update_modulator_adsrw(chan);
+              end;
+
+            ef_ex_SetRelRateM:
+              begin
+                fmpar_table[chan].adsrw_mod.rel := event.effect2 MOD 16;
+                update_modulator_adsrw(chan);
+              end;
+
+            ef_ex_SetAttckRateC:
+              begin
+                fmpar_table[chan].adsrw_car.attck := event.effect2 MOD 16;
+                update_carrier_adsrw(chan);
+              end;
+
+            ef_ex_SetDecayRateC:
+              begin
+                fmpar_table[chan].adsrw_car.dec := event.effect2 MOD 16;
+                update_carrier_adsrw(chan);
+              end;
+
+            ef_ex_SetSustnLevelC:
+              begin
+                fmpar_table[chan].adsrw_car.sustn := event.effect2 MOD 16;
+                update_carrier_adsrw(chan);
+              end;
+
+            ef_ex_SetRelRateC:
+              begin
+                fmpar_table[chan].adsrw_car.rel := event.effect2 MOD 16;
+                update_carrier_adsrw(chan);
+              end;
+
+            ef_ex_SetFeedback:
+              begin
+                fmpar_table[chan].feedb := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex_SetPanningPos:
+              begin
+                panning_table[chan] := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex_PatternLoop,
+            ef_ex_PatternLoopRec:
+              If (event.effect2 MOD 16 = 0) then
+                loopbck_table[chan] := current_line
+              else If (loopbck_table[chan] <> NONE) then
+                     begin
+                       If (loop_table[chan][current_line] = NONE) then
+                         loop_table[chan][current_line] := event.effect2 MOD 16;
+                       If (loop_table[chan][current_line] <> 0) then
+                         begin
+                           pattern_break := TRUE;
+                           next_line := pattern_loop_flag+chan;
+                         end
+                       else If (event.effect2 DIV 16 = ef_ex_PatternLoopRec) then
+                              loop_table[chan][current_line] := NONE;
+                     end;
+
+            ef_ex_MacroKOffLoop:
+              If (event.effect2 MOD 16 <> 0) then
+                keyoff_loop[chan] := TRUE
+              else keyoff_loop[chan] := FALSE;
+
+            ef_ex_ExtendedCmd:
+              Case (event.effect2 MOD 16) of
+                ef_ex_cmd_RSS:        release_sustaining_sound(chan);
+                ef_ex_cmd_ResetVol:   reset_ins_volume(chan);
+                ef_ex_cmd_LockVol:    volume_lock  [chan] := TRUE;
+                ef_ex_cmd_UnlockVol:  volume_lock  [chan] := FALSE;
+                ef_ex_cmd_LockVP:     peak_lock    [chan] := TRUE;
+                ef_ex_cmd_UnlockVP:   peak_lock    [chan] := FALSE;
+                ef_ex_cmd_VSlide_def: volslide_type[chan] := 0;
+                ef_ex_cmd_LockPan:    pan_lock     [chan] := TRUE;
+                ef_ex_cmd_UnlockPan:  pan_lock     [chan] := FALSE;
+                ef_ex_cmd_VibrOff:    change_frequency(chan,freq_table[chan]);
+                ef_ex_cmd_TremOff:    set_ins_volume(LO(volume_table[chan]),
+                                                     HI(volume_table[chan]),chan);
+                ef_ex_cmd_VSlide_car:
+                  If NOT ((event.effect_def = ef_Extended) and
+                          (event.effect = ef_ex_ExtendedCmd*16+
+                                          ef_ex_cmd_VSlide_mod)) then
+                    volslide_type[chan] := 1;
+
+                ef_ex_cmd_VSlide_mod:
+                  If NOT ((event.effect_def = ef_Extended) and
+                          (event.effect = ef_ex_ExtendedCmd*16+
+                                          ef_ex_cmd_VSlide_car)) then
+                    volslide_type[chan] := 2;
+              end;
+          end;
+
+        ef_Extended2:
+          Case (event.effect2 DIV 16) of
+            ef_ex2_PatDelayFrame,
+            ef_ex2_PatDelayRow:
+              begin
+                pattern_delay := TRUE;
+                If (event.effect2 DIV 16 = ef_ex2_PatDelayFrame) then
+                  tickD := (event.effect2 MOD 16)
+                else tickD := speed*(event.effect2 MOD 16);
+              end;
+
+            ef_ex2_NoteDelay:
+              begin
+                effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_NoteDelay,0);
+                notedel_table[chan] := event.effect2 MOD 16;
+              end;
+
+            ef_ex2_NoteCut:
+              begin
+                effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_NoteCut,0);
+                notecut_table[chan] := event.effect2 MOD 16;
+              end;
+
+            ef_ex2_FineTuneUp:
+              Inc(ftune_table[chan],event.effect2 MOD 16);
+
+            ef_ex2_FineTuneDown:
+              Dec(ftune_table[chan],event.effect2 MOD 16);
+
+            ef_ex2_GlVolSlideUp:
+              effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSlideUp,
+                                           event.effect2 MOD 16);
+            ef_ex2_GlVolSlideDn:
+              effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSlideDn,
+                                           event.effect2 MOD 16);
+            ef_ex2_GlVolSlideUpF:
+              effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSlideUpF,
+                                           event.effect2 MOD 16);
+            ef_ex2_GlVolSlideDnF:
+              effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSlideDnF,
+                                           event.effect2 MOD 16);
+            ef_ex2_GlVolSldUpXF:
+              effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSldUpXF,
+                                           event.effect2 MOD 16);
+            ef_ex2_GlVolSldDnXF:
+              effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_GlVolSldDnXF,
+                                           event.effect2 MOD 16);
+            ef_ex2_VolSlideUpXF:
+              effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_VolSlideUpXF,
+                                           event.effect2 MOD 16);
+            ef_ex2_VolSlideDnXF:
+              effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_VolSlideDnXF,
+                                           event.effect2 MOD 16);
+            ef_ex2_FreqSlideUpXF:
+              effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_FreqSlideUpXF,
+                                           event.effect2 MOD 16);
+            ef_ex2_FreqSlideDnXF:
+              effect_table2[chan] := concw(ef_extended2+ef_fix2+ef_ex2_FreqSlideDnXF,
+                                           event.effect2 MOD 16);
+          end;
+
+        ef_Extended3:
+          Case (event.effect2 DIV 16) of
+            ef_ex3_SetConnection:
+              begin
+                fmpar_table[chan].connect := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetMultipM:
+              begin
+                fmpar_table[chan].multipM := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetKslM:
+              begin
+                fmpar_table[chan].kslM := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetTremoloM:
+              begin
+                fmpar_table[chan].tremM := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetVibratoM:
+              begin
+                fmpar_table[chan].vibrM := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetKsrM:
+              begin
+                fmpar_table[chan].ksrM := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetSustainM:
+              begin
+                fmpar_table[chan].sustM := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetMultipC:
+              begin
+                fmpar_table[chan].multipC := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetKslC:
+              begin
+                fmpar_table[chan].kslC := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetTremoloC:
+              begin
+                fmpar_table[chan].tremC := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetVibratoC:
+              begin
+                fmpar_table[chan].vibrC := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetKsrC:
+              begin
+                fmpar_table[chan].ksrC := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+
+            ef_ex3_SetSustainC:
+              begin
+                fmpar_table[chan].sustC := event.effect2 MOD 16;
+                update_fmpar(chan);
+              end;
+          end;
+      end;
+
+      If (event.effect_def+event.effect = 0) then effect_table[chan] := 0
+      else begin
+             event_table[chan].effect_def := event.effect_def;
+             event_table[chan].effect := event.effect;
+           end;
+
+      If (event.effect_def2+event.effect2 = 0) then effect_table2[chan] := 0
+      else begin
+             event_table[chan].effect_def2 := event.effect_def2;
+             event_table[chan].effect2 := event.effect2;
+           end;
+
+      If (event.note = event.note OR keyoff_flag) then key_off(chan)
+      else If NOT (LO(effect_table[chan]) in  [ef_TonePortamento,
+                                               ef_TPortamVolSlide,
+                                               ef_TPortamVSlideFine,
+                                               ef_extended2+ef_fix2+ef_ex2_NoteDelay]) and
+              NOT (LO(effect_table2[chan]) in [ef_TonePortamento,
+                                               ef_TPortamVolSlide,
+                                               ef_TPortamVSlideFine,
+                                               ef_extended2+ef_fix2+ef_ex2_NoteDelay]) then
+             If NOT (((event.effect_def2 = ef_SwapArpeggio) or
+                      (event.effect_def2 = ef_SwapVibrato)) and
+                     (event.effect_def = ef_Extended) and
+                     (event.effect DIV 16 = ef_ex_ExtendedCmd) and
+                     (event.effect MOD 16 = ef_ex_cmd_NoRestart)) and
+                NOT (((event.effect_def = ef_SwapArpeggio) or
+                      (event.effect_def = ef_SwapVibrato)) and
+                     (event.effect_def2 = ef_Extended) and
+                     (event.effect2 DIV 16 = ef_ex_ExtendedCmd) and
+                     (event.effect2 MOD 16 = ef_ex_cmd_NoRestart)) then
+               output_note(event.note,voice_table[chan],chan,TRUE)
+             else output_note_NR(event.note,voice_table[chan],chan,TRUE)
+          else If (event.note <> 0) then
+                 event_table[chan].note := event.note;
+
+      Case event.effect_def of
+        ef_SwapArpeggio:
+          begin
+            If (event.effect_def2 = ef_Extended) and
+               (event.effect2 DIV 16 = ef_ex_ExtendedCmd) and
+               (event.effect2 MOD 16 = ef_ex_cmd_NoRestart) then
+              begin
+                If (macro_table[chan].arpg_pos >
+                    songdata.macro_table[event.effect].arpeggio.length) then
+                  macro_table[chan].arpg_pos :=
+                    songdata.macro_table[event.effect].arpeggio.length;
+                macro_table[chan].arpg_table := event.effect;
+              end
+            else begin
+                   macro_table[chan].arpg_count := 1;
+                   macro_table[chan].arpg_pos := 0;
+                   macro_table[chan].arpg_table := event.effect;
+                   macro_table[chan].arpg_note := event_table[chan].note;
+                 end;
+          end;
+
+        ef_SwapVibrato:
+          begin
+            If (event.effect_def2 = ef_Extended) and
+               (event.effect2 DIV 16 = ef_ex_ExtendedCmd) and
+               (event.effect2 MOD 16 = ef_ex_cmd_NoRestart) then
+              begin
+                If (macro_table[chan].vib_table >
+                    songdata.macro_table[event.effect].vibrato.length) then
+                  macro_table[chan].vib_pos :=
+                    songdata.macro_table[event.effect].vibrato.length;
+                macro_table[chan].vib_table := event.effect;
+              end
+            else begin
+                   macro_table[chan].vib_count := 1;
+                   macro_table[chan].vib_pos := 0;
+                   macro_table[chan].vib_table := event.effect;
+                   macro_table[chan].vib_delay := songdata.macro_table[macro_table[chan].vib_table].vibrato.delay;
+                 end;
+          end;
+      end;
+
+      Case event.effect_def2 of
+        ef_SwapArpeggio:
+          begin
+            If (event.effect_def = ef_Extended) and
+               (event.effect DIV 16 = ef_ex_ExtendedCmd) and
+               (event.effect MOD 16 = ef_ex_cmd_NoRestart) then
+              begin
+                If (macro_table[chan].arpg_pos >
+                    songdata.macro_table[event.effect2].arpeggio.length) then
+                  macro_table[chan].arpg_pos :=
+                    songdata.macro_table[event.effect2].arpeggio.length;
+                macro_table[chan].arpg_table := event.effect2;
+              end
+            else begin
+                   macro_table[chan].arpg_count := 1;
+                   macro_table[chan].arpg_pos := 0;
+                   macro_table[chan].arpg_table := event.effect2;
+                   macro_table[chan].arpg_note := event_table[chan].note;
+                 end;
+          end;
+
+        ef_SwapVibrato:
+          begin
+            If (event.effect_def = ef_Extended) and
+               (event.effect DIV 16 = ef_ex_ExtendedCmd) and
+               (event.effect MOD 16 = ef_ex_cmd_NoRestart) then
+              begin
+                If (macro_table[chan].vib_table >
+                    songdata.macro_table[event.effect2].vibrato.length) then
+                  macro_table[chan].vib_pos :=
+                    songdata.macro_table[event.effect2].vibrato.length;
+                macro_table[chan].vib_table := event.effect2;
+              end
+            else begin
+                   macro_table[chan].vib_count := 1;
+                   macro_table[chan].vib_pos := 0;
+                   macro_table[chan].vib_table := event.effect2;
+                   macro_table[chan].vib_delay := songdata.macro_table[macro_table[chan].vib_table].vibrato.delay;
+                 end;
+          end;
+      end;
+
+      update_fine_effects(chan);
+#endif
+	}
+}
+
 
 static void init_irq()
 {
