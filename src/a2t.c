@@ -3263,76 +3263,84 @@ static void update_extra_fine_effects()
 		eHi2 = HI(effect_table2[chan]);
 
 		switch (eLo) {
-		case ef_Extended2+ef_fix2+ef_ex2_GlVolSldUpXF:
+		case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldUpXF:
 			global_volume_slide(eHi, NONE);
-		break;
+			break;
 
 		case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldDnXF:
-			global_volume_slide(NONE,eHi);
-		break;
+			global_volume_slide(NONE, eHi);
+			break;
 
 		case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideUpXF:
 			volume_slide(chan, eHi, 0);
-		break;
+			break;
 
 		case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideDnXF:
 			volume_slide(chan, 0, eHi);
-		break;
+			break;
 
 		case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF:
 			portamento_up(chan, eHi, nFreq(12*8+1));
-		break;
+			break;
 
 		case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF:
 			portamento_down(chan, eHi, nFreq(0));
-		break;
+			break;
 
 		case ef_ExtraFineArpeggio:
 			arpeggio(chan);
-		break;
+			break;
 
 		case ef_ExtraFineVibrato:
 			if (!vibr_table[chan].fine)
 				vibrato(chan);
-		break;
+			break;
 
 		case ef_ExtraFineTremolo:
 			if (!trem_table[chan].fine)
 				tremolo(chan);
-		break;
+			break;
 		}
-#if 0
-      Case eLo2 of
-        ef_Extended2+ef_fix2+ef_ex2_GlVolSldUpXF:
-          global_volume_slide(eHi2,NONE);
 
-        ef_Extended2+ef_fix2+ef_ex2_GlVolSldDnXF:
-          global_volume_slide(NONE,eHi2);
+		switch (eLo2) {
+		case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldUpXF:
+			global_volume_slide(eHi2, NONE);
+			break;
 
-        ef_Extended2+ef_fix2+ef_ex2_VolSlideUpXF:
-          volume_slide(chan,eHi2,0);
+		case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldDnXF:
+			global_volume_slide(NONE, eHi2);
+			break;
 
-        ef_Extended2+ef_fix2+ef_ex2_VolSlideDnXF:
-          volume_slide(chan,0,eHi2);
+		case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideUpXF:
+			volume_slide(chan, eHi2, 0);
+			break;
 
-        ef_Extended2+ef_fix2+ef_ex2_FreqSlideUpXF:
-          portamento_up(chan,eHi2,nFreq(12*8+1));
+		case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideDnXF:
+			volume_slide(chan, 0, eHi2);
+			break;
 
-        ef_Extended2+ef_fix2+ef_ex2_FreqSlideDnXF:
-          portamento_down(chan,eHi2,nFreq(0));
+		case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF:
+			portamento_up(chan, eHi2, nFreq(12*8+1));
+			break;
 
-        ef_ExtraFineArpeggio:
-          arpeggio2(chan);
+		case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF:
+			portamento_down(chan,eHi2,nFreq(0));
+			break;
 
-        ef_ExtraFineVibrato:
-          If NOT vibr_table2[chan].fine then
-            vibrato2(chan);
+		case ef_ExtraFineArpeggio:
+			arpeggio2(chan);
+			break;
 
-        ef_ExtraFineTremolo:
-          If NOT trem_table2[chan].fine then
-            tremolo2(chan);
-      end;
-#endif
+		case ef_ExtraFineVibrato:
+			if (!vibr_table2[chan].fine)
+				vibrato2(chan);
+			break;
+
+		case ef_ExtraFineTremolo:
+			if (!trem_table2[chan].fine)
+				tremolo2(chan);
+			break;
+		}
 	}
 }
 
