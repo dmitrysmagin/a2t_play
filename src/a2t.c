@@ -1110,7 +1110,7 @@ static void play_line()
 				}
 
 				if (((event.note & 0x7f) >= 1) &&
-				    (event.note & 0x7f) <= 12 * 8 + 1) {
+				    ((event.note & 0x7f) <= 12 * 8 + 1)) {
 					arpgg_table[chan].state = 0;
 					arpgg_table[chan].note = event.note & 0x7f;
 					if ((event.effect_def == ef_Arpeggio) ||
@@ -1708,59 +1708,69 @@ static void play_line()
 			}
 			break;
 		}
+
+		switch (event.effect_def2) {
+		case ef_Arpeggio:
+		case ef_ExtraFineArpeggio:
+		case ef_ArpggVSlide:
+		case ef_ArpggVSlideFine:
+			if ((event.effect_def2 != ef_Arpeggio) ||
+			    (event.effect2 != 0)) {
+				switch (event.effect_def2) {
+				case ef_Arpeggio:
+					effect_table2[chan] = concw(ef_Arpeggio + ef_fix1, event.effect2);
+					break;
+
+				case ef_ExtraFineArpeggio:
+					effect_table2[chan] = concw(ef_ExtraFineArpeggio, event.effect2);
+					break;
+
+				case ef_ArpggVSlide:
+				case ef_ArpggVSlideFine:
+					if (event.effect2 != 0) {
+						effect_table2[chan] = concw(event.effect_def2, event.effect2);
+					} else {
+						if (((eLo2 == ef_ArpggVSlide) || (eLo2 == ef_ArpggVSlideFine)) &&
+						     (eHi2 != 0)) {
+							effect_table2[chan] = concw(event.effect_def2, eHi2);
+						} else {
+							effect_table2[chan] = effect_table2[chan] & 0xff00;
+						}
+					}
+				}
+
+				if (((event.note & 0x7f) >= 1) &&
+				    ((event.note & 0x7f) <= 12 * 8 + 1)) {
+					arpgg_table2[chan].state = 0;
+					arpgg_table2[chan].note = event.note & 0x7f;
+					if ((event.effect_def2 == ef_Arpeggio) ||
+					    (event.effect_def2 == ef_ExtraFineArpeggio)) {
+						arpgg_table2[chan].add1 = event.effect2 / 16;
+						arpgg_table2[chan].add2 = event.effect2 % 16;
+					}
+				} else {
+					if ((event.note == 0) &&
+					  (((event_table[chan].note & 0x7f) >= 1) &&
+					    (event_table[chan].note & 0x7f) <= 12 * 8 + 1)) {
+						if ((eLo2 != ef_Arpeggio + ef_fix1) &&
+						    (eLo2 != ef_ExtraFineArpeggio) &&
+						    (eLo2 != ef_ArpggVSlide) &&
+						    (eLo2 != ef_ArpggVSlideFine))
+							arpgg_table2[chan].state = 0;
+
+						arpgg_table2[chan].note = event_table[chan].note & 0x7f;
+						if ((event.effect_def2 == ef_Arpeggio) ||
+						    (event.effect_def2 == ef_ExtraFineArpeggio)) {
+							arpgg_table2[chan].add1 = event.effect2 / 16;
+							arpgg_table2[chan].add2 = event.effect2 % 16;
+						}
+					} else {
+						effect_table2[chan] = 0;
+					}
+				}
+			}
+		break;
 #if 0
-      Case event.effect_def2 of
-        ef_Arpeggio,
-        ef_ExtraFineArpeggio,
-        ef_ArpggVSlide,
-        ef_ArpggVSlideFine:
-          If (event.effect_def2 <> ef_Arpeggio) or
-             (event.effect2 <> 0) then
-            begin
-              Case event.effect_def2 of
-                ef_Arpeggio:
-                  effect_table2[chan] = concw(ef_Arpeggio+ef_fix1,event.effect2);
-
-                ef_ExtraFineArpeggio:
-                  effect_table2[chan] = concw(ef_ExtraFineArpeggio,event.effect2);
-
-                ef_ArpggVSlide,
-                ef_ArpggVSlideFine:
-                  If (event.effect2 <> 0) then
-                    effect_table2[chan] = concw(event.effect_def2,event.effect2)
-                  else If (eLo2 in [ef_ArpggVSlide,ef_ArpggVSlideFine]) and
-                          (eHi2 <> 0) then
-                         effect_table2[chan] = concw(event.effect_def2,eHi2)
-                       else effect_table2[chan] = effect_table2[chan] AND $0ff00;
-              end;
-
-              If (event.note AND $7f in [1..12*8+1]) then
-                begin
-                  arpgg_table2[chan].state = 0;
-                  arpgg_table2[chan].note = event.note AND $7f;
-                  If (event.effect_def2 in [ef_Arpeggio,ef_ExtraFineArpeggio]) then
-                    begin
-                      arpgg_table2[chan].add1 = event.effect2 / 16;
-                      arpgg_table2[chan].add2 = event.effect2 % 16;
-                    end;
-                end
-              else If (event.note = 0) and
-                      (event_table[chan].note AND $7f in [1..12*8+1]) then
-                     begin
-                       If NOT (eLo2 in [ef_Arpeggio+ef_fix1,ef_ExtraFineArpeggio,
-                                       ef_ArpggVSlide,ef_ArpggVSlideFine]) then
-                         arpgg_table2[chan].state = 0;
-
-                       arpgg_table2[chan].note = event_table[chan].note AND $7f;
-                       If (event.effect_def2 in [ef_Arpeggio,ef_ExtraFineArpeggio]) then
-                         begin
-                           arpgg_table2[chan].add1 = event.effect2 / 16;
-                           arpgg_table2[chan].add2 = event.effect2 % 16;
-                         end;
-                     end
-                   else effect_table2[chan] = 0;
-            end;
-
         ef_FSlideUp,
         ef_FSlideDown,
         ef_FSlideUpFine,
@@ -2244,8 +2254,8 @@ static void play_line()
                 update_fmpar(chan);
               end;
           end;
-      end;
 #endif
+		}
       
 		if (event.effect_def + event.effect == 0) {
 			effect_table[chan] = 0;
