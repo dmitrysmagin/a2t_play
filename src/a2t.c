@@ -987,18 +987,18 @@ static void play_line()
 		}
 
 		if ((event.note != 0) || (event.instr_def != 0)) {
-			event_table[chan].effect_def = event.effect_def;
-			event_table[chan].effect = event.effect;
+			event_table[chan].effect_def  = event.effect_def;
+			event_table[chan].effect      = event.effect;
 			event_table[chan].effect_def2 = event.effect_def2;
-			event_table[chan].effect2 = event.effect2;
+			event_table[chan].effect2     = event.effect2;
 		}
 
 		if (event.instr_def != 0) {
 			if (!nul_data(songdata->instr_data[event.instr_def], INSTRUMENT_SIZE)) {
-				set_ins_data(event.instr_def,chan);
+				set_ins_data(event.instr_def, chan);
 			} else {
 				release_sustaining_sound(chan);
-				set_ins_data(event.instr_def,chan);
+				set_ins_data(event.instr_def, chan);
 			}
 		}
 
@@ -1399,6 +1399,7 @@ static void play_line()
 				effect_table[chan] = concw(ef_Tremor, event.effect);
 			}
 			break;
+
 		case ef_Extended:
 			switch (event.effect / 16) {
 			case ef_ex_SetTremDepth:
@@ -1949,221 +1950,228 @@ static void play_line()
 						63 - event.effect2), 63 - event.effect2, chan);
 			}
 			break;
+
+		case ef_PositionJump:
+			if (no_loop(chan, current_line)) {
+				pattern_break = TRUE;
+				next_line = pattern_break_flag + chan;
+			}
+			break;
+
+		case ef_PatternBreak:
+			if (no_loop(chan,current_line)) {
+				pattern_break = TRUE;
+				next_line = event.effect2;
+			}
+			break;
+
+		case ef_SetSpeed:
+			speed = event.effect2;
+			break;
+
+		case ef_SetTempo:
+			update_timer(event.effect2);
+			break;
+
+		case ef_SetWaveform:
+			if (event.effect2 / 16 <= 7) { // in [0..7]
+				fmpar_table[chan].adsrw_car.wform = event.effect2 / 16;
+				update_carrier_adsrw(chan);
+			}
+
+			if (event.effect2 % 16 <= 7) { // in [0..7]
+				fmpar_table[chan].adsrw_mod.wform = event.effect2 % 16;
+				update_modulator_adsrw(chan);
+			}
+			break;
+
+		case ef_VolSlide:
+			effect_table2[chan] = concw(ef_VolSlide, event.effect2);
+			break;
+
+		case ef_VolSlideFine:
+			effect_table2[chan] = concw(ef_VolSlideFine, event.effect2);
+			break;
+
+		case ef_RetrigNote:
+			if (event.effect2 != 0) {
+				if ((eLo2 != ef_RetrigNote) &&
+				    (eLo2 != ef_MultiRetrigNote))
+					retrig_table2[chan] = 1;
+
+				effect_table2[chan] = concw(ef_RetrigNote, event.effect2);
+			}
+			break;
+
+		case ef_SetGlobalVolume:
+			global_volume = event.effect2;
+			set_global_volume();
+			break;
+
+		case ef_MultiRetrigNote:
+			if (event.effect2 / 16 != 0) {
+				if ((eLo2 != ef_RetrigNote) &&
+				    (eLo2 != ef_MultiRetrigNote))
+					retrig_table2[chan] = 1;
+
+				effect_table2[chan] = concw(ef_MultiRetrigNote, event.effect2);
+			}
+			break;
+
+		case ef_Tremor:
+			if ((event.effect2 / 16 != 0) &&
+			    (event.effect2 % 16 != 0)) {
+				if (eLo2 != ef_Tremor) {
+					tremor_table2[chan].pos = 0;
+					tremor_table2[chan].volume = volume_table[chan];
+				}
+				effect_table2[chan] = concw(ef_Tremor, event.effect2);
+			}
+			break;
+
+		case ef_Extended:
+			switch (event.effect2 / 16) {
+			case ef_ex_SetTremDepth:
+				switch (event.effect2 % 16) {
+				case 0:
+					opl3out(_instr[11], misc_register & 0x7f);
+					current_tremolo_depth = 0;
+					break;
+
+				case 1:
+					opl3out(_instr[11], misc_register | 0x80);
+					current_tremolo_depth = 1;
+					break;
+				}
+				break;
+
+			case ef_ex_SetVibDepth:
+				switch (event.effect2 % 16) {
+				case 0:
+					opl3out(_instr[11], misc_register & 0xbf);
+					current_vibrato_depth = 0;
+					break;
+
+				case 1:
+					opl3out(_instr[11], misc_register | 0x40);
+					current_vibrato_depth = 1;
+					break;
+				}
+				break;
+
+			case ef_ex_SetAttckRateM:
+				fmpar_table[chan].adsrw_mod.attck = event.effect2 % 16;
+				update_modulator_adsrw(chan);
+				break;
+
+			case ef_ex_SetDecayRateM:
+				fmpar_table[chan].adsrw_mod.dec = event.effect2 % 16;
+				update_modulator_adsrw(chan);
+				break;
+
+			case ef_ex_SetSustnLevelM:
+				fmpar_table[chan].adsrw_mod.sustn = event.effect2 % 16;
+				update_modulator_adsrw(chan);
+				break;
+
+			case ef_ex_SetRelRateM:
+				fmpar_table[chan].adsrw_mod.rel = event.effect2 % 16;
+				update_modulator_adsrw(chan);
+				break;
+
+			case ef_ex_SetAttckRateC:
+				fmpar_table[chan].adsrw_car.attck = event.effect2 % 16;
+				update_carrier_adsrw(chan);
+				break;
+
+			case ef_ex_SetDecayRateC:
+				fmpar_table[chan].adsrw_car.dec = event.effect2 % 16;
+				update_carrier_adsrw(chan);
+				break;
+
+			case ef_ex_SetSustnLevelC:
+				fmpar_table[chan].adsrw_car.sustn = event.effect2 % 16;
+				update_carrier_adsrw(chan);
+				break;
+
+			case ef_ex_SetRelRateC:
+				fmpar_table[chan].adsrw_car.rel = event.effect2 % 16;
+				update_carrier_adsrw(chan);
+				break;
+
+			case ef_ex_SetFeedback:
+				fmpar_table[chan].feedb = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+
+			case ef_ex_SetPanningPos:
+				panning_table[chan] = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+
+			case ef_ex_PatternLoop:
+			case ef_ex_PatternLoopRec:
+				if (event.effect2 % 16 == 0) {
+					loopbck_table[chan] = current_line;
+				} else {
+					if (loopbck_table[chan] != NONE) {
+						if (loop_table[chan][current_line] == NONE)
+							loop_table[chan][current_line] = event.effect2 % 16;
+
+						if (loop_table[chan][current_line] != 0) {
+							pattern_break = TRUE;
+							next_line = pattern_loop_flag + chan;
+						} else {
+							if (event.effect2 / 16 == ef_ex_PatternLoopRec)
+								loop_table[chan][current_line] = NONE;
+						}
+					}
+				}
+				break;
+
+			case ef_ex_MacroKOffLoop:
+				if (event.effect2 % 16 != 0) {
+					keyoff_loop[chan] = TRUE;
+				} else {
+					keyoff_loop[chan] = FALSE;
+				}
+				break;
+
+			case ef_ex_ExtendedCmd:
+				switch (event.effect2 % 16) {
+				case ef_ex_cmd_RSS:        release_sustaining_sound(chan); break;
+				case ef_ex_cmd_ResetVol:   reset_ins_volume(chan); break;
+				case ef_ex_cmd_LockVol:    volume_lock  [chan] = TRUE; break;
+				case ef_ex_cmd_UnlockVol:  volume_lock  [chan] = FALSE; break;
+				case ef_ex_cmd_LockVP:     peak_lock    [chan] = TRUE; break;
+				case ef_ex_cmd_UnlockVP:   peak_lock    [chan] = FALSE; break;
+				case ef_ex_cmd_VSlide_def: volslide_type[chan] = 0; break;
+				case ef_ex_cmd_LockPan:    pan_lock     [chan] = TRUE; break;
+				case ef_ex_cmd_UnlockPan:  pan_lock     [chan] = FALSE; break;
+				case ef_ex_cmd_VibrOff:    change_frequency(chan, freq_table[chan]); break;
+				case ef_ex_cmd_TremOff:
+					set_ins_volume(LO(volume_table[chan]),
+						       HI(volume_table[chan]), chan);
+					break;
+				case ef_ex_cmd_VSlide_car:
+					if (!((event.effect_def == ef_Extended) &&
+					      (event.effect == ef_ex_ExtendedCmd * 16 +
+								ef_ex_cmd_VSlide_mod)))
+						volslide_type[chan] = 1;
+					break;
+
+				case ef_ex_cmd_VSlide_mod:
+					if (!((event.effect_def == ef_Extended) &&
+					      (event.effect == ef_ex_ExtendedCmd * 16 +
+								ef_ex_cmd_VSlide_car)))
+						volslide_type[chan] = 2;
+					break;
+				}
+				break;
+			}
+			break;
 #if 0
-        ef_PositionJump:
-          If no_loop(chan,current_line) then
-            begin
-              pattern_break = TRUE;
-              next_line = pattern_break_flag+chan;
-            end;
-
-        ef_PatternBreak:
-          If no_loop(chan,current_line) then
-            begin
-              pattern_break = TRUE;
-              next_line = event.effect2;
-            end;
-
-        ef_SetSpeed:
-          speed = event.effect2;
-
-        ef_SetTempo:
-          update_timer(event.effect2);
-
-        ef_SetWaveform:
-          begin
-            If (event.effect2 / 16 in [0..7]) then
-              begin
-                fmpar_table[chan].adsrw_car.wform = event.effect2 / 16;
-                update_carrier_adsrw(chan);
-              end;
-
-            If (event.effect2 % 16 in [0..7]) then
-              begin
-                fmpar_table[chan].adsrw_mod.wform = event.effect2 % 16;
-                update_modulator_adsrw(chan);
-              end;
-          end;
-
-        ef_VolSlide:
-          effect_table2[chan] = concw(ef_VolSlide,event.effect2);
-
-        ef_VolSlideFine:
-          effect_table2[chan] = concw(ef_VolSlideFine,event.effect2);
-
-        ef_RetrigNote:
-          If (event.effect2 <> 0) then
-            begin
-              If NOT (eLo2 in [ef_RetrigNote,ef_MultiRetrigNote]) then
-                retrig_table2[chan] = 1;
-              effect_table2[chan] = concw(ef_RetrigNote,event.effect2);
-            end;
-
-        ef_SetGlobalVolume:
-          begin
-            global_volume = event.effect2;
-            set_global_volume;
-          end;
-
-        ef_MultiRetrigNote:
-          If (event.effect2 / 16 <> 0) then
-            begin
-              If NOT (eLo2 in [ef_RetrigNote,ef_MultiRetrigNote]) then
-                retrig_table2[chan] = 1;
-              effect_table2[chan] = concw(ef_MultiRetrigNote,event.effect2);
-            end;
-
-        ef_Tremor:
-          If (event.effect2 / 16 <> 0) and
-             (event.effect2 % 16 <> 0) then
-          begin
-            If (eLo2 <> ef_Tremor) then
-              begin
-                tremor_table2[chan].pos = 0;
-                tremor_table2[chan].volume = volume_table[chan];
-              end;
-            effect_table2[chan] = concw(ef_Tremor,event.effect2);
-          end;
-
-        ef_Extended:
-          Case (event.effect2 / 16) of
-            ef_ex_SetTremDepth:
-              Case (event.effect2 % 16) of
-                0: begin
-                     opl3out(_instr[11],misc_register AND $07f);
-                     current_tremolo_depth = 0;
-                   end;
-
-                1: begin
-                     opl3out(_instr[11],misc_register OR $080);
-                     current_tremolo_depth = 1;
-                   end;
-              end;
-
-            ef_ex_SetVibDepth:
-              Case (event.effect2 % 16) of
-                0: begin
-                     opl3out(_instr[11],misc_register AND $0bf);
-                     current_vibrato_depth = 0;
-                   end;
-
-                1: begin
-                     opl3out(_instr[11],misc_register OR $040);
-                     current_vibrato_depth = 1;
-                   end;
-              end;
-
-            ef_ex_SetAttckRateM:
-              begin
-                fmpar_table[chan].adsrw_mod.attck = event.effect2 % 16;
-                update_modulator_adsrw(chan);
-              end;
-
-            ef_ex_SetDecayRateM:
-              begin
-                fmpar_table[chan].adsrw_mod.dec = event.effect2 % 16;
-                update_modulator_adsrw(chan);
-              end;
-
-            ef_ex_SetSustnLevelM:
-              begin
-                fmpar_table[chan].adsrw_mod.sustn = event.effect2 % 16;
-                update_modulator_adsrw(chan);
-              end;
-
-            ef_ex_SetRelRateM:
-              begin
-                fmpar_table[chan].adsrw_mod.rel = event.effect2 % 16;
-                update_modulator_adsrw(chan);
-              end;
-
-            ef_ex_SetAttckRateC:
-              begin
-                fmpar_table[chan].adsrw_car.attck = event.effect2 % 16;
-                update_carrier_adsrw(chan);
-              end;
-
-            ef_ex_SetDecayRateC:
-              begin
-                fmpar_table[chan].adsrw_car.dec = event.effect2 % 16;
-                update_carrier_adsrw(chan);
-              end;
-
-            ef_ex_SetSustnLevelC:
-              begin
-                fmpar_table[chan].adsrw_car.sustn = event.effect2 % 16;
-                update_carrier_adsrw(chan);
-              end;
-
-            ef_ex_SetRelRateC:
-              begin
-                fmpar_table[chan].adsrw_car.rel = event.effect2 % 16;
-                update_carrier_adsrw(chan);
-              end;
-
-            ef_ex_SetFeedback:
-              begin
-                fmpar_table[chan].feedb = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
-
-            ef_ex_SetPanningPos:
-              begin
-                panning_table[chan] = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
-
-            ef_ex_PatternLoop,
-            ef_ex_PatternLoopRec:
-              If (event.effect2 % 16 = 0) then
-                loopbck_table[chan] = current_line
-              else If (loopbck_table[chan] <> NONE) then
-                     begin
-                       If (loop_table[chan][current_line] = NONE) then
-                         loop_table[chan][current_line] = event.effect2 % 16;
-                       If (loop_table[chan][current_line] <> 0) then
-                         begin
-                           pattern_break = TRUE;
-                           next_line = pattern_loop_flag+chan;
-                         end
-                       else If (event.effect2 / 16 = ef_ex_PatternLoopRec) then
-                              loop_table[chan][current_line] = NONE;
-                     end;
-
-            ef_ex_MacroKOffLoop:
-              If (event.effect2 % 16 <> 0) then
-                keyoff_loop[chan] = TRUE
-              else keyoff_loop[chan] = FALSE;
-
-            ef_ex_ExtendedCmd:
-              Case (event.effect2 % 16) of
-                ef_ex_cmd_RSS:        release_sustaining_sound(chan);
-                ef_ex_cmd_ResetVol:   reset_ins_volume(chan);
-                ef_ex_cmd_LockVol:    volume_lock  [chan] = TRUE;
-                ef_ex_cmd_UnlockVol:  volume_lock  [chan] = FALSE;
-                ef_ex_cmd_LockVP:     peak_lock    [chan] = TRUE;
-                ef_ex_cmd_UnlockVP:   peak_lock    [chan] = FALSE;
-                ef_ex_cmd_VSlide_def: volslide_type[chan] = 0;
-                ef_ex_cmd_LockPan:    pan_lock     [chan] = TRUE;
-                ef_ex_cmd_UnlockPan:  pan_lock     [chan] = FALSE;
-                ef_ex_cmd_VibrOff:    change_frequency(chan,freq_table[chan]);
-                ef_ex_cmd_TremOff:    set_ins_volume(LO(volume_table[chan]),
-                                                     HI(volume_table[chan]),chan);
-                ef_ex_cmd_VSlide_car:
-                  If NOT ((event.effect_def = ef_Extended) and
-                          (event.effect = ef_ex_ExtendedCmd*16+
-                                          ef_ex_cmd_VSlide_mod)) then
-                    volslide_type[chan] = 1;
-
-                ef_ex_cmd_VSlide_mod:
-                  If NOT ((event.effect_def = ef_Extended) and
-                          (event.effect = ef_ex_ExtendedCmd*16+
-                                          ef_ex_cmd_VSlide_car)) then
-                    volslide_type[chan] = 2;
-              end;
-          end;
-
-        ef_Extended2:
+		case ef_Extended2:
           Case (event.effect2 / 16) of
             ef_ex2_PatDelayFrame,
             ef_ex2_PatDelayRow:
