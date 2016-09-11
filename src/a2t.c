@@ -329,7 +329,7 @@ bool pattern_break = FALSE;
 bool pattern_delay = FALSE;
 uint8_t next_line = 0;
 const uint8_t max_patterns = 128;
-const tPLAY_STATUS play_status = isStopped;
+tPLAY_STATUS play_status = isStopped;
 uint8_t overall_volume = 63;
 uint8_t global_volume = 63;
 
@@ -449,9 +449,29 @@ int ticks, tick0, tickD, tickXF;
 #define FreqRange  (FreqEnd - FreqStart)
 
 /* PLAYER */
-void opl2out(uint16_t reg, uint16_t data) {}
-void opl3out(uint16_t reg, uint16_t data) {}
-void opl3exp(uint16_t data) {}
+void opl_out(uint8_t reg, uint8_t data) {}
+void opl2out(uint16_t reg, uint16_t data)
+{
+	opl_out(0, reg);
+	opl_out(1, data);
+}
+
+void opl3out(uint16_t reg, uint16_t data)
+{
+	if (reg < 0x100) {
+		opl_out(0, reg);
+		opl_out(1, data);
+	} else {
+		opl_out(2, reg & 0xff);
+		opl_out(3, data);
+	}
+}
+
+void opl3exp(uint16_t data)
+{
+	opl_out(2, data & 0xff);
+	opl_out(3, data >> 8);
+}
 
 static bool nul_data(void *data, int size)
 {
@@ -3460,6 +3480,52 @@ static void update_extra_fine_effects()
 	}
 }
 
+static int calc_following_order(uint8_t order)
+{
+	int result;
+	uint8_t index, jump_count;
+
+	result = -1;
+	index = order;
+	jump_count = 0;
+
+	do {
+		if (songdata->pattern_order[index] < 0x80) {
+			result = index;
+		} else {
+			index = songdata->pattern_order[index] - 0x80;
+			jump_count++;
+		}
+	} while ((jump_count <= 0x7f) || (result == -1));
+
+	return result;
+}
+
+static int calc_order_jump()
+{
+	uint8_t temp;
+	int result;
+
+	result = 0;
+	temp = 0;
+
+	do {
+		if (songdata->pattern_order[current_order] > 0x7f)
+			current_order = songdata->pattern_order[current_order] - 0x80;
+		temp++;
+	} while ((temp <= 0x7f) || (songdata->pattern_order[current_order] >= 0x80));
+
+	if (temp > 0x7f) {
+		//stop_playing();
+		result = -1;
+	}
+
+	return result;
+}
+
+static int ticklooper, macro_ticklooper;
+
+
 static void init_irq()
 {
 	if (irq_initialized)
@@ -3567,8 +3633,8 @@ static void init_player()
 	opl3exp(0x0105);
 	opl3exp(0x04 + (songdata->flag_4op << 8));
 
+	key_off(16);
 	key_off(17);
-	key_off(18);
 	opl2out(_instr[11], misc_register);
 
 	init_buffers();
@@ -3591,6 +3657,38 @@ static void init_player()
 		arpgg_table[i].state = 1;
 		voice_table[i] = i;
 	}
+}
+
+void start_playing(char *tune)
+{
+	//stop_playing();
+	//a2t_import(tune);
+
+	//if (error_code)
+	//	return;
+
+	init_player();
+
+	if ((songdata->pattern_order[current_order] > 0x7f) &&
+	    (calc_order_jump() == -1))
+		return;
+
+	current_pattern = songdata->pattern_order[current_order];
+	current_line = 0;
+	pattern_break = FALSE;
+	pattern_delay = FALSE;
+	tickXF = 0;
+	ticks = 0;
+	tick0 = 0;
+	next_line = 0;
+	irq_mode = TRUE;
+	play_status = isPlaying;
+
+	ticklooper = 0;
+	macro_ticklooper = 0;
+	speed = songdata->speed;
+	macro_speedup = songdata->macro_speedup;
+	update_timer(songdata->tempo);
 }
 
 /* LOADER FOR A2M/A2T */
