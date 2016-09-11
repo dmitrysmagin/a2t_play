@@ -1552,7 +1552,7 @@ static void play_line()
 			case ef_ex2_PatDelayRow:
 				pattern_delay = TRUE;
 				if (event.effect / 16 == ef_ex2_PatDelayFrame) {
-					tickD = event.effect / 16;
+					tickD = event.effect % 16;
 				} else {
 					tickD = speed * (event.effect % 16);
 				}
@@ -2170,151 +2170,170 @@ static void play_line()
 				break;
 			}
 			break;
-#if 0
+
 		case ef_Extended2:
-          Case (event.effect2 / 16) of
-            ef_ex2_PatDelayFrame,
-            ef_ex2_PatDelayRow:
-              begin
-                pattern_delay = TRUE;
-                If (event.effect2 / 16 = ef_ex2_PatDelayFrame) then
-                  tickD = (event.effect2 % 16)
-                else tickD = speed*(event.effect2 % 16);
-              end;
+			switch (event.effect2 / 16) {
+			case ef_ex2_PatDelayFrame:
+			case ef_ex2_PatDelayRow:
+				pattern_delay = TRUE;
+				if (event.effect2 / 16 == ef_ex2_PatDelayFrame) {
+					tickD = event.effect2 % 16;
+				} else {
+					tickD = speed * (event.effect2 % 16);
+				}
+				break;
 
-            ef_ex2_NoteDelay:
-              begin
-                effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_NoteDelay,0);
-                notedel_table[chan] = event.effect2 % 16;
-              end;
+			case ef_ex2_NoteDelay:
+				effect_table2[chan] = concw(ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay, 0);
+				notedel_table[chan] = event.effect2 % 16;
+				break;
 
-            ef_ex2_NoteCut:
-              begin
-                effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_NoteCut,0);
-                notecut_table[chan] = event.effect2 % 16;
-              end;
+			case ef_ex2_NoteCut:
+				effect_table2[chan] = concw(ef_Extended2 + ef_fix2 + ef_ex2_NoteCut, 0);
+				notecut_table[chan] = event.effect2 % 16;
+				break;
 
-            ef_ex2_FineTuneUp:
-              Inc(ftune_table[chan],event.effect2 % 16);
+			case ef_ex2_FineTuneUp:
+				ftune_table[chan] += event.effect2 % 16;
+				break;
 
-            ef_ex2_FineTuneDown:
-              Dec(ftune_table[chan],event.effect2 % 16);
+			case ef_ex2_FineTuneDown:
+				ftune_table[chan] -= event.effect2 % 16;
+				break;
 
-            ef_ex2_GlVolSlideUp:
-              effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_GlVolSlideUp,
-                                           event.effect2 % 16);
-            ef_ex2_GlVolSlideDn:
-              effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_GlVolSlideDn,
-                                           event.effect2 % 16);
-            ef_ex2_GlVolSlideUpF:
-              effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_GlVolSlideUpF,
-                                           event.effect2 % 16);
-            ef_ex2_GlVolSlideDnF:
-              effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_GlVolSlideDnF,
-                                           event.effect2 % 16);
-            ef_ex2_GlVolSldUpXF:
-              effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_GlVolSldUpXF,
-                                           event.effect2 % 16);
-            ef_ex2_GlVolSldDnXF:
-              effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_GlVolSldDnXF,
-                                           event.effect2 % 16);
-            ef_ex2_VolSlideUpXF:
-              effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_VolSlideUpXF,
-                                           event.effect2 % 16);
-            ef_ex2_VolSlideDnXF:
-              effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_VolSlideDnXF,
-                                           event.effect2 % 16);
-            ef_ex2_FreqSlideUpXF:
-              effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_FreqSlideUpXF,
-                                           event.effect2 % 16);
-            ef_ex2_FreqSlideDnXF:
-              effect_table2[chan] = concw(ef_Extended2+ef_fix2+ef_ex2_FreqSlideDnXF,
-                                           event.effect2 % 16);
-          end;
+			case ef_ex2_GlVolSlideUp:
+				effect_table2[chan] =
+					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUp,
+					      event.effect2 % 16);
+				break;
 
-        ef_Extended3:
-          Case (event.effect2 / 16) of
-            ef_ex3_SetConnection:
-              begin
-                fmpar_table[chan].connect = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+			case ef_ex2_GlVolSlideDn:
+				effect_table2[chan] =
+					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDn,
+						event.effect2 % 16);
+				break;
 
-            ef_ex3_SetMultipM:
-              begin
-                fmpar_table[chan].multipM = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+			case ef_ex2_GlVolSlideUpF:
+				effect_table2[chan] =
+					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUpF,
+						event.effect2 % 16);
+				break;
 
-            ef_ex3_SetKslM:
-              begin
-                fmpar_table[chan].kslM = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+			case ef_ex2_GlVolSlideDnF:
+				effect_table2[chan] =
+					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDnF,
+						event.effect2 % 16);
+				break;
 
-            ef_ex3_SetTremoloM:
-              begin
-                fmpar_table[chan].tremM = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+			case ef_ex2_GlVolSldUpXF:
+				effect_table2[chan] =
+					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldUpXF,
+						event.effect2 % 16);
+				break;
 
-            ef_ex3_SetVibratoM:
-              begin
-                fmpar_table[chan].vibrM = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+			case ef_ex2_GlVolSldDnXF:
+				effect_table2[chan] =
+					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldDnXF,
+						event.effect2 % 16);
+				break;
 
-            ef_ex3_SetKsrM:
-              begin
-                fmpar_table[chan].ksrM = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+			case ef_ex2_VolSlideUpXF:
+				effect_table2[chan] =
+					concw(ef_Extended2 + ef_fix2 + ef_ex2_VolSlideUpXF,
+						event.effect2 % 16);
+				break;
 
-            ef_ex3_SetSustainM:
-              begin
-                fmpar_table[chan].sustM = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+			case ef_ex2_VolSlideDnXF:
+				effect_table2[chan] =
+					concw(ef_Extended2 + ef_fix2 + ef_ex2_VolSlideDnXF,
+						event.effect2 % 16);
+				break;
 
-            ef_ex3_SetMultipC:
-              begin
-                fmpar_table[chan].multipC = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+			case ef_ex2_FreqSlideUpXF:
+				effect_table2[chan] =
+					concw(ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF,
+						event.effect2 % 16);
+				break;
 
-            ef_ex3_SetKslC:
-              begin
-                fmpar_table[chan].kslC = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+			case ef_ex2_FreqSlideDnXF:
+				effect_table2[chan] =
+					concw(ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF,
+						event.effect2 % 16);
+				break;
+			}
+			break;
 
-            ef_ex3_SetTremoloC:
-              begin
-                fmpar_table[chan].tremC = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+		case ef_Extended3:
+			switch (event.effect2 / 16) {
+			case ef_ex3_SetConnection:
+				fmpar_table[chan].connect = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
 
-            ef_ex3_SetVibratoC:
-              begin
-                fmpar_table[chan].vibrC = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+			case ef_ex3_SetMultipM:
+				fmpar_table[chan].multipM = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
 
-            ef_ex3_SetKsrC:
-              begin
-                fmpar_table[chan].ksrC = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
+			case ef_ex3_SetKslM:
+				fmpar_table[chan].kslM = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
 
-            ef_ex3_SetSustainC:
-              begin
-                fmpar_table[chan].sustC = event.effect2 % 16;
-                update_fmpar(chan);
-              end;
-          end;
-#endif
+			case ef_ex3_SetTremoloM:
+				fmpar_table[chan].tremM = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+
+			case ef_ex3_SetVibratoM:
+				fmpar_table[chan].vibrM = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+
+			case ef_ex3_SetKsrM:
+				fmpar_table[chan].ksrM = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+
+			case ef_ex3_SetSustainM:
+				fmpar_table[chan].sustM = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+
+			case ef_ex3_SetMultipC:
+				fmpar_table[chan].multipC = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+
+			case ef_ex3_SetKslC:
+				fmpar_table[chan].kslC = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+
+			case ef_ex3_SetTremoloC:
+				fmpar_table[chan].tremC = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+
+			case ef_ex3_SetVibratoC:
+				fmpar_table[chan].vibrC = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+
+			case ef_ex3_SetKsrC:
+				fmpar_table[chan].ksrC = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+
+			case ef_ex3_SetSustainC:
+				fmpar_table[chan].sustC = event.effect2 % 16;
+				update_fmpar(chan);
+				break;
+			}
+			break;
+
 		}
-      
+
 		if (event.effect_def + event.effect == 0) {
 			effect_table[chan] = 0;
 		} else {
