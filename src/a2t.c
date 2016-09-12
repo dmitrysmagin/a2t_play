@@ -3523,8 +3523,117 @@ static int calc_order_jump()
 	return result;
 }
 
+static void update_song_position()
+{
+	if ((current_line < songdata->patt_len - 1) && !pattern_break) {
+		current_line++;
+	} else {
+		if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
+		     (current_order < 0x7f)) {
+			memset(loopbck_table, NONE, sizeof(loopbck_table));
+			memset(loop_table, NONE, sizeof(loop_table));
+			current_order++;
+		}
+
+		if (pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) {
+			uint8_t temp;
+
+			temp = next_line - pattern_loop_flag;
+			next_line = loopbck_table[temp];
+
+			if (loop_table[temp][current_line] != 0)
+				loop_table[temp][current_line]--;
+		} else {
+			if (pattern_break && ((next_line & 0xf0) == pattern_break_flag)) {
+				current_order = event_table[next_line - pattern_break_flag].effect;
+				pattern_break = FALSE;
+			} else {
+				if (current_order >= 0x7f)
+					current_order = 0;
+			}
+		}
+
+		if ((songdata->pattern_order[current_order] > 0x7f) &&
+		    (calc_order_jump() == -1))
+			return;
+
+		current_pattern = songdata->pattern_order[current_order];
+		if (!pattern_break) {
+			current_line = 0;
+		} else {
+			pattern_break = FALSE;
+			current_line = next_line;
+		}
+	}
+
+	if ((current_line == 0) &&
+	    (current_order == calc_following_order(0)) && speed_update) {
+		tempo = songdata->tempo;
+		speed = songdata->speed;
+		update_timer(tempo);
+	}
+}
+
+static void poll_proc()
+{
+	if (!pattern_delay && (ticks - tick0 + 1 >= speed))  {
+		if ((songdata->pattern_order[current_order] > 0x7f) &&
+		    (calc_order_jump() == -1))
+			return;
+
+		current_pattern = songdata->pattern_order[current_order];
+		play_line();
+		update_effects();
+
+		if (!pattern_delay)
+			update_song_position();
+		tick0 = ticks;
+	} else {
+		update_effects();
+		ticks++;
+		if (pattern_delay && (tickD > 1)) {
+			tickD--;
+		} else {
+			if (pattern_delay) {
+				tick0 = ticks;
+				update_song_position();
+			}
+			pattern_delay = FALSE;
+		}
+}
+
+	tickXF++;
+	if (tickXF % 4 == 0) {
+		update_extra_fine_effects();
+		tickXF -= 4;
+	}
+}
+
+static void macro_poll_proc()
+{
+}
+
 static int ticklooper, macro_ticklooper;
 
+static void newtimer()
+{
+
+	if ((ticklooper == 0) &&
+	    (irq_mode))
+		poll_proc();
+
+	if ((macro_ticklooper == 0) &&
+	    (irq_mode))
+		macro_poll_proc();
+
+	ticklooper++;
+	if (ticklooper >= IRQ_freq / tempo)
+		ticklooper = 0;
+
+	macro_ticklooper++;
+	if (macro_ticklooper >= IRQ_freq / (tempo * _macro_speedup()))
+		macro_ticklooper = 0;
+}
 
 static void init_irq()
 {
