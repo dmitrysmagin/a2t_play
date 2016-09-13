@@ -712,7 +712,7 @@ static void set_global_volume()
 	}
 }
 
-static void set_overall_volume(uint8_t level)
+void set_overall_volume(unsigned char level)
 {
 	overall_volume = max(level, 63);
 	set_global_volume();
@@ -3511,7 +3511,7 @@ static int calc_order_jump()
 	} while ((temp <= 0x7f) || (songdata->pattern_order[current_order] >= 0x80));
 
 	if (temp > 0x7f) {
-		//stop_playing();
+		stop_playing();
 		result = -1;
 	}
 
@@ -3569,7 +3569,7 @@ static void update_song_position()
 	}
 }
 
-static void poll_proc()
+void poll_proc()
 {
 	if (!pattern_delay && (ticks - tick0 + 1 >= speed))  {
 		if ((songdata->pattern_order[current_order] > 0x7f) &&
@@ -3604,7 +3604,7 @@ static void poll_proc()
 	}
 }
 
-static void macro_poll_proc()
+void macro_poll_proc()
 {
 #define  IDLE		0xfff
 #define  FINISHED	0xffff
@@ -4068,9 +4068,32 @@ static void init_player()
 	}
 }
 
+void stop_playing()
+{
+	irq_mode = FALSE;
+	play_status = isStopped;
+	global_volume = 63;
+	current_tremolo_depth = tremolo_depth;
+	current_vibrato_depth = vibrato_depth;
+	pattern_break = FALSE;
+	current_order = 0;
+	current_pattern = 0;
+	current_line = 0;
+
+	for (int i = 0; i < 20; i++)
+		release_sustaining_sound(i);
+	opl2out(_instr[11], 0);
+	opl3exp(0x0004);
+	opl3exp(0x0005);
+	init_buffers();
+
+	speed = songdata->speed;
+	update_timer(songdata->tempo);
+}
+
 void start_playing(char *tune)
 {
-	//stop_playing();
+	stop_playing();
 	//a2t_import(tune);
 
 	//if (error_code)
