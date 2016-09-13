@@ -4091,6 +4091,33 @@ void stop_playing()
 	update_timer(songdata->tempo);
 }
 
+/* Clean songdata before importing a2t tune */
+static void init_songdata()
+{
+	if (play_status != isStopped)
+		stop_playing();
+	else
+		init_buffers();
+
+	memset(songdata, 0, sizeof(_songdata));
+	memset(songdata->pattern_order, 0x80, sizeof(songdata->pattern_order));
+	memset(pattdata, 0, sizeof(_pattdata));
+
+	songdata->patt_len = 64;
+	songdata->nm_tracks = 18;
+	songdata->tempo = tempo;
+	songdata->speed = speed;
+	songdata->macro_speedup = 1;
+	speed_update = FALSE;
+	lockvol = FALSE;
+	panlock = FALSE;
+	lockVP  = FALSE;
+	tremolo_depth = 0;
+	vibrato_depth = 0;
+	volume_scaling = FALSE;
+	percussion_mode = FALSE;
+}
+
 void start_playing(char *tune)
 {
 	stop_playing();
@@ -4467,8 +4494,8 @@ void a2t_import(char *tune)
 	if(strncmp(header->id, "_A2tiny_module_", 15))
 		return;
 
-	memset(songdata, 0, sizeof(_songdata));
-	memset(pattdata, 0, sizeof(_pattdata));
+	init_songdata();
+
 	memset(len, 0, sizeof(len));
 
 	ffver = header->ffver;
