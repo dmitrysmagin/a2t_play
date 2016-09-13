@@ -3621,7 +3621,7 @@ static void macro_poll_proc()
 		tCH_MACRO_TABLE *mt = &macro_table[chan];
 		tREGISTER_TABLE *rt = &songdata->instr_macros[mt->fmreg_table];
 
-		if ((mt->fmreg_table != 0) && (speed != 0)) {
+		if ((mt->fmreg_table != 0) && (speed != 0)) { // FIXME: what speed?
 			if (mt->fmreg_duration > 1) {
 				mt->fmreg_duration--;
 			} else {
@@ -3658,195 +3658,258 @@ static void macro_poll_proc()
 					    ((mt->fmreg_pos < rt->keyoff_pos) || (mt->fmreg_pos == IDLE)))
 						mt->fmreg_pos = rt->keyoff_pos;
 				}
-#if 0
-                     If (fmreg_pos <> 0) and
-                        (fmreg_pos <> IDLE) and (fmreg_pos <> finished_flag) then
-                       begin
-                         fmreg_duration := data[fmreg_pos].duration;
-                         If (fmreg_duration <> 0) then
-                           With data[fmreg_pos] do
-                             begin
-                               If NOT songdata.dis_fmreg_col[fmreg_table][0] then
-                                 fmpar_table[chan].adsrw_mod.attck := fm_data.ATTCK_DEC_modulator SHR 4;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][1] then
-                                 fmpar_table[chan].adsrw_mod.dec := fm_data.ATTCK_DEC_modulator AND $0f;
+				if ((mt->fmreg_pos != 0) &&
+				    (mt->fmreg_pos != IDLE) && (mt->fmreg_pos != finished_flag)) {
+					mt->fmreg_duration = rt->data[mt->fmreg_pos].duration;
+					if (mt->fmreg_duration != 0) {
+						tREGISTER_TABLE_DEF *d = &rt->data[mt->fmreg_pos];
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][2] then
-                                 fmpar_table[chan].adsrw_mod.sustn := fm_data.SUSTN_REL_modulator SHR 4;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][0])
+							fmpar_table[chan].adsrw_mod.attck =
+								d->fm_data.ATTCK_DEC_modulator >> 4;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][3] then
-                                 fmpar_table[chan].adsrw_mod.rel := fm_data.SUSTN_REL_modulator AND $0f;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][1])
+							fmpar_table[chan].adsrw_mod.dec =
+								d->fm_data.ATTCK_DEC_modulator & 0x0f;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][4] then
-                                 fmpar_table[chan].adsrw_mod.wform := fm_data.WAVEFORM_modulator AND $07;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][2])
+							fmpar_table[chan].adsrw_mod.sustn =
+								d->fm_data.SUSTN_REL_modulator >> 4;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][6] then
-                                 fmpar_table[chan].kslM := fm_data.KSL_VOLUM_modulator SHR 6;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][3])
+							fmpar_table[chan].adsrw_mod.rel =
+								d->fm_data.SUSTN_REL_modulator & 0x0f;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][7] then
-                                 fmpar_table[chan].multipM := fm_data.AM_VIB_EG_modulator AND $0f;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][4])
+							fmpar_table[chan].adsrw_mod.wform =
+								d->fm_data.WAVEFORM_modulator & 0x07;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][8] then
-                                 fmpar_table[chan].tremM := fm_data.AM_VIB_EG_modulator SHR 7;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][6])
+							fmpar_table[chan].kslM =
+								d->fm_data.KSL_VOLUM_modulator >> 6;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][9] then
-                                 fmpar_table[chan].vibrM := fm_data.AM_VIB_EG_modulator SHR 6 AND 1;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][7])
+							fmpar_table[chan].multipM =
+								d->fm_data.AM_VIB_EG_modulator & 0x0f;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][10] then
-                                 fmpar_table[chan].ksrM := fm_data.AM_VIB_EG_modulator SHR 4 AND 1;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][8])
+							fmpar_table[chan].tremM =
+								d->fm_data.AM_VIB_EG_modulator >> 7;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][11] then
-                                 fmpar_table[chan].sustM := fm_data.AM_VIB_EG_modulator SHR 5 AND 1;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][9])
+							fmpar_table[chan].vibrM =
+								(d->fm_data.AM_VIB_EG_modulator >> 6) & 1;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][12] then
-                                 fmpar_table[chan].adsrw_car.attck := fm_data.ATTCK_DEC_carrier SHR 4;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][10])
+							fmpar_table[chan].ksrM =
+								(d->fm_data.AM_VIB_EG_modulator >> 4) & 1;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][13] then
-                                 fmpar_table[chan].adsrw_car.dec := fm_data.ATTCK_DEC_carrier AND $0f;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][11])
+							fmpar_table[chan].sustM =
+								(d->fm_data.AM_VIB_EG_modulator >> 5) & 1;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][14] then
-                                 fmpar_table[chan].adsrw_car.sustn := fm_data.SUSTN_REL_carrier SHR 4;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][12])
+							fmpar_table[chan].adsrw_car.attck =
+								d->fm_data.ATTCK_DEC_carrier >> 4;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][15] then
-                                 fmpar_table[chan].adsrw_car.rel := fm_data.SUSTN_REL_carrier AND $0f;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][13])
+							fmpar_table[chan].adsrw_car.dec =
+								d->fm_data.ATTCK_DEC_carrier & 0x0f;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][16] then
-                                 fmpar_table[chan].adsrw_car.wform := fm_data.WAVEFORM_carrier AND $07;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][14])
+							fmpar_table[chan].adsrw_car.sustn =
+								d->fm_data.SUSTN_REL_carrier >> 4;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][18] then
-                                 fmpar_table[chan].kslC := fm_data.KSL_VOLUM_carrier SHR 6;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][15])
+							fmpar_table[chan].adsrw_car.rel =
+								d->fm_data.SUSTN_REL_carrier & 0xf;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][19] then
-                                 fmpar_table[chan].multipC := fm_data.AM_VIB_EG_carrier AND $0f;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][16])
+							fmpar_table[chan].adsrw_car.wform =
+								d->fm_data.WAVEFORM_carrier & 0x07;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][20] then
-                                 fmpar_table[chan].tremC := fm_data.AM_VIB_EG_carrier SHR 7;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][18])
+							fmpar_table[chan].kslC =
+								d->fm_data.KSL_VOLUM_carrier >> 6;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][21] then
-                                 fmpar_table[chan].vibrC := fm_data.AM_VIB_EG_carrier SHR 6 AND 1;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][19])
+							fmpar_table[chan].multipC =
+								d->fm_data.AM_VIB_EG_carrier & 0x0f;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][22] then
-                                 fmpar_table[chan].ksrC := fm_data.AM_VIB_EG_carrier SHR 4 AND 1;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][20])
+							fmpar_table[chan].tremC =
+								d->fm_data.AM_VIB_EG_carrier >> 7;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][23] then
-                                 fmpar_table[chan].sustC := fm_data.AM_VIB_EG_carrier SHR 5 AND 1;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][21])
+							fmpar_table[chan].vibrC =
+								(d->fm_data.AM_VIB_EG_carrier >> 6) & 1;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][24] then
-                                 fmpar_table[chan].connect := fm_data.FEEDBACK_FM AND 1;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][22])
+							fmpar_table[chan].ksrC =
+								(d->fm_data.AM_VIB_EG_carrier >> 4) & 1;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][25] then
-                                 fmpar_table[chan].feedb := fm_data.FEEDBACK_FM SHR 1 AND 7;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][23])
+							fmpar_table[chan].sustC =
+								(d->fm_data.AM_VIB_EG_carrier >> 5) & 1;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][27] then
-                                 If NOT pan_lock[chan] then
-                                   panning_table[chan] := panning;
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][24])
+							fmpar_table[chan].connect =
+								d->fm_data.FEEDBACK_FM & 1;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][5] then
-                                 set_ins_volume(63-fm_data.KSL_VOLUM_modulator AND $3f,
-                                                NONE,chan);
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][25])
+							fmpar_table[chan].feedb =
+								(d->fm_data.FEEDBACK_FM >> 1) & 7;
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][17] then
-                                 set_ins_volume(NONE,
-                                                63-fm_data.KSL_VOLUM_carrier AND $3f,chan);
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][27] &&
+						    !pan_lock[chan])
+							panning_table[chan] = d->panning;
 
-                               update_modulator_adsrw(chan);
-                               update_carrier_adsrw(chan);
-                               update_fmpar(chan);
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][5])
+							set_ins_volume(63 - (d->fm_data.KSL_VOLUM_modulator & 0x3f),
+								       NONE, chan);
 
-                               If NOT (fm_data.FEEDBACK_FM OR $80 <> fm_data.FEEDBACK_FM) then
-                                 output_note(event_table[chan].note,
-                                             event_table[chan].instr_def,chan,FALSE);
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][17])
+							set_ins_volume(NONE,
+									63 - (d->fm_data.KSL_VOLUM_carrier & 0x3f), chan);
 
-                               If NOT songdata.dis_fmreg_col[fmreg_table][26] then
-                                 If (freq_slide > 0) then
-                                   portamento_up(chan,freq_slide,nFreq(12*8+1))
-                                 else If (freq_slide < 0) then
-                                        portamento_down(chan,Abs(freq_slide),nFreq(0));
-                             end;
-                       end;
-#endif
+						update_modulator_adsrw(chan);
+						update_carrier_adsrw(chan);
+						update_fmpar(chan);
+
+						if (!((d->fm_data.FEEDBACK_FM | 0x80) != d->fm_data.FEEDBACK_FM))
+							output_note(event_table[chan].note,
+								    event_table[chan].instr_def, chan, FALSE);
+
+						if (!songdata->dis_fmreg_col[mt->fmreg_table][26]) {
+							if (d->freq_slide > 0) {
+								portamento_up(chan, d->freq_slide, nFreq(12*8+1));
+							} else {
+								if (d->freq_slide < 0)
+									portamento_down(chan, abs(d->freq_slide), nFreq(0));
+							}
+						}
+					}
+				}
 			}
 		}
-#if 0
-          With songdata.macro_table[arpg_table].arpeggio do
-            If (arpg_table <> 0) and (speed <> 0) then
-              If (arpg_count = speed) then
-                begin
-                  arpg_count := 1;
-                  If (arpg_pos <= length) then
-                    If (loop_begin <> 0) and (loop_length <> 0) then
-                      If (arpg_pos = loop_begin+PRED(loop_length)) then
-                        arpg_pos := loop_begin
-                      else If (arpg_pos < length) then Inc(arpg_pos)
-                           else arpg_pos := finished_flag
-                    else If (arpg_pos < length) then Inc(arpg_pos)
-                         else arpg_pos := finished_flag
-                  else arpg_pos := finished_flag;
 
-                  If (freq_table[chan] OR $2000 = freq_table[chan]) and
-                     (keyoff_pos <> 0) and
-                     (arpg_pos >= keyoff_pos) then
-                    arpg_pos := IDLE
-                  else If (freq_table[chan] OR $2000 <> freq_table[chan]) and
-                          (keyoff_pos <> 0) and (keyoff_pos <> 0) and
-                          ((arpg_pos < keyoff_pos) or (arpg_pos = IDLE)) then
-                         arpg_pos := keyoff_pos;
+		tARPEGGIO_TABLE *at = &songdata->macro_table[mt->arpg_table].arpeggio;
 
-                  If (arpg_pos <> 0) and
-                     (arpg_pos <> IDLE) and (arpg_pos <> finished_flag) then
-                    Case data[arpg_pos] of
-                      0: change_frequency(chan,
-                           nFreq(arpg_note-1)+
-                           SHORTINT(ins_parameter(event_table[chan].instr_def,12)));
+		if ((mt->arpg_table != 0) && (at->speed != 0)) {
+			if (mt->arpg_count == at->speed) {
+				mt->arpg_count = 1;
 
-                      1..96:
-                        change_frequency(chan,
-                          nFreq(max(arpg_note+data[arpg_pos],97)-1)+
-                          SHORTINT(ins_parameter(event_table[chan].instr_def,12)));
+				if (mt->arpg_pos <= at->length) {
+					if ((at->loop_begin != 0) && (at->loop_length != 0)) {
+						if (mt->arpg_pos == at->loop_begin + (at->loop_length - 1)) {
+							mt->arpg_pos = at->loop_begin;
+						} else {
+							if (mt->arpg_pos < at->length)
+								mt->arpg_pos++;
+							else
+								mt->arpg_pos = finished_flag;
+						}
+					} else {
+						if (mt->arpg_pos < at->length)
+							mt->arpg_pos++;
+						else
+							mt->arpg_pos = finished_flag;
+					}
+				} else {
+					mt->arpg_pos = finished_flag;
+				}
 
-                      $80..$80+12*8+1:
-                        change_frequency(chan,nFreq(data[arpg_pos]-$80-1)+
-                          SHORTINT(ins_parameter(event_table[chan].instr_def,12)));
-                    end;
-                end
-              else Inc(arpg_count);
+				if (((freq_table[chan] | 0x2000) == freq_table[chan]) &&
+				     (at->keyoff_pos != 0) &&
+				     (mt->arpg_pos >= at->keyoff_pos)) {
+					mt->arpg_pos = IDLE;
+				} else {
+					if (((freq_table[chan] | 0x2000) != freq_table[chan]) &&
+					     (at->keyoff_pos != 0) && (at->keyoff_pos != 0) &&
+					    ((mt->arpg_pos < at->keyoff_pos) || (mt->arpg_pos == IDLE)))
+						mt->arpg_pos = at->keyoff_pos;
+				}
 
-          With songdata.macro_table[vib_table].vibrato do
-            If (vib_table <> 0) and (speed <> 0) then
-              If (vib_count = speed) then
-                If (vib_delay <> 0) then Dec(vib_delay)
-                else begin
-                       vib_count := 1;
-                       If (vib_pos <= length) then
-                         If (loop_begin <> 0) and (loop_length <> 0) then
-                           If (vib_pos = loop_begin+PRED(loop_length)) then
-                             vib_pos := loop_begin
-                           else If (vib_pos < length) then Inc(vib_pos)
-                                else vib_pos := finished_flag
-                         else If (vib_pos < length) then Inc(vib_pos)
-                              else vib_pos := finished_flag
-                       else vib_pos := finished_flag;
+				if ((mt->arpg_pos != 0) &&
+				    (mt->arpg_pos != IDLE) && (mt->arpg_pos != finished_flag)) {
+					switch (at->data[mt->arpg_pos]) {
+					case 0:
+						change_frequency(chan, nFreq(mt->arpg_note - 1) +
+							(int8_t)ins_parameter(event_table[chan].instr_def, 12));
+						break;
 
-                       If (freq_table[chan] OR $2000 = freq_table[chan]) and
-                          (keyoff_pos <> 0) and
-                          (vib_pos >= keyoff_pos) then
-                         vib_pos := IDLE
-                       else If (freq_table[chan] OR $2000 <> freq_table[chan]) and
-                               (vib_pos <> 0) and (keyoff_pos <> 0) and
-                               ((vib_pos < keyoff_pos) or (vib_pos = IDLE)) then
-                              vib_pos := keyoff_pos;
+					case 1 ... 96:
+						change_frequency(chan, nFreq(max(mt->arpg_note + at->data[mt->arpg_pos], 97) - 1) +
+							(int8_t)ins_parameter(event_table[chan].instr_def, 12));
+						break;
 
-                       If (vib_pos <> 0) and
-                          (vib_pos <> IDLE) and (vib_pos <> finished_flag) then
-                         If (data[vib_pos] > 0) then
-                           macro_vibrato__porta_up(chan,data[vib_pos])
-                         else If (data[vib_pos] < 0) then
-                                macro_vibrato__porta_down(chan,Abs(data[vib_pos]))
-                              else change_freq(chan,vib_freq);
-                     end
-              else Inc(vib_count);
-#endif
+					case 0x80 ... 0x80+12*8+1:
+						change_frequency(chan, nFreq(at->data[mt->arpg_pos] - 0x80 - 1) +
+							(int8_t)ins_parameter(event_table[chan].instr_def, 12));
+						break;
+                    }
+				}
+			} else {
+				mt->arpg_count++;
+			}
+		}
+
+		tVIBRATO_TABLE *vt = &songdata->macro_table[mt->vib_table].vibrato;
+
+		if ((mt->vib_table != 0) && (vt->speed != 0)) {
+			if (mt->vib_count == vt->speed) {
+				if (mt->vib_delay != 0) {
+					mt->vib_delay--;
+				} else {
+					mt->vib_count = 1;
+
+					if (mt->vib_pos <= vt->length) {
+						if ((vt->loop_begin != 0) && (vt->loop_length != 0)) {
+							if (mt->vib_pos == vt->loop_begin + (vt->loop_length-1)) {
+								mt->vib_pos = vt->loop_begin;
+							} else {
+								if (mt->vib_pos < vt->length)
+									mt->vib_pos++;
+								else
+									mt->vib_pos = finished_flag;
+							}
+						} else {
+							if (mt->vib_pos < vt->length)
+								mt->vib_pos++;
+							else
+								mt->vib_pos = finished_flag;
+						}
+					} else {
+						mt->vib_pos = finished_flag;
+					}
+
+					if (((freq_table[chan] | 0x2000) == freq_table[chan]) &&
+					     (vt->keyoff_pos != 0) &
+					     (mt->vib_pos >= vt->keyoff_pos)) {
+						mt->vib_pos = IDLE;
+					} else {
+						if (((freq_table[chan] | 0x2000) != freq_table[chan]) &&
+						     (mt->vib_pos != 0) && (vt->keyoff_pos != 0) &&
+						    ((mt->vib_pos < vt->keyoff_pos) || (mt->vib_pos == IDLE)))
+							mt->vib_pos = vt->keyoff_pos;
+					}
+
+					if ((mt->vib_pos != 0) &&
+					    (mt->vib_pos != IDLE) && (mt->vib_pos != finished_flag)) {
+						if (vt->data[mt->vib_pos] > 0)
+							macro_vibrato__porta_up(chan, vt->data[mt->vib_pos]);
+					} else {
+						if (vt->data[mt->vib_pos] < 0)
+							macro_vibrato__porta_down(chan, abs(vt->data[mt->vib_pos]));
+						else
+							change_freq(chan, mt->vib_freq);
+					}
+				}
+			} else {
+				mt->vib_count++;
+			}
+		}
 	}
 }
 
