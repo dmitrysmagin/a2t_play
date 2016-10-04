@@ -4759,6 +4759,58 @@ void a2m_import(char *tune)
 	a2m_read_patterns(blockptr);
 }
 
+#include <SDL.h>
+
+#define FREQHZ 44100
+#define BUFFSMPL 4096
+
+static int framesmpl = FREQHZ / 50;
+static int irq_freq = 50;
+static int cnt = 1;
+static int ticklooper, macro_ticklooper;
+static int ym;
+static Uint32 buf[BUFFSMPL];
+
+static void playcallback(void *unused, Uint8 *stream, int len)
+{
+	for (int cntr = 0; cntr < BUFFSMPL; cntr++) {
+
+		cnt++;
+		if (cnt >= framesmpl) {
+			cnt = 0;
+			if (ticklooper == 0) {
+				poll_proc();
+				if (irq_freq != tempo * macro_speedup) {
+					irq_freq = tempo * macro_speedup;
+					if (tempo == 18)
+						irq_freq = 0;
+					if (irq_freq == 0 /* && timer_fix*/)
+						irq_freq = 364; //TRUNC((18.2)*20);
+					framesmpl = FREQHZ / irq_freq;
+				}
+			}
+
+			if (macro_ticklooper == 0)
+				macro_poll_proc();
+
+			ticklooper++;
+			if (ticklooper >= irq_freq / tempo)
+				ticklooper = 0;
+
+			macro_ticklooper++;
+			if (macro_ticklooper >= irq_freq / (tempo * macro_speedup))
+				macro_ticklooper = 0;
+		}
+		YMF262UpdateOne(ym, (Sint16 *)&buf[cntr], 1);
+	}
+
+	memcpy(stream, buf, len);
+#if 0
+	if (wavwriter)
+		blockwrite(f,buf[0],len);
+#endif
+}
+
 int main(int argc, char *argv[])
 {
 	char *a2t;
@@ -4769,6 +4821,8 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	SDL_Init(SDL_INIT_EVERYTHING | SDL_INIT_NOPARACHUTE);
+
 	a2t = a2t_load(argv[1]);
 	if(a2t == NULL) {
 		printf("Error reading %s\n", argv[1]);
@@ -4777,6 +4831,8 @@ int main(int argc, char *argv[])
 
 	a2t_import(a2t);
 	a2m_import(a2t);
+
+	SDL_Quit();
 
 	return 0;
 }
