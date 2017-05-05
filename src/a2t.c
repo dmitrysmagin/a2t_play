@@ -468,10 +468,12 @@ void opl3exp(uint16_t data)
 	opl_out(3, data >> 8);
 }
 
-static bool nul_data(void *data, int size)
+static bool nul_data(void *data, unsigned int size)
 {
-	for (int i = 0; i < size; i++)
-		if (*(char *)data++) return TRUE;
+	while (size--) {
+		if (*(char *)data++)
+			return FALSE;
+	}
 
 	return TRUE;
 }
