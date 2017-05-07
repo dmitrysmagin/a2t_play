@@ -552,10 +552,10 @@ static void change_freq(uint8_t chan, uint16_t freq)
 	opl3out(0xb0 + _chan_n[chan], HI(freq_table[chan]));
 }
 
-// FIXME: check ins
 static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
 {
-	return songdata->instr_data[ins][param];
+	// NOTE: adjust ins
+	return songdata->instr_data[ins-1][param];
 }
 
 static inline uint16_t max(uint16_t value, uint16_t maximum)
@@ -1011,7 +1011,8 @@ static void play_line()
 		}
 
 		if (event.instr_def != 0) {
-			if (!nul_data(songdata->instr_data[event.instr_def], INSTRUMENT_SIZE)) {
+			// NOTE: adjust ins
+			if (!nul_data(songdata->instr_data[event.instr_def-1], INSTRUMENT_SIZE)) {
 				set_ins_data(event.instr_def, chan);
 			} else {
 				release_sustaining_sound(chan);
