@@ -444,7 +444,8 @@ int ticks, tick0, tickD, tickXF;
 #define FreqRange  (FreqEnd - FreqStart)
 
 /* PLAYER */
-void opl_out(uint8_t reg, uint8_t data) {}
+void opl_out(uint8_t port, uint8_t val); // forward def
+
 void opl2out(uint16_t reg, uint16_t data)
 {
 	opl_out(0, reg);
@@ -4814,6 +4815,11 @@ static void playcallback(void *unused, Uint8 *stream, int len)
 #endif
 }
 
+void opl_out(uint8_t port, uint8_t val)
+{
+	YMF262Write(ym, port, val);
+}
+
 int main(int argc, char *argv[])
 {
 	char *a2t;
@@ -4823,6 +4829,9 @@ int main(int argc, char *argv[])
 		printf("Usage: a2t_play.exe *.a2t\n");
 		return 1;
 	}
+
+	ym = YMF262Init(1, OPL3_INTERNAL_FREQ, FREQHZ);
+	YMF262ResetChip(ym);
 
 	SDL_Init(SDL_INIT_EVERYTHING | SDL_INIT_NOPARACHUTE);
 
@@ -4836,6 +4845,8 @@ int main(int argc, char *argv[])
 	a2m_import(a2t);
 
 	SDL_Quit();
+
+	YMF262Shutdown();
 
 	return 0;
 }
