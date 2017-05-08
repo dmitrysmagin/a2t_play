@@ -4766,11 +4766,11 @@ void a2m_import(char *tune)
 #include <SDL.h>
 
 #define FREQHZ 44100
-#define BUFFSMPL 4096
+#define BUFFSMPL 2048
 
 static int framesmpl = FREQHZ / 50;
 static int irq_freq = 50;
-static int cnt = 1;
+static int cnt = 0;
 static int ticklooper, macro_ticklooper;
 static int ym;
 static Uint32 buf[BUFFSMPL];
@@ -4778,7 +4778,7 @@ SDL_AudioSpec audio;
 
 static void playcallback(void *unused, Uint8 *stream, int len)
 {
-	for (int cntr = 0; cntr < BUFFSMPL; cntr++) {
+	for (int cntr = 0; cntr < len/4 /*BUFFSMPL*/; cntr++) {
 
 		cnt++;
 		if (cnt >= framesmpl) {
@@ -4786,11 +4786,7 @@ static void playcallback(void *unused, Uint8 *stream, int len)
 			if (ticklooper == 0) {
 				poll_proc();
 				if (irq_freq != tempo * macro_speedup) {
-					irq_freq = tempo * macro_speedup;
-					if (tempo == 18)
-						irq_freq = 0;
-					if (irq_freq == 0 /* && timer_fix*/)
-						irq_freq = 364; //TRUNC((18.2)*20);
+					irq_freq = (tempo < 18 ? 18 : tempo) * macro_speedup;
 					framesmpl = FREQHZ / irq_freq;
 				}
 			}
@@ -4870,7 +4866,7 @@ int main(int argc, char *argv[])
 	audio.freq = FREQHZ;
 	audio.format = AUDIO_S16;
 	audio.channels = 2;
-	audio.samples = 4096;
+	audio.samples = BUFFSMPL;
 	audio.callback = playcallback;
 	audio.userdata = 0; // use later
 
