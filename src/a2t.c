@@ -3495,7 +3495,7 @@ static int calc_following_order(uint8_t order)
 			index = songdata->pattern_order[index] - 0x80;
 			jump_count++;
 		}
-	} while ((jump_count <= 0x7f) || (result == -1));
+	} while (!((jump_count > 0x7f) || (result != -1)));
 
 	return result;
 }
@@ -3512,7 +3512,7 @@ static int calc_order_jump()
 		if (songdata->pattern_order[current_order] > 0x7f)
 			current_order = songdata->pattern_order[current_order] - 0x80;
 		temp++;
-	} while ((temp <= 0x7f) || (songdata->pattern_order[current_order] >= 0x80));
+	} while (!((temp > 0x7f) || (songdata->pattern_order[current_order] < 0x80)));
 
 	if (temp > 0x7f) {
 		stop_playing();
