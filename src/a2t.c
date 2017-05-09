@@ -3575,6 +3575,28 @@ static void update_song_position()
 
 void poll_proc()
 {
+#if 1
+	if (pattern_delay) {
+		update_effects();
+		if (tickD > 1) {
+			tickD--;
+		} else {
+			pattern_delay = FALSE;
+		}
+	} else {
+		if (ticks == 0) {
+			ticks = speed;
+		}
+		if (ticks == speed)
+			play_line();
+		update_effects();
+		ticks--;
+		if (ticks == 0) {
+			ticks = speed;
+			update_song_position();
+		}
+	}
+#else
 	if (!pattern_delay && (ticks - tick0 + 1 >= speed))  {
 		if ((songdata->pattern_order[current_order] > 0x7f) &&
 		    (calc_order_jump() == -1))
@@ -3599,8 +3621,8 @@ void poll_proc()
 			}
 			pattern_delay = FALSE;
 		}
-}
-
+	}
+#endif
 	tickXF++;
 	if (tickXF % 4 == 0) {
 		update_extra_fine_effects();
