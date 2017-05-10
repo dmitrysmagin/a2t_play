@@ -4348,7 +4348,7 @@ int a2t_read_instruments(char *src)
 		memcpy(songdata->instr_data[i], dst + i * instsize, instsize);
 	}
 
-	FILE *f = fopen("0_inst.dmp", "w");
+	FILE *f = fopen("0_inst.dmp", "wb");
 	fwrite(songdata->instr_data, 1, sizeof(songdata->instr_data), f);
 	fclose(f);
 
@@ -4363,7 +4363,7 @@ int a2t_read_instmacros(char *src)
 
 	a2t_depack(src, len[1], songdata->instr_macros);
 
-	FILE *f = fopen("1_inst_macro.dmp", "w");
+	FILE *f = fopen("1_inst_macro.dmp", "wb");
 	fwrite(songdata->instr_macros, 1, sizeof(songdata->instr_macros), f);
 	fclose(f);
 
@@ -4376,7 +4376,7 @@ int a2t_read_macrotable(char *src)
 
 	a2t_depack(src, len[2], songdata->macro_table);
 
-	FILE *f = fopen("2_macrotable.dmp", "w");
+	FILE *f = fopen("2_macrotable.dmp", "wb");
 	fwrite(songdata->macro_table, 1, sizeof(songdata->macro_table), f);
 	fclose(f);
 
@@ -4389,7 +4389,7 @@ int a2t_read_disabled_fmregs(char *src)
 
 	a2t_depack(src, len[3], songdata->dis_fmreg_col);
 
-	FILE *f = fopen("3_fm_disregs.dmp", "w");
+	FILE *f = fopen("3_fm_disregs.dmp", "wb");
 	fwrite(songdata->dis_fmreg_col, 1, sizeof(songdata->dis_fmreg_col), f);
 	fclose(f);
 
@@ -4403,7 +4403,7 @@ int a2t_read_order(char *src)
 
 	a2t_depack(src, len[i], songdata->pattern_order);
 
-	FILE *f = fopen("4_order.dmp", "w");
+	FILE *f = fopen("4_order.dmp", "wb");
 	fwrite(songdata->pattern_order, 1, sizeof(songdata->pattern_order), f);
 	fclose(f);
 
@@ -4505,7 +4505,7 @@ int a2t_read_patterns(char *src)
 
 	a2_read_patterns(src, s);
 
-	FILE *f = fopen("5_patterns.dmp", "w");
+	FILE *f = fopen("5_patterns.dmp", "wb");
 	fwrite(pattdata, 1, 16*8*20*256*6, f);
 	fclose(f);
 
@@ -4737,7 +4737,7 @@ static int a2m_read_songdata(char *src)
 	printf("Tempo: %d\n", songdata->tempo);
 	printf("Speed: %d\n", songdata->speed);
 
-	FILE *f = fopen("songdata.dmp", "w");
+	FILE *f = fopen("songdata.dmp", "wb");
 	fwrite(songdata, 1, sizeof(*songdata), f);
 	fclose(f);
 
@@ -4748,7 +4748,7 @@ int a2m_read_patterns(char *src)
 {
 	a2_read_patterns(src, 1);
 
-	FILE *f = fopen("patterns.dmp", "w");
+	FILE *f = fopen("patterns.dmp", "wb");
 	fwrite(pattdata, 1, sizeof(_pattdata), f);
 	fclose(f);
 
