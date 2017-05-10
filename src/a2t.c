@@ -4839,6 +4839,10 @@ void opl_out(uint8_t port, uint8_t val)
 	YMF262Write(ym, port, val);
 }
 
+/* MINGW has built-in kbhit() in conio.h */
+#ifdef _WIN32
+#include <conio.h>
+#else
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
@@ -4869,6 +4873,7 @@ int kbhit(void)
 
 	return 0;
 }
+#endif
 
 int main(int argc, char *argv[])
 {
