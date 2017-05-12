@@ -534,7 +534,8 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 	uint16_t val;
 
 	val = vibr[position & 0x1f] * depth;
-	val = (val << 1) | (val >> 15); // xchg ah,al
+	val = (val << 1) | (val >> 15); // rol val, 1
+	val = (val << 8) | (val >> 8); // xchg ah,al
 	val = (val & 0x1ff) << 1;
 
 	if (position != 32) val++;
