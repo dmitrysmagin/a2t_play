@@ -546,8 +546,8 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 
 static void change_freq(uint8_t chan, uint16_t freq)
 {
-	freq_table[chan] = (freq & 0x1fff) +
-			   (freq_table[chan] & ~0x1fff);
+	freq_table[chan] &= ~0x1fff;
+	freq_table[chan] |= (freq & 0x1fff);
 	opl3out(0xa0 + _chan_n[chan], LO(freq_table[chan]));
 	opl3out(0xb0 + _chan_n[chan], HI(freq_table[chan]));
 }
@@ -609,8 +609,7 @@ static void update_timer(int Hz)
 
 static void key_off(uint8_t chan)
 {
-	freq_table[chan] = LO(freq_table[chan]) +
-			  ((HI(freq_table[chan]) & ~0x20) << 8);
+	freq_table[chan] &= ~0x2000;
 	change_frequency(chan, freq_table[chan]);
 	event_table[chan].note = event_table[chan].note | keyoff_flag;
 }
