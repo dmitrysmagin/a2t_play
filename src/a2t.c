@@ -4477,7 +4477,7 @@ static int a2_read_patterns(char *src, int s)
 	case 9 ... 11:	// [16][8][20][256][6]
 		for (int i = 0; i < 16; i++) {
 			if (!len[i+1]) continue;
-			a2t_depack(src, len[i+s], &pattdata[i * 16]);
+			a2t_depack(src, len[i+s], &pattdata[i * 8]);
 			src += len[i+s];
 		}
 		break;
