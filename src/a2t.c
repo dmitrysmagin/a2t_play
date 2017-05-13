@@ -531,14 +531,8 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 		253,250,244,235,224,212,197,180,161,141,120,97,74,49,24
 	};
 
-	uint16_t val;
-
-	val = vibr[position & 0x1f] * depth;
-	val = (val << 1) | (val >> 15); // rol val, 1
-	val = (val << 8) | (val >> 8); // xchg ah,al
-	val = val & 0x1ff;
-
-	return val;
+	/* ATTENTION: wtf this calculation should be ? */
+	return (vibr[position & 0x1f] * depth) >> 6;
 }
 
 #define LO(A) ((A) & 0xFF)
