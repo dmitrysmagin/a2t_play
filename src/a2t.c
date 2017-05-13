@@ -536,9 +536,7 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 	val = vibr[position & 0x1f] * depth;
 	val = (val << 1) | (val >> 15); // rol val, 1
 	val = (val << 8) | (val >> 8); // xchg ah,al
-	val = (val & 0x1ff) << 1;
-
-	if (position != 32) val++;
+	val = val & 0x1ff;
 
 	return val;
 }
@@ -2765,13 +2763,12 @@ void arpeggio2(uint8_t chan)
 
 void vibrato(uint8_t chan)
 {
-	uint16_t freq,old_freq;
+	uint16_t freq, old_freq;
 	uint8_t direction;
 
 	vibr_table[chan].pos += vibr_table[chan].speed;
 	freq = calc_vibrato_shift(vibr_table[chan].depth, vibr_table[chan].pos);
-	direction = freq & 1;
-	freq = freq >> 1;
+	direction = vibr_table[chan].pos & 0x20;
 	old_freq = freq_table[chan];
 	if (direction == 0)
 		portamento_down(chan, freq, nFreq(0));
@@ -2787,8 +2784,7 @@ void vibrato2(uint8_t chan)
 
 	vibr_table2[chan].pos += vibr_table2[chan].speed;
 	freq = calc_vibrato_shift(vibr_table2[chan].depth, vibr_table2[chan].pos);
-	direction = freq & 1;
-	freq = freq >> 1;
+	direction = vibr_table2[chan].pos & 0x20;
 	old_freq = freq_table[chan];
 	if (direction == 0)
 		portamento_down(chan, freq, nFreq(0));
@@ -2803,9 +2799,8 @@ void tremolo(uint8_t chan)
 	uint8_t direction;
 
 	trem_table[chan].pos += trem_table[chan].speed;
-	vol = calc_vibrato_shift(trem_table[chan].depth,trem_table[chan].pos);
-	direction = vol & 1;
-	vol = vol >> 1;
+	vol = calc_vibrato_shift(trem_table[chan].depth, trem_table[chan].pos);
+	direction = trem_table[chan].pos & 0x20;
 	old_vol = volume_table[chan];
 	if (direction == 0)
 		slide_volume_down(chan, vol);
@@ -2820,9 +2815,8 @@ void tremolo2(uint8_t chan)
 	uint8_t direction;
 
 	trem_table2[chan].pos += trem_table2[chan].speed;
-	vol = calc_vibrato_shift(trem_table2[chan].depth,trem_table2[chan].pos);
-	direction = vol & 1;
-	vol = vol >> 1;
+	vol = calc_vibrato_shift(trem_table2[chan].depth, trem_table2[chan].pos);
+	direction = trem_table2[chan].pos & 0x20;
 	old_vol = volume_table[chan];
 	if (direction == 0)
 		slide_volume_down(chan, vol);
