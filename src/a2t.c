@@ -493,9 +493,9 @@ static uint16_t nFreq(uint8_t note)
 static uint16_t calc_freq_shift_up(uint16_t freq, uint16_t shift)
 {
 	uint16_t oc = (freq >> 10) & 7;
-	uint16_t fr = (freq & 0x3ff);
+	int16_t fr = (freq & 0x3ff) + shift;
 
-	if (fr + shift >= FreqEnd) {
+	if (fr > FreqEnd) {
 		if (oc == 7) {
 			fr = FreqEnd;
 		} else {
@@ -510,9 +510,9 @@ static uint16_t calc_freq_shift_up(uint16_t freq, uint16_t shift)
 static uint16_t calc_freq_shift_down(uint16_t freq, uint16_t shift)
 {
 	uint16_t oc = (freq >> 10) & 7;
-	uint16_t fr = (freq & 0x3ff);
+	int16_t fr = (freq & 0x3ff) - shift;
 
-	if (fr - shift <= FreqStart) {
+	if (fr < FreqStart) {
 		if (oc == 0) {
 			fr = FreqStart;
 		} else {
