@@ -437,7 +437,7 @@ bool reset_chan[20];	// array[1..20] of Boolean;
 tFIXED_SONGDATA _songdata, *songdata = &_songdata;
 tPATTERN_DATA _pattdata[128], *pattdata = _pattdata;
 
-int ticks, tick0, tickD, tickXF;
+int ticks, tickD, tickXF;
 
 #define FreqStart 0x156
 #define FreqEnd   0x2ae
@@ -3563,7 +3563,6 @@ static void update_song_position()
 
 void poll_proc()
 {
-#if 1
 	if (pattern_delay) {
 		update_effects();
 		if (tickD > 1) {
@@ -3584,33 +3583,7 @@ void poll_proc()
 			update_song_position();
 		}
 	}
-#else
-	if (!pattern_delay && (ticks - tick0 + 1 >= speed))  {
-		if ((songdata->pattern_order[current_order] > 0x7f) &&
-		    (calc_order_jump() == -1))
-			return;
 
-		current_pattern = songdata->pattern_order[current_order];
-		play_line();
-		update_effects();
-
-		if (!pattern_delay)
-			update_song_position();
-		tick0 = ticks;
-	} else {
-		update_effects();
-		ticks++;
-		if (pattern_delay && (tickD > 1)) {
-			tickD--;
-		} else {
-			if (pattern_delay) {
-				tick0 = ticks;
-				update_song_position();
-			}
-			pattern_delay = FALSE;
-		}
-	}
-#endif
 	tickXF++;
 	if (tickXF % 4 == 0) {
 		update_extra_fine_effects();
@@ -4152,7 +4125,6 @@ void start_playing(char *tune)
 	pattern_delay = FALSE;
 	tickXF = 0;
 	ticks = 0;
-	tick0 = 0;
 	next_line = 0;
 	irq_mode = TRUE;
 	play_status = isPlaying;
