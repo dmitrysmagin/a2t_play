@@ -719,19 +719,19 @@ static void init_macro_table(uint8_t chan, uint8_t note, uint8_t ins, uint16_t f
 	macro_table[chan].fmreg_count = 1;
 	macro_table[chan].fmreg_pos = 0;
 	macro_table[chan].fmreg_duration = 0;
-	macro_table[chan].fmreg_table = ins;
+	macro_table[chan].fmreg_table = ins-1;
 	macro_table[chan].arpg_count = 1;
 	macro_table[chan].arpg_pos = 0;
 	macro_table[chan].arpg_table =
-		songdata->instr_macros[ins].arpeggio_table;
+		songdata->instr_macros[ins-1].arpeggio_table;
 	macro_table[chan].arpg_note = note;
 	macro_table[chan].vib_count = 1;
 	macro_table[chan].vib_pos = 0;
 	macro_table[chan].vib_table =
-		songdata->instr_macros[ins].vibrato_table;
+		songdata->instr_macros[ins-1].vibrato_table;
 	macro_table[chan].vib_freq = freq;
 	macro_table[chan].vib_delay =
-		songdata->macro_table[macro_table[chan].vib_table].vibrato.delay;
+		songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
 }
 
 static void set_ins_data(uint8_t ins, uint8_t chan)
@@ -2396,9 +2396,9 @@ static void play_line()
 			    (event.effect2 / 16 == ef_ex_ExtendedCmd) &&
 			    (event.effect2 % 16 == ef_ex_cmd_NoRestart)) {
 				if (macro_table[chan].arpg_pos >
-				    songdata->macro_table[event.effect].arpeggio.length)
+				    songdata->macro_table[event.effect-1].arpeggio.length)
 					macro_table[chan].arpg_pos =
-						songdata->macro_table[event.effect].arpeggio.length;
+						songdata->macro_table[event.effect-1].arpeggio.length;
 				macro_table[chan].arpg_table = event.effect;
 			} else {
 				macro_table[chan].arpg_count = 1;
@@ -2413,9 +2413,9 @@ static void play_line()
 			    (event.effect2 / 16 == ef_ex_ExtendedCmd) &&
 			    (event.effect2 % 16 == ef_ex_cmd_NoRestart)) {
 				if (macro_table[chan].vib_table >
-				    songdata->macro_table[event.effect].vibrato.length) 
+				    songdata->macro_table[event.effect-1].vibrato.length)
 					macro_table[chan].vib_pos =
-						songdata->macro_table[event.effect].vibrato.length;
+						songdata->macro_table[event.effect-1].vibrato.length;
 			macro_table[chan].vib_table = event.effect;
 		      
 		    } else {
@@ -2423,7 +2423,7 @@ static void play_line()
 			   macro_table[chan].vib_pos = 0;
 			   macro_table[chan].vib_table = event.effect;
 			   macro_table[chan].vib_delay =
-				songdata->macro_table[macro_table[chan].vib_table].vibrato.delay;
+				songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
 			 }
 			break;
 		}
@@ -2434,9 +2434,9 @@ static void play_line()
 			    (event.effect / 16 == ef_ex_ExtendedCmd) &&
 			   (event.effect % 16 == ef_ex_cmd_NoRestart)) {
 				if (macro_table[chan].arpg_pos >
-				    songdata->macro_table[event.effect2].arpeggio.length)
+				    songdata->macro_table[event.effect2-1].arpeggio.length)
 					macro_table[chan].arpg_pos =
-						songdata->macro_table[event.effect2].arpeggio.length;
+						songdata->macro_table[event.effect2-1].arpeggio.length;
 			macro_table[chan].arpg_table = event.effect2;
 			} else {
 				macro_table[chan].arpg_count = 1;
@@ -2452,16 +2452,16 @@ static void play_line()
 			    (event.effect % 16 == ef_ex_cmd_NoRestart)) {
 
 				if (macro_table[chan].vib_table >
-				    songdata->macro_table[event.effect2].vibrato.length) 
+				    songdata->macro_table[event.effect2-1].vibrato.length)
 					macro_table[chan].vib_pos =
-						songdata->macro_table[event.effect2].vibrato.length;
+						songdata->macro_table[event.effect2-1].vibrato.length;
 				macro_table[chan].vib_table = event.effect2;
 			} else {
 				macro_table[chan].vib_count = 1;
 				macro_table[chan].vib_pos = 0;
 				macro_table[chan].vib_table = event.effect2;
 				macro_table[chan].vib_delay =
-					songdata->macro_table[macro_table[chan].vib_table].vibrato.delay;
+					songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
 			}
 			break;
 		}
@@ -3781,7 +3781,7 @@ void macro_poll_proc()
 			}
 		}
 
-		tARPEGGIO_TABLE *at = &songdata->macro_table[mt->arpg_table].arpeggio;
+		tARPEGGIO_TABLE *at = &songdata->macro_table[mt->arpg_table-1].arpeggio;
 
 		if ((mt->arpg_table != 0) && (at->speed != 0)) {
 			if (mt->arpg_count == at->speed) {
@@ -3842,7 +3842,7 @@ void macro_poll_proc()
 			}
 		}
 
-		tVIBRATO_TABLE *vt = &songdata->macro_table[mt->vib_table].vibrato;
+		tVIBRATO_TABLE *vt = &songdata->macro_table[mt->vib_table-1].vibrato;
 
 		if ((mt->vib_table != 0) && (vt->speed != 0)) {
 			if (mt->vib_count == vt->speed) {
