@@ -4740,6 +4740,9 @@ static void playcallback(void *unused, Uint8 *stream, int len)
 	static int ticklooper, macro_ticklooper;
 	static int cnt = 0;
 
+	if (play_status != isPlaying)
+		return;
+
 	for (int cntr = 0; cntr < len; cntr += 4) {
 		if (cnt >= framesmpl) {
 			cnt = 0;
