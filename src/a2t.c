@@ -346,8 +346,7 @@ uint8_t carrier_vol[20];		// array[1..20] of Byte;
 tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
 uint8_t voice_table[20];		// array[1..20] of Byte;
 uint16_t freq_table[20];		// array[1..20] of Word;
-uint16_t effect_table[20];		// array[1..20] of Word;
-uint16_t effect_table2[20];		// array[1..20] of Word;
+uint16_t effect_table[2][20];		// array[1..20] of Word;
 uint8_t fslide_table[20];		// array[1..20] of Byte;
 uint8_t fslide_table2[20];		// array[1..20] of Byte;
 struct PACK {
@@ -963,13 +962,13 @@ static void play_line()
 		//event = pattdata^[current_pattern DIV 8]
 		//                  [current_pattern MOD 8][chan][current_line];
 
-		if (effect_table[chan] != 0)
-			last_effect[0][chan] = effect_table[chan];
-		effect_table[chan] = effect_table[chan] & 0xff00;
+		if (effect_table[0][chan] != 0)
+			last_effect[0][chan] = effect_table[0][chan];
+		effect_table[0][chan] = effect_table[0][chan] & 0xff00;
 
-		if (effect_table2[chan] != 0)
-			last_effect[1][chan] = effect_table2[chan];
-		effect_table2[chan] = effect_table2[chan] & 0xff00;
+		if (effect_table[1][chan] != 0)
+			last_effect[1][chan] = effect_table[1][chan];
+		effect_table[1][chan] = effect_table[1][chan] & 0xff00;
 
 		ftune_table[chan] = 0;
 
@@ -1082,24 +1081,24 @@ static void play_line()
 			    (event.effect != 0)) {
 				switch (event.effect_def) {
 				case ef_Arpeggio:
-					effect_table[chan] =
+					effect_table[0][chan] =
 						concw(ef_Arpeggio + ef_fix1, event.effect);
 					break;
 				case ef_ExtraFineArpeggio:
-					effect_table[chan] =
+					effect_table[0][chan] =
 						concw(ef_ExtraFineArpeggio, event.effect);
 					break;
 				case ef_ArpggVSlide:
 				case ef_ArpggVSlideFine:
 					if (event.effect != 0) {
-						effect_table[chan] =
+						effect_table[0][chan] =
 							concw(event.effect_def, event.effect);
 					} else {
 						if (((eLo == ef_ArpggVSlide) || (eLo == ef_ArpggVSlideFine)) &&
 						    (eHi != 0)) {
-							effect_table[chan] = concw(event.effect_def, eHi);
+							effect_table[0][chan] = concw(event.effect_def, eHi);
 						} else {
-							effect_table[chan] = effect_table[chan] && 0xff00;
+							effect_table[0][chan] = effect_table[0][chan] && 0xff00;
 						}
 					}
 				       break;
@@ -1131,7 +1130,7 @@ static void play_line()
 							arpgg_table[chan].add2 = event.effect % 16;
 						}
 					} else {
-						effect_table[chan] = 0;
+						effect_table[0][chan] = 0;
 					}
 				}
 			}
@@ -1141,7 +1140,7 @@ static void play_line()
 		case ef_FSlideDown:
 		case ef_FSlideUpFine:
 		case ef_FSlideDownFine:
-			effect_table[chan] = concw(event.effect_def, event.effect);
+			effect_table[0][chan] = concw(event.effect_def, event.effect);
 			fslide_table[chan] = event.effect;
 			break;
 
@@ -1154,7 +1153,7 @@ static void play_line()
 		case ef_FSlDownFineVSlide:
 		case ef_FSlDownFineVSlF:
 			if (event.effect != 0) {
-				effect_table[chan] = concw(event.effect_def, event.effect);
+				effect_table[0][chan] = concw(event.effect_def, event.effect);
 			} else {
 				if (((eLo == ef_FSlideUpVSlide) ||
 				     (eLo == ef_FSlUpVSlF) ||
@@ -1165,9 +1164,9 @@ static void play_line()
 				     (eLo == ef_FSlDownFineVSlide) ||
 				     (eLo == ef_FSlDownFineVSlF)) &&
 				     (eHi != 0)) {
-					effect_table[chan] = concw(event.effect_def, eHi);
+					effect_table[0][chan] = concw(event.effect_def, eHi);
 				} else {
-					effect_table[chan] = effect_table[chan] & 0xff00;
+					effect_table[0][chan] = effect_table[0][chan] & 0xff00;
 				}
 			}
 			break;
@@ -1176,33 +1175,33 @@ static void play_line()
 			if ((event.note >= 1) && (event.note <= 12 * 8 + 1)) {
 
 				if (event.effect != 0) {
-					effect_table[chan] =
+					effect_table[0][chan] =
 						concw(ef_TonePortamento, event.effect);
 				} else {
 					if ((eLo == ef_TonePortamento) && (eHi != 0)) {
-						effect_table[chan] =
+						effect_table[0][chan] =
 							concw(ef_TonePortamento, eHi);
 					} else {
-						effect_table[chan] = ef_TonePortamento;
+						effect_table[0][chan] = ef_TonePortamento;
 					}
 				}
 
-				porta_table[chan].speed = HI(effect_table[chan]);
+				porta_table[chan].speed = HI(effect_table[0][chan]);
 				porta_table[chan].freq = nFreq(event.note - 1) +
 					(int8_t)ins_parameter(event_table[chan].instr_def, 12);
 			} else {
 				if (eLo == ef_TonePortamento) {
 					if (event.effect != 0) {
-						effect_table[chan] =
+						effect_table[0][chan] =
 							concw(ef_TonePortamento, event.effect);
 					} else {
 						if ((eLo == ef_TonePortamento) && (eHi != 0)) {
-							effect_table[chan] = concw(ef_TonePortamento, eHi);
+							effect_table[0][chan] = concw(ef_TonePortamento, eHi);
 						} else {
-							effect_table[chan] = ef_TonePortamento;
+							effect_table[0][chan] = ef_TonePortamento;
 						}
 					}
-					porta_table[chan].speed = HI(effect_table[chan]);
+					porta_table[chan].speed = HI(effect_table[0][chan]);
 				}
 			}
 			break;
@@ -1210,14 +1209,14 @@ static void play_line()
 		case ef_TPortamVolSlide:
 		case ef_TPortamVSlideFine:
 			if (event.effect != 0) {
-				effect_table[chan] = concw(event.effect_def, event.effect);
+				effect_table[0][chan] = concw(event.effect_def, event.effect);
 			} else {
 				if (((eLo == ef_TPortamVolSlide) ||
 				     (eLo == ef_TPortamVSlideFine)) &&
 				     (eHi != 0)) {
-					effect_table[chan] = concw(event.effect_def, eHi);
+					effect_table[0][chan] = concw(event.effect_def, eHi);
 				} else {
-					effect_table[chan] = effect_table[chan] & 0xff00;
+					effect_table[0][chan] = effect_table[0][chan] & 0xff00;
 				}
 			}
 			break;
@@ -1225,15 +1224,15 @@ static void play_line()
 		case ef_Vibrato:
 		case ef_ExtraFineVibrato:
 			if (event.effect != 0) {
-				effect_table[chan] =
+				effect_table[0][chan] =
 					concw(event.effect_def, event.effect);
 			} else {
 				if (((eLo == ef_Vibrato) ||
 				     (eLo == ef_ExtraFineVibrato)) &&
 				     (eHi != 0)) {
-					effect_table[chan] = concw(event.effect_def, eHi);
+					effect_table[0][chan] = concw(event.effect_def, eHi);
 				} else {
-					effect_table[chan] = event.effect_def;
+					effect_table[0][chan] = event.effect_def;
 				}
 			}
 
@@ -1242,22 +1241,22 @@ static void play_line()
 				vibr_table[chan].fine = TRUE;
 			}
 
-			vibr_table[chan].speed = HI(effect_table[chan]) / 16;
-			vibr_table[chan].depth = HI(effect_table[chan]) % 16;
+			vibr_table[chan].speed = HI(effect_table[0][chan]) / 16;
+			vibr_table[chan].depth = HI(effect_table[0][chan]) % 16;
 			break;
 
 		case ef_Tremolo:
 		case ef_ExtraFineTremolo:
 			if (event.effect != 0) {
-				effect_table[chan] =
+				effect_table[0][chan] =
 					concw(event.effect_def, event.effect);
 			} else {
 				if (((eLo == ef_Tremolo) ||
 				     (eLo == ef_ExtraFineTremolo)) &&
 				     (eHi != 0)) {
-					effect_table[chan] = concw(event.effect_def, eHi);
+					effect_table[0][chan] = concw(event.effect_def, eHi);
 				} else {
-					effect_table[chan] = event.effect_def;
+					effect_table[0][chan] = event.effect_def;
 				}
 			}
 
@@ -1266,21 +1265,21 @@ static void play_line()
 				trem_table[chan].fine = TRUE;
 			}
 
-			trem_table[chan].speed = HI(effect_table[chan]) / 16;
-			trem_table[chan].depth = HI(effect_table[chan]) % 16;
+			trem_table[chan].speed = HI(effect_table[0][chan]) / 16;
+			trem_table[chan].depth = HI(effect_table[0][chan]) % 16;
 			break;
 
 		case ef_VibratoVolSlide:
 		case ef_VibratoVSlideFine:
 			if (event.effect != 0) {
-				effect_table[chan] = concw(event.effect_def, event.effect);
+				effect_table[0][chan] = concw(event.effect_def, event.effect);
 			} else {
 				if (((eLo ==  ef_VibratoVolSlide) ||
 				     (eLo ==  ef_VibratoVSlideFine)) &&
-				     (HI(effect_table[chan]) != 0)) {
-					effect_table[chan] = concw(event.effect_def, HI(effect_table[chan]));
+				     (HI(effect_table[0][chan]) != 0)) {
+					effect_table[0][chan] = concw(event.effect_def, HI(effect_table[0][chan]));
 				} else {
-					effect_table[chan] = effect_table[chan] & 0xff00;
+					effect_table[0][chan] = effect_table[0][chan] & 0xff00;
 				}
 			}
 
@@ -1353,11 +1352,11 @@ static void play_line()
 			break;
 
 		case ef_VolSlide:
-			effect_table[chan] = concw(ef_VolSlide, event.effect);
+			effect_table[0][chan] = concw(ef_VolSlide, event.effect);
 			break;
 
 		case ef_VolSlideFine:
-			effect_table[chan] = concw(ef_VolSlideFine, event.effect);
+			effect_table[0][chan] = concw(ef_VolSlideFine, event.effect);
 			break;
 
 		case ef_RetrigNote:
@@ -1366,7 +1365,7 @@ static void play_line()
 				    (eLo != ef_MultiRetrigNote))
 					retrig_table[chan] = 1;
 
-				effect_table[chan] = concw(ef_RetrigNote, event.effect);
+				effect_table[0][chan] = concw(ef_RetrigNote, event.effect);
 			}
 			break;
 
@@ -1381,7 +1380,7 @@ static void play_line()
 				    (eLo != ef_MultiRetrigNote))
 					retrig_table[chan] = 1;
 
-				effect_table[chan] = concw(ef_MultiRetrigNote, event.effect);
+				effect_table[0][chan] = concw(ef_MultiRetrigNote, event.effect);
 			}
 			break;
 
@@ -1392,7 +1391,7 @@ static void play_line()
 					tremor_table[chan].pos = 0;
 					tremor_table[chan].volume = volume_table[chan];
 				}
-				effect_table[chan] = concw(ef_Tremor, event.effect);
+				effect_table[0][chan] = concw(ef_Tremor, event.effect);
 			}
 			break;
 
@@ -1555,12 +1554,12 @@ static void play_line()
 				break;
 
 			case ef_ex2_NoteDelay:
-				effect_table[chan] = concw(ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay, 0);
+				effect_table[0][chan] = concw(ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay, 0);
 				notedel_table[chan] = event.effect % 16;
 				break;
 
 			case ef_ex2_NoteCut:
-				effect_table[chan] = concw(ef_Extended2 + ef_fix2 + ef_ex2_NoteCut, 0);
+				effect_table[0][chan] = concw(ef_Extended2 + ef_fix2 + ef_ex2_NoteCut, 0);
 				notecut_table[chan] = event.effect % 16;
 				break;
 
@@ -1573,61 +1572,61 @@ static void play_line()
 				break;
 
 			case ef_ex2_GlVolSlideUp:
-				effect_table[chan] =
+				effect_table[0][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUp,
 						event.effect % 16);
 				break;
 
 			case ef_ex2_GlVolSlideDn:
-				effect_table[chan] =
+				effect_table[0][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDn,
 						event.effect % 16);
 				break;
 
 			case ef_ex2_GlVolSlideUpF:
-				effect_table[chan] =
+				effect_table[0][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUpF,
 						event.effect % 16);
 				break;
 
 			case ef_ex2_GlVolSlideDnF:
-				effect_table[chan] = 
+				effect_table[0][chan] = 
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDnF,
 						event.effect % 16);
 				break;
 
 			case ef_ex2_GlVolSldUpXF:
-				effect_table[chan] =
+				effect_table[0][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldUpXF,
                                           event.effect % 16);
 				break;
 
 			case ef_ex2_GlVolSldDnXF:
-				effect_table[chan] =
+				effect_table[0][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldDnXF,
 						event.effect % 16);
 				break;
 
 			case ef_ex2_VolSlideUpXF:
-				effect_table[chan] =
+				effect_table[0][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_VolSlideUpXF,
 						event.effect % 16);
 				break;
 
 			case ef_ex2_VolSlideDnXF:
-				effect_table[chan] =
+				effect_table[0][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_VolSlideDnXF,
 						event.effect % 16);
 				break;
 
 			case ef_ex2_FreqSlideUpXF:
-				effect_table[chan] =
+				effect_table[0][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF,
 						event.effect % 16);
 				break;
 
 			case ef_ex2_FreqSlideDnXF:
-				effect_table[chan] =
+				effect_table[0][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF,
 						event.effect % 16);
 				break;
@@ -1713,23 +1712,23 @@ static void play_line()
 			    (event.effect2 != 0)) {
 				switch (event.effect_def2) {
 				case ef_Arpeggio:
-					effect_table2[chan] = concw(ef_Arpeggio + ef_fix1, event.effect2);
+					effect_table[1][chan] = concw(ef_Arpeggio + ef_fix1, event.effect2);
 					break;
 
 				case ef_ExtraFineArpeggio:
-					effect_table2[chan] = concw(ef_ExtraFineArpeggio, event.effect2);
+					effect_table[1][chan] = concw(ef_ExtraFineArpeggio, event.effect2);
 					break;
 
 				case ef_ArpggVSlide:
 				case ef_ArpggVSlideFine:
 					if (event.effect2 != 0) {
-						effect_table2[chan] = concw(event.effect_def2, event.effect2);
+						effect_table[1][chan] = concw(event.effect_def2, event.effect2);
 					} else {
 						if (((eLo2 == ef_ArpggVSlide) || (eLo2 == ef_ArpggVSlideFine)) &&
 						     (eHi2 != 0)) {
-							effect_table2[chan] = concw(event.effect_def2, eHi2);
+							effect_table[1][chan] = concw(event.effect_def2, eHi2);
 						} else {
-							effect_table2[chan] = effect_table2[chan] & 0xff00;
+							effect_table[1][chan] = effect_table[1][chan] & 0xff00;
 						}
 					}
 				}
@@ -1760,7 +1759,7 @@ static void play_line()
 							arpgg_table2[chan].add2 = event.effect2 % 16;
 						}
 					} else {
-						effect_table2[chan] = 0;
+						effect_table[1][chan] = 0;
 					}
 				}
 			}
@@ -1770,7 +1769,7 @@ static void play_line()
 		case ef_FSlideDown:
 		case ef_FSlideUpFine:
 		case ef_FSlideDownFine:
-			effect_table2[chan] = concw(event.effect_def2, event.effect2);
+			effect_table[1][chan] = concw(event.effect_def2, event.effect2);
 			fslide_table2[chan] = event.effect2;
 			break;
 
@@ -1783,7 +1782,7 @@ static void play_line()
 		case ef_FSlDownFineVSlide:
 		case ef_FSlDownFineVSlF:
 			if (event.effect2 != 0) {
-				effect_table2[chan] = concw(event.effect_def2, event.effect2);
+				effect_table[1][chan] = concw(event.effect_def2, event.effect2);
 			} else {
 				if (((eLo2 == ef_FSlideUpVSlide) ||
 				     (eLo2 == ef_FSlUpVSlF) ||
@@ -1794,9 +1793,9 @@ static void play_line()
 				     (eLo2 == ef_FSlDownFineVSlide) ||
 				     (eLo2 == ef_FSlDownFineVSlF)) &&
 				     (eHi2 != 0)) {
-					effect_table2[chan] = concw(event.effect_def2, eHi2);
+					effect_table[1][chan] = concw(event.effect_def2, eHi2);
 				} else {
-					effect_table2[chan] = effect_table2[chan] & 0xff00;
+					effect_table[1][chan] = effect_table[1][chan] & 0xff00;
 				}
 			}
 			break;
@@ -1805,33 +1804,33 @@ static void play_line()
 			if ((event.note >= 1) && (event.note <= 12 * 8 + 1)) {
 
 				if (event.effect2 != 0) {
-					effect_table2[chan] =
+					effect_table[1][chan] =
 						concw(ef_TonePortamento, event.effect2);
 				} else {
 					if ((eLo2 == ef_TonePortamento) && (eHi2 != 0)) {
-						effect_table2[chan] =
+						effect_table[1][chan] =
 							concw(ef_TonePortamento, eHi2);
 					} else {
-						effect_table2[chan] = ef_TonePortamento;
+						effect_table[1][chan] = ef_TonePortamento;
 					}
 				}
 
-				porta_table2[chan].speed = HI(effect_table2[chan]);
+				porta_table2[chan].speed = HI(effect_table[1][chan]);
 				porta_table2[chan].freq = nFreq(event.note - 1) +
 					(int8_t)ins_parameter(event_table[chan].instr_def, 12);
 			} else {
 				if (eLo2 == ef_TonePortamento) {
 					if (event.effect2 != 0) {
-						effect_table2[chan] =
+						effect_table[1][chan] =
 							concw(ef_TonePortamento, event.effect2);
 					} else {
 						if ((eLo2 == ef_TonePortamento) && (eHi2 != 0)) {
-							effect_table2[chan] = concw(ef_TonePortamento, eHi2);
+							effect_table[1][chan] = concw(ef_TonePortamento, eHi2);
 						} else {
-							effect_table2[chan] = ef_TonePortamento;
+							effect_table[1][chan] = ef_TonePortamento;
 						}
 					}
-					porta_table2[chan].speed = HI(effect_table2[chan]);
+					porta_table2[chan].speed = HI(effect_table[1][chan]);
 				}
 			}
 			break;
@@ -1839,14 +1838,14 @@ static void play_line()
 		case ef_TPortamVolSlide:
 		case ef_TPortamVSlideFine:
 			if (event.effect2 != 0) {
-				effect_table2[chan] = concw(event.effect_def2, event.effect2);
+				effect_table[1][chan] = concw(event.effect_def2, event.effect2);
 			} else {
 				if (((eLo2 == ef_TPortamVolSlide) ||
 				     (eLo2 == ef_TPortamVSlideFine)) &&
 				     (eHi2 != 0)) {
-					effect_table2[chan] = concw(event.effect_def2, eHi2);
+					effect_table[1][chan] = concw(event.effect_def2, eHi2);
 				} else {
-					effect_table2[chan] = effect_table2[chan] & 0xff00;
+					effect_table[1][chan] = effect_table[1][chan] & 0xff00;
 				}
 			}
 			break;
@@ -1854,15 +1853,15 @@ static void play_line()
 		case ef_Vibrato:
 		case ef_ExtraFineVibrato:
 			if (event.effect2 != 0) {
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(event.effect_def2, event.effect2);
 			} else {
 				if (((eLo2 == ef_Vibrato) ||
 				     (eLo2 == ef_ExtraFineVibrato)) &&
 				     (eHi2 != 0)) {
-					effect_table2[chan] = concw(event.effect_def2, eHi2);
+					effect_table[1][chan] = concw(event.effect_def2, eHi2);
 				} else {
-					effect_table2[chan] = event.effect_def2;
+					effect_table[1][chan] = event.effect_def2;
 				}
 			}
 
@@ -1871,22 +1870,22 @@ static void play_line()
 				vibr_table2[chan].fine = TRUE;
 			}
 
-			vibr_table2[chan].speed = HI(effect_table2[chan]) / 16;
-			vibr_table2[chan].depth = HI(effect_table2[chan]) % 16;
+			vibr_table2[chan].speed = HI(effect_table[1][chan]) / 16;
+			vibr_table2[chan].depth = HI(effect_table[1][chan]) % 16;
 			break;
 
 		case ef_Tremolo:
 		case ef_ExtraFineTremolo:
 			if (event.effect2 != 0) {
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(event.effect_def2,event.effect2);
 			} else {
 				if (((eLo2 == ef_Tremolo) ||
 				     (eLo2 == ef_ExtraFineTremolo)) &&
 				     (eHi2 != 0)) {
-					effect_table2[chan] = concw(event.effect_def2, eHi2);
+					effect_table[1][chan] = concw(event.effect_def2, eHi2);
 				} else {
-					effect_table2[chan] = event.effect_def2;
+					effect_table[1][chan] = event.effect_def2;
 				}
 			}
 
@@ -1895,21 +1894,21 @@ static void play_line()
 				trem_table2[chan].fine = TRUE;
 			}
 
-			trem_table2[chan].speed = HI(effect_table2[chan]) / 16;
-			trem_table2[chan].depth = HI(effect_table2[chan]) % 16;
+			trem_table2[chan].speed = HI(effect_table[1][chan]) / 16;
+			trem_table2[chan].depth = HI(effect_table[1][chan]) % 16;
 			break;
 
 		case ef_VibratoVolSlide:
 		case ef_VibratoVSlideFine:
 			if (event.effect2 != 0) {
-				effect_table2[chan] = concw(event.effect_def2, event.effect2);
+				effect_table[1][chan] = concw(event.effect_def2, event.effect2);
 			} else {
 				if (((eLo2 == ef_VibratoVolSlide) ||
 				     (eLo2 == ef_VibratoVSlideFine)) &&
-				     (HI(effect_table2[chan]) != 0)) {
-					effect_table2[chan] = concw(event.effect_def2, HI(effect_table2[chan]));
+				     (HI(effect_table[1][chan]) != 0)) {
+					effect_table[1][chan] = concw(event.effect_def2, HI(effect_table[1][chan]));
 				} else {
-					effect_table2[chan] = effect_table2[chan] & 0xff00;
+					effect_table[1][chan] = effect_table[1][chan] & 0xff00;
 				}
 			}
 
@@ -1982,11 +1981,11 @@ static void play_line()
 			break;
 
 		case ef_VolSlide:
-			effect_table2[chan] = concw(ef_VolSlide, event.effect2);
+			effect_table[1][chan] = concw(ef_VolSlide, event.effect2);
 			break;
 
 		case ef_VolSlideFine:
-			effect_table2[chan] = concw(ef_VolSlideFine, event.effect2);
+			effect_table[1][chan] = concw(ef_VolSlideFine, event.effect2);
 			break;
 
 		case ef_RetrigNote:
@@ -1995,7 +1994,7 @@ static void play_line()
 				    (eLo2 != ef_MultiRetrigNote))
 					retrig_table2[chan] = 1;
 
-				effect_table2[chan] = concw(ef_RetrigNote, event.effect2);
+				effect_table[1][chan] = concw(ef_RetrigNote, event.effect2);
 			}
 			break;
 
@@ -2010,7 +2009,7 @@ static void play_line()
 				    (eLo2 != ef_MultiRetrigNote))
 					retrig_table2[chan] = 1;
 
-				effect_table2[chan] = concw(ef_MultiRetrigNote, event.effect2);
+				effect_table[1][chan] = concw(ef_MultiRetrigNote, event.effect2);
 			}
 			break;
 
@@ -2021,7 +2020,7 @@ static void play_line()
 					tremor_table2[chan].pos = 0;
 					tremor_table2[chan].volume = volume_table[chan];
 				}
-				effect_table2[chan] = concw(ef_Tremor, event.effect2);
+				effect_table[1][chan] = concw(ef_Tremor, event.effect2);
 			}
 			break;
 
@@ -2180,12 +2179,12 @@ static void play_line()
 				break;
 
 			case ef_ex2_NoteDelay:
-				effect_table2[chan] = concw(ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay, 0);
+				effect_table[1][chan] = concw(ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay, 0);
 				notedel_table[chan] = event.effect2 % 16;
 				break;
 
 			case ef_ex2_NoteCut:
-				effect_table2[chan] = concw(ef_Extended2 + ef_fix2 + ef_ex2_NoteCut, 0);
+				effect_table[1][chan] = concw(ef_Extended2 + ef_fix2 + ef_ex2_NoteCut, 0);
 				notecut_table[chan] = event.effect2 % 16;
 				break;
 
@@ -2198,61 +2197,61 @@ static void play_line()
 				break;
 
 			case ef_ex2_GlVolSlideUp:
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUp,
 					      event.effect2 % 16);
 				break;
 
 			case ef_ex2_GlVolSlideDn:
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDn,
 						event.effect2 % 16);
 				break;
 
 			case ef_ex2_GlVolSlideUpF:
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUpF,
 						event.effect2 % 16);
 				break;
 
 			case ef_ex2_GlVolSlideDnF:
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDnF,
 						event.effect2 % 16);
 				break;
 
 			case ef_ex2_GlVolSldUpXF:
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldUpXF,
 						event.effect2 % 16);
 				break;
 
 			case ef_ex2_GlVolSldDnXF:
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldDnXF,
 						event.effect2 % 16);
 				break;
 
 			case ef_ex2_VolSlideUpXF:
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_VolSlideUpXF,
 						event.effect2 % 16);
 				break;
 
 			case ef_ex2_VolSlideDnXF:
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_VolSlideDnXF,
 						event.effect2 % 16);
 				break;
 
 			case ef_ex2_FreqSlideUpXF:
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF,
 						event.effect2 % 16);
 				break;
 
 			case ef_ex2_FreqSlideDnXF:
-				effect_table2[chan] =
+				effect_table[1][chan] =
 					concw(ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF,
 						event.effect2 % 16);
 				break;
@@ -2331,14 +2330,14 @@ static void play_line()
 		}
 
 		if (event.effect_def + event.effect == 0) {
-			effect_table[chan] = 0;
+			effect_table[0][chan] = 0;
 		} else {
 			event_table[chan].effect_def = event.effect_def;
 			event_table[chan].effect = event.effect;
 		}
 
 		if (event.effect_def2 + event.effect2 == 0) {
-			 effect_table2[chan] = 0;
+			 effect_table[1][chan] = 0;
 		} else {
 			event_table[chan].effect_def2 = event.effect_def2;
 			event_table[chan].effect2 = event.effect2;
@@ -2347,14 +2346,14 @@ static void play_line()
 		if (event.note == (event.note | keyoff_flag)) {
 			key_off(chan);
 		} else {
-			if (((LO(effect_table[chan]) != ef_TonePortamento) &&
-			     (LO(effect_table[chan]) != ef_TPortamVolSlide) &&
-			     (LO(effect_table[chan]) != ef_TPortamVSlideFine) &&
-			     (LO(effect_table[chan]) != ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay)) &&
-			    ((LO(effect_table2[chan]) != ef_TonePortamento) &&
-			     (LO(effect_table2[chan]) != ef_TPortamVolSlide) &&
-			     (LO(effect_table2[chan]) != ef_TPortamVSlideFine) &&
-			     (LO(effect_table2[chan]) != ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay))) {
+			if (((LO(effect_table[0][chan]) != ef_TonePortamento) &&
+			     (LO(effect_table[0][chan]) != ef_TPortamVolSlide) &&
+			     (LO(effect_table[0][chan]) != ef_TPortamVSlideFine) &&
+			     (LO(effect_table[0][chan]) != ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay)) &&
+			    ((LO(effect_table[1][chan]) != ef_TonePortamento) &&
+			     (LO(effect_table[1][chan]) != ef_TPortamVolSlide) &&
+			     (LO(effect_table[1][chan]) != ef_TPortamVSlideFine) &&
+			     (LO(effect_table[1][chan]) != ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay))) {
 				if (!(((event.effect_def2 == ef_SwapArpeggio) ||
 				       (event.effect_def2 == ef_SwapVibrato)) &&
 				       (event.effect_def == ef_Extended) &&
@@ -2816,10 +2815,10 @@ void update_effects()
 	uint8_t chan, eLo, eHi, eLo2, eHi2;
 
 	for(chan = 0; chan < 20; chan++) {
-		eLo  = LO(effect_table[chan]);
-		eHi  = HI(effect_table[chan]);
-		eLo2 = LO(effect_table2[chan]);
-		eHi2 = HI(effect_table2[chan]);
+		eLo  = LO(effect_table[0][chan]);
+		eHi  = HI(effect_table[0][chan]);
+		eLo2 = LO(effect_table[1][chan]);
+		eHi2 = HI(effect_table[1][chan]);
 
 		switch (eLo) {
 		case ef_Arpeggio + ef_fix1:
@@ -3200,10 +3199,10 @@ static void update_fine_effects(uint8_t chan)
 {
 	uint8_t eLo, eHi, eLo2, eHi2;
 
-	eLo  = LO(effect_table[chan]);
-	eHi  = HI(effect_table[chan]);
-	eLo2 = LO(effect_table2[chan]);
-	eHi2 = HI(effect_table2[chan]);
+	eLo  = LO(effect_table[0][chan]);
+	eHi  = HI(effect_table[0][chan]);
+	eLo2 = LO(effect_table[1][chan]);
+	eHi2 = HI(effect_table[1][chan]);
 
 	switch (eLo) {
 	case ef_ArpggVSlideFine:
@@ -3365,10 +3364,10 @@ static void update_extra_fine_effects()
 	uint8_t chan, eLo, eHi, eLo2, eHi2;
 
 	for (chan = 0; chan < 20; chan++) {
-		eLo  = LO(effect_table[chan]);
-		eHi  = HI(effect_table[chan]);
-		eLo2 = LO(effect_table2[chan]);
-		eHi2 = HI(effect_table2[chan]);
+		eLo  = LO(effect_table[0][chan]);
+		eHi  = HI(effect_table[0][chan]);
+		eLo2 = LO(effect_table[1][chan]);
+		eHi2 = HI(effect_table[1][chan]);
 
 		switch (eLo) {
 		case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldUpXF:
@@ -3938,7 +3937,6 @@ static void init_buffers()
 	memset(event_table, 0, sizeof(event_table));
 	memset(freq_table, 0, sizeof(freq_table));
 	memset(effect_table, 0, sizeof(effect_table));
-	memset(effect_table2, 0, sizeof(effect_table2));
 	memset(fslide_table, 0, sizeof(fslide_table));
 	memset(fslide_table2, 0, sizeof(fslide_table2));
 	memset(porta_table, 0, sizeof(porta_table));
