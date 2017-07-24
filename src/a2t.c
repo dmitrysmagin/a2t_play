@@ -4752,17 +4752,16 @@ void a2m_import(char *tune)
 
 static int framesmpl = FREQHZ / 50;
 static int irq_freq = 50;
-static int cnt = 0;
-static int ticklooper, macro_ticklooper;
 static int ym;
-static Uint32 buf[BUFFSMPL];
+
 SDL_AudioSpec audio;
 
 static void playcallback(void *unused, Uint8 *stream, int len)
 {
-	for (int cntr = 0; cntr < len/4 /*BUFFSMPL*/; cntr++) {
+	static int ticklooper, macro_ticklooper;
+	static int cnt = 0;
 
-		cnt++;
+	for (int cntr = 0; cntr < len; cntr += 4) {
 		if (cnt >= framesmpl) {
 			cnt = 0;
 			if (ticklooper == 0) {
@@ -4784,10 +4783,11 @@ static void playcallback(void *unused, Uint8 *stream, int len)
 			if (macro_ticklooper >= irq_freq / (tempo * macro_speedup))
 				macro_ticklooper = 0;
 		}
-		YMF262UpdateOne(ym, (Sint16 *)&buf[cntr], 1);
+
+		YMF262UpdateOne(ym, (Sint16 *)(stream + cntr), 1);
+		cnt++;
 	}
 
-	memcpy(stream, buf, len);
 #if 0
 	if (wavwriter)
 		blockwrite(f,buf[0],len);
