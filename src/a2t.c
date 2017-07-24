@@ -394,7 +394,6 @@ uint8_t panning_table[20];	// array[1..20] of Byte;
 uint16_t last_effect[20];	// array[1..20] of Word;
 uint16_t last_effect2[20];	// array[1..20] of Word;
 uint8_t volslide_type[20];	// array[1..20] of Byte;
-bool event_new[20];		// array[1..20] of Boolean;
 uint8_t notedel_table[20];	// array[1..20] of Byte;
 uint8_t notecut_table[20];	// array[1..20] of Byte;
 int8_t ftune_table[20];		// array[1..20] of Shortint;
@@ -981,16 +980,6 @@ static void play_line()
 			if((event.note >= fixed_note_flag + 1) &&
 			   (event.note <= fixed_note_flag + 12 * 8 + 1))
 				event.note = event.note - fixed_note_flag;
-		}
-
-		if ((event.note != 0) ||
-		   (event.effect_def != 0) ||
-		   (event.effect_def2 != 0) ||
-		  ((event.effect_def == 0) && (event.effect != 0)) ||
-		  ((event.effect_def2 == 0) && (event.effect2 != 0))) {
-			event_new[chan] = TRUE;
-		} else {
-			event_new[chan] = FALSE;
 		}
 
 		if ((event.note != 0) || (event.instr_def != 0)) {
@@ -3969,7 +3958,6 @@ static void init_buffers()
 	memset(last_effect, 0, sizeof(last_effect));
 	memset(last_effect2, 0, sizeof(last_effect2));
 	memset(voice_table, 0, sizeof(voice_table));
-	memset(event_new, 0, sizeof(event_new));
 	memset(notedel_table, NONE, sizeof(notedel_table));
 	memset(notecut_table, NONE, sizeof(notecut_table));
 	memset(ftune_table, 0, sizeof(ftune_table));
