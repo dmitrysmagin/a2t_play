@@ -347,8 +347,7 @@ tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
 uint8_t voice_table[20];		// array[1..20] of Byte;
 uint16_t freq_table[20];		// array[1..20] of Word;
 uint16_t effect_table[2][20];		// array[1..20] of Word;
-uint8_t fslide_table[20];		// array[1..20] of Byte;
-uint8_t fslide_table2[20];		// array[1..20] of Byte;
+uint8_t fslide_table[2][20];		// array[1..20] of Byte;
 struct PACK {
 	uint16_t freq;
 	uint8_t speed;
@@ -1141,7 +1140,7 @@ static void play_line()
 		case ef_FSlideUpFine:
 		case ef_FSlideDownFine:
 			effect_table[0][chan] = concw(event.effect_def, event.effect);
-			fslide_table[chan] = event.effect;
+			fslide_table[0][chan] = event.effect;
 			break;
 
 		case ef_FSlideUpVSlide:
@@ -1770,7 +1769,7 @@ static void play_line()
 		case ef_FSlideUpFine:
 		case ef_FSlideDownFine:
 			effect_table[1][chan] = concw(event.effect_def2, event.effect2);
-			fslide_table2[chan] = event.effect2;
+			fslide_table[1][chan] = event.effect2;
 			break;
 
 		case ef_FSlideUpVSlide:
@@ -2843,21 +2842,21 @@ void update_effects()
 			break;
 
 		case ef_FSlideUpVSlide:
-			portamento_up(chan, fslide_table[chan], nFreq(12*8+1));
+			portamento_up(chan, fslide_table[0][chan], nFreq(12*8+1));
 			volume_slide(chan, eHi / 16, eHi % 16);
 			break;
 
 		case ef_FSlUpVSlF:
-			portamento_up(chan, fslide_table[chan], nFreq(12*8+1));
+			portamento_up(chan, fslide_table[0][chan], nFreq(12*8+1));
 			break;
 
 		case ef_FSlideDownVSlide:
-			portamento_down(chan, fslide_table[chan], nFreq(0));
+			portamento_down(chan, fslide_table[0][chan], nFreq(0));
 			volume_slide(chan, eHi / 16, eHi % 16);
 			break;
 
 		case ef_FSlDownVSlF:
-			portamento_down(chan, fslide_table[chan], nFreq(0));
+			portamento_down(chan, fslide_table[0][chan], nFreq(0));
 			break;
 
 		case ef_FSlUpFineVSlide:
@@ -3032,21 +3031,21 @@ void update_effects()
 			break;
 
 		case ef_FSlideUpVSlide:
-			portamento_up(chan, fslide_table2[chan], nFreq(12*8+1));
+			portamento_up(chan, fslide_table[1][chan], nFreq(12*8+1));
 			volume_slide(chan, eHi2 / 16, eHi2 % 16);
 			break;
 
 		case ef_FSlUpVSlF:
-			portamento_up(chan, fslide_table2[chan], nFreq(12*8+1));
+			portamento_up(chan, fslide_table[1][chan], nFreq(12*8+1));
 			break;
 
 		case ef_FSlideDownVSlide:
-			portamento_down(chan, fslide_table2[chan], nFreq(0));
+			portamento_down(chan, fslide_table[1][chan], nFreq(0));
 			volume_slide(chan,eHi2 / 16, eHi2 % 16);
 			break;
 
 		case ef_FSlDownVSlF:
-			portamento_down(chan, fslide_table2[chan], nFreq(0));
+			portamento_down(chan, fslide_table[1][chan], nFreq(0));
 			break;
 
 		case ef_FSlUpFineVSlide:
@@ -3226,20 +3225,20 @@ static void update_fine_effects(uint8_t chan)
 		break;
 
 	case ef_FSlUpFineVSlide:
-		portamento_up(chan, fslide_table[chan], nFreq(12*8+1));
+		portamento_up(chan, fslide_table[0][chan], nFreq(12*8+1));
 		break;
 
 	case ef_FSlUpFineVSlF:
-		portamento_up(chan, fslide_table[chan], nFreq(12*8+1));
+		portamento_up(chan, fslide_table[0][chan], nFreq(12*8+1));
 		volume_slide(chan, eHi / 16, eHi % 16);
 		break;
 
 	case ef_FSlDownFineVSlide:
-		portamento_down(chan, fslide_table[chan], nFreq(0));
+		portamento_down(chan, fslide_table[0][chan], nFreq(0));
 		break;
 
 	case ef_FSlDownFineVSlF:
-		portamento_down(chan, fslide_table[chan], nFreq(0));
+		portamento_down(chan, fslide_table[0][chan], nFreq(0));
 		volume_slide(chan, eHi / 16, eHi % 16);
 		break;
 
@@ -3303,20 +3302,20 @@ static void update_fine_effects(uint8_t chan)
 		break;
 
 	case ef_FSlUpFineVSlide:
-		portamento_up(chan, fslide_table2[chan], nFreq(12*8+1));
+		portamento_up(chan, fslide_table[1][chan], nFreq(12*8+1));
 		break;
 
 	case ef_FSlUpFineVSlF:
-		portamento_up(chan, fslide_table2[chan], nFreq(12*8+1));
+		portamento_up(chan, fslide_table[1][chan], nFreq(12*8+1));
 		volume_slide(chan, eHi2 / 16, eHi2 % 16);
 		break;
 
 	case ef_FSlDownFineVSlide:
-		portamento_down(chan, fslide_table2[chan], nFreq(0));
+		portamento_down(chan, fslide_table[1][chan], nFreq(0));
 		break;
 
 	case ef_FSlDownFineVSlF:
-		portamento_down(chan, fslide_table2[chan], nFreq(0));
+		portamento_down(chan, fslide_table[1][chan], nFreq(0));
 		volume_slide(chan, eHi2 / 16, eHi2 % 16);
 		break;
 
@@ -3938,7 +3937,6 @@ static void init_buffers()
 	memset(freq_table, 0, sizeof(freq_table));
 	memset(effect_table, 0, sizeof(effect_table));
 	memset(fslide_table, 0, sizeof(fslide_table));
-	memset(fslide_table2, 0, sizeof(fslide_table2));
 	memset(porta_table, 0, sizeof(porta_table));
 	memset(porta_table2, 0, sizeof(porta_table2));
 	memset(arpgg_table, 0, sizeof(arpgg_table));
