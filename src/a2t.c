@@ -391,8 +391,7 @@ struct PACK {
 	uint16_t volume;
 } tremor_table2[20];		// array[1..20] of Record pos: Integer; volume: Word; end;
 uint8_t panning_table[20];	// array[1..20] of Byte;
-uint16_t last_effect[20];	// array[1..20] of Word;
-uint16_t last_effect2[20];	// array[1..20] of Word;
+uint16_t last_effect[2][20];	// array[1..20] of Word;
 uint8_t volslide_type[20];	// array[1..20] of Byte;
 uint8_t notedel_table[20];	// array[1..20] of Byte;
 uint8_t notecut_table[20];	// array[1..20] of Byte;
@@ -965,11 +964,11 @@ static void play_line()
 		//                  [current_pattern MOD 8][chan][current_line];
 
 		if (effect_table[chan] != 0)
-			last_effect[chan] = effect_table[chan];
+			last_effect[0][chan] = effect_table[chan];
 		effect_table[chan] = effect_table[chan] & 0xff00;
 
 		if (effect_table2[chan] != 0)
-			last_effect2[chan] = effect_table2[chan];
+			last_effect[1][chan] = effect_table2[chan];
 		effect_table2[chan] = effect_table2[chan] & 0xff00;
 
 		ftune_table[chan] = 0;
@@ -1027,10 +1026,10 @@ static void play_line()
 		    (event.effect_def2 != ef_ExtraFineTremolo))
 			memset(&trem_table2[chan], 0, sizeof(trem_table2[chan]));
 
-		eLo  = LO(last_effect[chan]);
-		eHi  = HI(last_effect[chan]);
-		eLo2 = LO(last_effect2[chan]);
-		eHi2 = HI(last_effect2[chan]);
+		eLo  = LO(last_effect[0][chan]);
+		eHi  = HI(last_effect[0][chan]);
+		eLo2 = LO(last_effect[1][chan]);
+		eHi2 = HI(last_effect[1][chan]);
 
 		if ((arpgg_table[chan].state != 1) &&
 		    (event.effect_def != ef_ExtraFineArpeggio)) {
@@ -3956,7 +3955,6 @@ static void init_buffers()
 	memset(tremor_table2, 0, sizeof(tremor_table2));
 	memset(panning_table, 0, sizeof(panning_table));
 	memset(last_effect, 0, sizeof(last_effect));
-	memset(last_effect2, 0, sizeof(last_effect2));
 	memset(voice_table, 0, sizeof(voice_table));
 	memset(notedel_table, NONE, sizeof(notedel_table));
 	memset(notecut_table, NONE, sizeof(notecut_table));
