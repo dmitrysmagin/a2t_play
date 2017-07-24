@@ -4849,7 +4849,9 @@ int main(int argc, char *argv[])
 	ym = YMF262Init(1, OPL3_INTERNAL_FREQ, FREQHZ);
 	YMF262ResetChip(ym);
 
-	SDL_Init(SDL_INIT_EVERYTHING | SDL_INIT_NOPARACHUTE);
+	/* HINT: Perhaps, SDL_INIT_EVERYTHING doesn't let audio work without
+	         setting video mode with MINGW */
+	SDL_Init(SDL_INIT_AUDIO | SDL_INIT_NOPARACHUTE);
 
 	audio.freq = FREQHZ;
 	audio.format = AUDIO_S16;
