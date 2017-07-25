@@ -929,6 +929,8 @@ static bool no_loop(uint8_t current_chan, uint8_t current_line)
 	return TRUE;
 }
 
+static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int chan); // forward
+
 static void play_line()
 {
 	tADTRACK2_EVENT event;
@@ -2348,82 +2350,86 @@ static void play_line()
 			}
 		}
 
-		switch (event.effect_def) {
-		case ef_SwapArpeggio:
-			if ((event.effect_def2 == ef_Extended) &&
-			    (event.effect2 / 16 == ef_ex_ExtendedCmd) &&
-			    (event.effect2 % 16 == ef_ex_cmd_NoRestart)) {
-				if (macro_table[chan].arpg_pos >
-				    songdata->macro_table[event.effect-1].arpeggio.length)
-					macro_table[chan].arpg_pos =
-						songdata->macro_table[event.effect-1].arpeggio.length;
-				macro_table[chan].arpg_table = event.effect;
-			} else {
-				macro_table[chan].arpg_count = 1;
-				macro_table[chan].arpg_pos = 0;
-				macro_table[chan].arpg_table = event.effect;
-				macro_table[chan].arpg_note = event_table[chan].note;
-			}
-			break;
-
-		case ef_SwapVibrato:
-			if ((event.effect_def2 == ef_Extended) &&
-			    (event.effect2 / 16 == ef_ex_ExtendedCmd) &&
-			    (event.effect2 % 16 == ef_ex_cmd_NoRestart)) {
-				if (macro_table[chan].vib_table >
-				    songdata->macro_table[event.effect-1].vibrato.length)
-					macro_table[chan].vib_pos =
-						songdata->macro_table[event.effect-1].vibrato.length;
-				macro_table[chan].vib_table = event.effect;
-			} else {
-			   macro_table[chan].vib_count = 1;
-			   macro_table[chan].vib_pos = 0;
-			   macro_table[chan].vib_table = event.effect;
-			   macro_table[chan].vib_delay =
-				songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
-			 }
-			break;
-		}
-
-		switch (event.effect_def2) {
-		case ef_SwapArpeggio:
-			if ((event.effect_def == ef_Extended) &&
-			    (event.effect / 16 == ef_ex_ExtendedCmd) &&
-			   (event.effect % 16 == ef_ex_cmd_NoRestart)) {
-				if (macro_table[chan].arpg_pos >
-				    songdata->macro_table[event.effect2-1].arpeggio.length)
-					macro_table[chan].arpg_pos =
-						songdata->macro_table[event.effect2-1].arpeggio.length;
-			macro_table[chan].arpg_table = event.effect2;
-			} else {
-				macro_table[chan].arpg_count = 1;
-				macro_table[chan].arpg_pos = 0;
-				macro_table[chan].arpg_table = event.effect2;
-				macro_table[chan].arpg_note = event_table[chan].note;
-			}
-			break;
-
-		case ef_SwapVibrato:
-			if ((event.effect_def == ef_Extended) &
-			    (event.effect / 16 == ef_ex_ExtendedCmd) &&
-			    (event.effect % 16 == ef_ex_cmd_NoRestart)) {
-
-				if (macro_table[chan].vib_table >
-				    songdata->macro_table[event.effect2-1].vibrato.length)
-					macro_table[chan].vib_pos =
-						songdata->macro_table[event.effect2-1].vibrato.length;
-				macro_table[chan].vib_table = event.effect2;
-			} else {
-				macro_table[chan].vib_count = 1;
-				macro_table[chan].vib_pos = 0;
-				macro_table[chan].vib_table = event.effect2;
-				macro_table[chan].vib_delay =
-					songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
-			}
-			break;
-		}
+		check_swap_arp_vibr(&event, chan);
 
 		update_fine_effects(chan);
+	}
+}
+
+static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int chan)
+{
+	// Check if second effect is ZFF - force no restart
+	bool is_norestart = ((((event->effect_def2 << 8) | event->effect2)) ==
+			    ((ef_Extended << 8) | (ef_ex_ExtendedCmd << 4) | ef_ex_cmd_NoRestart));
+
+	switch (event->effect_def) {
+	case ef_SwapArpeggio:
+		if (is_norestart) {
+			if (macro_table[chan].arpg_pos >
+			    songdata->macro_table[event->effect-1].arpeggio.length)
+				macro_table[chan].arpg_pos =
+					songdata->macro_table[event->effect-1].arpeggio.length;
+			macro_table[chan].arpg_table = event->effect;
+		} else {
+			macro_table[chan].arpg_count = 1;
+			macro_table[chan].arpg_pos = 0;
+			macro_table[chan].arpg_table = event->effect;
+			macro_table[chan].arpg_note = event_table[chan].note;
+		}
+		break;
+
+	case ef_SwapVibrato:
+		if (is_norestart) {
+			if (macro_table[chan].vib_table >
+			    songdata->macro_table[event->effect-1].vibrato.length)
+				macro_table[chan].vib_pos =
+					songdata->macro_table[event->effect-1].vibrato.length;
+			macro_table[chan].vib_table = event->effect;
+		} else {
+			macro_table[chan].vib_count = 1;
+			macro_table[chan].vib_pos = 0;
+			macro_table[chan].vib_table = event->effect;
+			macro_table[chan].vib_delay =
+				songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
+		}
+		break;
+	}
+
+	// Check if second effect is ZFF - force no restart
+	is_norestart = ((((event->effect_def << 8) | event->effect)) ==
+			    ((ef_Extended << 8) | (ef_ex_ExtendedCmd << 4) | ef_ex_cmd_NoRestart));
+
+	switch (event->effect_def2) {
+	case ef_SwapArpeggio:
+		if (is_norestart) {
+			if (macro_table[chan].arpg_pos >
+			    songdata->macro_table[event->effect2-1].arpeggio.length)
+				macro_table[chan].arpg_pos =
+					songdata->macro_table[event->effect2-1].arpeggio.length;
+			macro_table[chan].arpg_table = event->effect2;
+		} else {
+			macro_table[chan].arpg_count = 1;
+			macro_table[chan].arpg_pos = 0;
+			macro_table[chan].arpg_table = event->effect2;
+			macro_table[chan].arpg_note = event_table[chan].note;
+		}
+		break;
+
+	case ef_SwapVibrato:
+		if (is_norestart) {
+			if (macro_table[chan].vib_table >
+			    songdata->macro_table[event->effect2-1].vibrato.length)
+				macro_table[chan].vib_pos =
+					songdata->macro_table[event->effect2-1].vibrato.length;
+			macro_table[chan].vib_table = event->effect2;
+		} else {
+			macro_table[chan].vib_count = 1;
+			macro_table[chan].vib_pos = 0;
+			macro_table[chan].vib_table = event->effect2;
+			macro_table[chan].vib_delay =
+				songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
+		}
+		break;
 	}
 }
 
