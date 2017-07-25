@@ -941,11 +941,13 @@ static void play_line()
 
 		if (effect_table[0][chan] != 0)
 			last_effect[0][chan] = effect_table[0][chan];
-		effect_table[0][chan] = effect_table[0][chan] & 0xff00;
+
+		effect_table[0][chan] &= 0xff00;
 
 		if (effect_table[1][chan] != 0)
 			last_effect[1][chan] = effect_table[1][chan];
-		effect_table[1][chan] = effect_table[1][chan] & 0xff00;
+
+		effect_table[1][chan] &= 0xff00;
 
 		ftune_table[chan] = 0;
 
@@ -1056,8 +1058,7 @@ static void play_line()
 		case ef_ExtraFineArpeggio:
 		case ef_ArpggVSlide:
 		case ef_ArpggVSlideFine:
-			if ((event.effect_def != ef_Arpeggio) ||
-			    (event.effect != 0)) {
+			if ((event.effect_def != ef_Arpeggio) || (event.effect != 0)) {
 				switch (event.effect_def) {
 				case ef_Arpeggio:
 					effect_table[0][chan] =
@@ -2373,9 +2374,8 @@ static void play_line()
 				    songdata->macro_table[event.effect-1].vibrato.length)
 					macro_table[chan].vib_pos =
 						songdata->macro_table[event.effect-1].vibrato.length;
-			macro_table[chan].vib_table = event.effect;
-		      
-		    } else {
+				macro_table[chan].vib_table = event.effect;
+			} else {
 			   macro_table[chan].vib_count = 1;
 			   macro_table[chan].vib_pos = 0;
 			   macro_table[chan].vib_table = event.effect;
