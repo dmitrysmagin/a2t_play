@@ -2483,23 +2483,13 @@ void macro_vibrato__porta_down(uint8_t chan, uint8_t depth)
 	}
 }
 
-void tone_portamento(uint8_t chan)
+static void tone_portamento(int slot, uint8_t chan)
 {
-	if ((freq_table[chan] & 0x1fff) > porta_table[0][chan].freq) {
-		portamento_down(chan, porta_table[0][chan].speed, porta_table[0][chan].freq);
+	if ((freq_table[chan] & 0x1fff) > porta_table[slot][chan].freq) {
+		portamento_down(chan, porta_table[slot][chan].speed, porta_table[slot][chan].freq);
 	} else {
-		if ((freq_table[chan] & 0x1fff) < porta_table[0][chan].freq)
-			portamento_up(chan, porta_table[0][chan].speed, porta_table[0][chan].freq);
-	}
-}
-
-void tone_portamento2(uint8_t chan)
-{
-	if ((freq_table[chan] & 0x1fff) > porta_table[1][chan].freq) {
-		portamento_down(chan, porta_table[1][chan].speed,porta_table[1][chan].freq);
-	} else {
-		if ((freq_table[chan] & 0x1fff) < porta_table[1][chan].freq)
-			portamento_up(chan, porta_table[1][chan].speed, porta_table[1][chan].freq);
+		if ((freq_table[chan] & 0x1fff) < porta_table[slot][chan].freq)
+			portamento_up(chan, porta_table[slot][chan].speed, porta_table[slot][chan].freq);
 	}
 }
 
@@ -2819,16 +2809,16 @@ void update_effects()
 			break;
 
 		case ef_TonePortamento:
-			tone_portamento(chan);
+			tone_portamento(0, chan);
 			break;
 
 		case ef_TPortamVolSlide:
 			volume_slide(chan, eHi / 16, eHi % 16);
-			tone_portamento(chan);
+			tone_portamento(0, chan);
 			break;
 
 		case ef_TPortamVSlideFine:
-			tone_portamento(chan);
+			tone_portamento(0, chan);
 			break;
 
 		case ef_Vibrato:
@@ -3007,16 +2997,16 @@ void update_effects()
 			volume_slide(chan, eHi2 / 16, eHi2 % 16);
 
 		case ef_TonePortamento:
-			tone_portamento2(chan);
+			tone_portamento(1, chan);
 			break;
 
 		case ef_TPortamVolSlide:
 			volume_slide(chan, eHi2 / 16, eHi2 % 16);
-			tone_portamento2(chan);
+			tone_portamento(1, chan);
 			break;
 
 		case ef_TPortamVSlideFine:
-			tone_portamento2(chan);
+			tone_portamento(1, chan);
 			break;
 
 		case ef_Vibrato:
