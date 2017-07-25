@@ -382,11 +382,7 @@ uint8_t retrig_table[2][20];	// array[1..20] of Byte;
 struct PACK {
 	int pos;
 	uint16_t volume;
-} tremor_table[20];		// array[1..20] of Record pos: Integer; volume: Word; end;
-struct PACK {
-	int pos;
-	uint16_t volume;
-} tremor_table2[20];		// array[1..20] of Record pos: Integer; volume: Word; end;
+} tremor_table[2][20];		// array[1..20] of Record pos: Integer; volume: Word; end;
 uint8_t panning_table[20];	// array[1..20] of Byte;
 uint16_t last_effect[2][20];	// array[1..20] of Word;
 uint8_t volslide_type[20];	// array[1..20] of Byte;
@@ -1049,18 +1045,18 @@ static void play_line()
 			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
 		}
 
-		if ((tremor_table[chan].pos != 0) &&
+		if ((tremor_table[0][chan].pos != 0) &&
 		    (event.effect_def != ef_Tremor)) {
-			tremor_table[chan].pos = 0;
-			set_ins_volume(LO(tremor_table[chan].volume),
-				       HI(tremor_table[chan].volume), chan);
+			tremor_table[0][chan].pos = 0;
+			set_ins_volume(LO(tremor_table[0][chan].volume),
+				       HI(tremor_table[0][chan].volume), chan);
 		}
 
-		if ((tremor_table2[chan].pos != 0) &&
+		if ((tremor_table[1][chan].pos != 0) &&
 		    (event.effect_def2 != ef_Tremor)) {
-			tremor_table2[chan].pos = 0;
-			set_ins_volume(LO(tremor_table2[chan].volume),
-				       HI(tremor_table2[chan].volume), chan);
+			tremor_table[1][chan].pos = 0;
+			set_ins_volume(LO(tremor_table[1][chan].volume),
+				       HI(tremor_table[1][chan].volume), chan);
 		}
 
 		if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
@@ -1386,8 +1382,8 @@ static void play_line()
 			if ((event.effect / 16 != 0) &&
 			    (event.effect % 16 != 0)) {
 				if (eLo != ef_Tremor) {
-					tremor_table[chan].pos = 0;
-					tremor_table[chan].volume = volume_table[chan];
+					tremor_table[0][chan].pos = 0;
+					tremor_table[0][chan].volume = volume_table[chan];
 				}
 				effect_table[0][chan] = concw(ef_Tremor, event.effect);
 			}
@@ -2015,8 +2011,8 @@ static void play_line()
 			if ((event.effect2 / 16 != 0) &&
 			    (event.effect2 % 16 != 0)) {
 				if (eLo2 != ef_Tremor) {
-					tremor_table2[chan].pos = 0;
-					tremor_table2[chan].volume = volume_table[chan];
+					tremor_table[1][chan].pos = 0;
+					tremor_table[1][chan].volume = volume_table[chan];
 				}
 				effect_table[1][chan] = concw(ef_Tremor, event.effect2);
 			}
@@ -2960,20 +2956,20 @@ void update_effects()
 			break;
 
 		case ef_Tremor:
-			if (tremor_table[chan].pos >= 0) {
-				if ((tremor_table[chan].pos + 1) <= eHi / 16) {
-					tremor_table[chan].pos++;
+			if (tremor_table[0][chan].pos >= 0) {
+				if ((tremor_table[0][chan].pos + 1) <= eHi / 16) {
+					tremor_table[0][chan].pos++;
 				} else {
 					slide_volume_down(chan, 63);
-					tremor_table[chan].pos = -1;
+					tremor_table[0][chan].pos = -1;
 				}
 			} else {
-				if ((tremor_table[chan].pos - 1) >= -(eHi % 16)) {
-					tremor_table[chan].pos--;
+				if ((tremor_table[0][chan].pos - 1) >= -(eHi % 16)) {
+					tremor_table[0][chan].pos--;
 				} else {
-					set_ins_volume(LO(tremor_table[chan].volume),
-						       HI(tremor_table[chan].volume), chan);
-					tremor_table[chan].pos = 1;
+					set_ins_volume(LO(tremor_table[0][chan].volume),
+						       HI(tremor_table[0][chan].volume), chan);
+					tremor_table[0][chan].pos = 1;
 				}
 			}
 			break;
@@ -3145,20 +3141,20 @@ void update_effects()
 			break;
 
 		case ef_Tremor:
-			if (tremor_table2[chan].pos >= 0) {
-				if ((tremor_table2[chan].pos + 1) <= eHi2 / 16) {
-					tremor_table2[chan].pos++;
+			if (tremor_table[1][chan].pos >= 0) {
+				if ((tremor_table[1][chan].pos + 1) <= eHi2 / 16) {
+					tremor_table[1][chan].pos++;
 				} else {
 					slide_volume_down(chan, 63);
-					tremor_table2[chan].pos = -1;
+					tremor_table[1][chan].pos = -1;
 				}
 			} else {
-				if ((tremor_table2[chan].pos - 1) >= -(eHi2 % 16)) {
-					tremor_table2[chan].pos--;
+				if ((tremor_table[1][chan].pos - 1) >= -(eHi2 % 16)) {
+					tremor_table[1][chan].pos--;
 				} else {
-					set_ins_volume(LO(tremor_table2[chan].volume),
-							HI(tremor_table2[chan].volume), chan);
-					tremor_table2[chan].pos = 1;
+					set_ins_volume(LO(tremor_table[1][chan].volume),
+							HI(tremor_table[1][chan].volume), chan);
+					tremor_table[1][chan].pos = 1;
 				}
 			}
 			break;
@@ -3946,7 +3942,6 @@ static void init_buffers()
 	memset(trem_table2, 0, sizeof(trem_table2));
 	memset(retrig_table, 0, sizeof(retrig_table));
 	memset(tremor_table, 0, sizeof(tremor_table));
-	memset(tremor_table2, 0, sizeof(tremor_table2));
 	memset(panning_table, 0, sizeof(panning_table));
 	memset(last_effect, 0, sizeof(last_effect));
 	memset(voice_table, 0, sizeof(voice_table));
