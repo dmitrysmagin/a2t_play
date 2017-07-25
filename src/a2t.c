@@ -2673,36 +2673,19 @@ void global_volume_slide(uint8_t up_speed, uint8_t down_speed)
 	set_global_volume();
 }
 
-void arpeggio(uint8_t chan)
+static void arpeggio(int slot, uint8_t chan)
 {
 	uint8_t arpgg_state[3] = {1, 2, 0};
 
 	uint16_t freq;
 
-	switch (arpgg_table[0][chan].state) {
-	case 0: freq = nFreq(arpgg_table[0][chan].note - 1); break;
-	case 1: freq = nFreq(arpgg_table[0][chan].note - 1 + arpgg_table[0][chan].add1); break;
-	case 2: freq = nFreq(arpgg_table[0][chan].note - 1 + arpgg_table[0][chan].add2); break;
+	switch (arpgg_table[slot][chan].state) {
+	case 0: freq = nFreq(arpgg_table[slot][chan].note - 1); break;
+	case 1: freq = nFreq(arpgg_table[slot][chan].note - 1 + arpgg_table[slot][chan].add1); break;
+	case 2: freq = nFreq(arpgg_table[slot][chan].note - 1 + arpgg_table[slot][chan].add2); break;
 	}
 
-	arpgg_table[0][chan].state = arpgg_state[arpgg_table[0][chan].state];
-	change_frequency(chan, freq +
-			(int8_t)(ins_parameter(event_table[chan].instr_def, 12)));
-}
-
-void arpeggio2(uint8_t chan)
-{
-	uint8_t arpgg_state[3] = {1, 2, 0};
-
-	uint16_t freq;
-
-	switch (arpgg_table[1][chan].state) {
-	case 0: freq = nFreq(arpgg_table[1][chan].note - 1); break;
-	case 1: freq = nFreq(arpgg_table[1][chan].note - 1 + arpgg_table[1][chan].add1); break;
-	case 2: freq = nFreq(arpgg_table[1][chan].note - 1 + arpgg_table[1][chan].add2); break;
-	}
-
-	arpgg_table[1][chan].state = arpgg_state[arpgg_table[1][chan].state];
+	arpgg_table[slot][chan].state = arpgg_state[arpgg_table[slot][chan].state];
 	change_frequency(chan, freq +
 			(int8_t)(ins_parameter(event_table[chan].instr_def, 12)));
 }
@@ -2759,16 +2742,16 @@ void update_effects()
 
 		switch (eLo) {
 		case ef_Arpeggio + ef_fix1:
-			arpeggio(chan);
+			arpeggio(0, chan);
 			break;
 
 		case ef_ArpggVSlide:
 			volume_slide(chan, eHi / 16, eHi % 16);
-			arpeggio(chan);
+			arpeggio(0, chan);
 			break;
 
 		case ef_ArpggVSlideFine:
-			arpeggio(chan);
+			arpeggio(0, chan);
 			break;
 
 		case ef_FSlideUp:
@@ -2948,16 +2931,16 @@ void update_effects()
 
 		switch (eLo2) {
 		case ef_Arpeggio + ef_fix1:
-			arpeggio2(chan);
+			arpeggio(1, chan);
 			break;
 
 		case ef_ArpggVSlide:
 			volume_slide(chan, eHi2 / 16, eHi2 % 16);
-			arpeggio2(chan);
+			arpeggio(1, chan);
 			break;
 
 		case ef_ArpggVSlideFine:
-			arpeggio2(chan);
+			arpeggio(1, chan);
 			break;
 
 		case ef_FSlideUp:
@@ -3332,7 +3315,7 @@ static void update_extra_fine_effects()
 			break;
 
 		case ef_ExtraFineArpeggio:
-			arpeggio(chan);
+			arpeggio(0, chan);
 			break;
 
 		case ef_ExtraFineVibrato:
@@ -3372,7 +3355,7 @@ static void update_extra_fine_effects()
 			break;
 
 		case ef_ExtraFineArpeggio:
-			arpeggio2(chan);
+			arpeggio(1, chan);
 			break;
 
 		case ef_ExtraFineVibrato:
