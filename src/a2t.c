@@ -365,11 +365,7 @@ struct PACK {
 struct PACK {
 	uint8_t pos, speed, depth;
 	bool fine;
-} vibr_table[20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
-struct PACK {
-	uint8_t pos, speed, depth;
-	bool fine;
-} vibr_table2[20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
+} vibr_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
 struct PACK {
 	uint8_t pos, speed, depth;
 	bool fine;
@@ -991,13 +987,13 @@ static void play_line()
 		    (event.effect_def != ef_ExtraFineVibrato) &&
 		    (event.effect_def != ef_VibratoVolSlide) &&
 		    (event.effect_def != ef_VibratoVSlideFine))
-			memset(&vibr_table[chan], 0, sizeof(vibr_table[chan]));
+			memset(&vibr_table[0][chan], 0, sizeof(vibr_table[0][chan]));
 
 		if ((event.effect_def2 != ef_Vibrato) &&
 		    (event.effect_def2 != ef_ExtraFineVibrato) &&
 		    (event.effect_def2 != ef_VibratoVolSlide) &&
 		    (event.effect_def2 != ef_VibratoVSlideFine))
-			memset(&vibr_table2[chan], 0, sizeof(vibr_table2[chan]));
+			memset(&vibr_table[1][chan], 0, sizeof(vibr_table[1][chan]));
 
 		if ((event.effect_def != ef_RetrigNote) &&
 		    (event.effect_def != ef_MultiRetrigNote))
@@ -1228,11 +1224,11 @@ static void play_line()
 
 			if ((event.effect_def2 == ef_Extended) &&
 			    (event.effect2 == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_FineVibr)) {
-				vibr_table[chan].fine = TRUE;
+				vibr_table[0][chan].fine = TRUE;
 			}
 
-			vibr_table[chan].speed = HI(effect_table[0][chan]) / 16;
-			vibr_table[chan].depth = HI(effect_table[0][chan]) % 16;
+			vibr_table[0][chan].speed = HI(effect_table[0][chan]) / 16;
+			vibr_table[0][chan].depth = HI(effect_table[0][chan]) % 16;
 			break;
 
 		case ef_Tremolo:
@@ -1275,7 +1271,7 @@ static void play_line()
 
 			if ((event.effect_def2 == ef_Extended) &&
 			    (event.effect2 == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_FineVibr))
-				vibr_table[chan].fine = TRUE;
+				vibr_table[0][chan].fine = TRUE;
 			break;
 
 		case ef_SetCarrierVol:
@@ -1857,11 +1853,11 @@ static void play_line()
 
 			if ((event.effect_def == ef_Extended) &&
 			    (event.effect == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_FineVibr)) {
-				vibr_table2[chan].fine = TRUE;
+				vibr_table[1][chan].fine = TRUE;
 			}
 
-			vibr_table2[chan].speed = HI(effect_table[1][chan]) / 16;
-			vibr_table2[chan].depth = HI(effect_table[1][chan]) % 16;
+			vibr_table[1][chan].speed = HI(effect_table[1][chan]) / 16;
+			vibr_table[1][chan].depth = HI(effect_table[1][chan]) % 16;
 			break;
 
 		case ef_Tremolo:
@@ -1904,7 +1900,7 @@ static void play_line()
 
 			if ((event.effect_def == ef_Extended) &
 			    (event.effect == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_FineVibr))
-				vibr_table2[chan].fine = TRUE;
+				vibr_table[1][chan].fine = TRUE;
 			break;
 
 		case ef_SetCarrierVol:
@@ -2733,9 +2729,9 @@ void vibrato(uint8_t chan)
 	uint16_t freq, old_freq;
 	uint8_t direction;
 
-	vibr_table[chan].pos += vibr_table[chan].speed;
-	freq = calc_vibrato_shift(vibr_table[chan].depth, vibr_table[chan].pos);
-	direction = vibr_table[chan].pos & 0x20;
+	vibr_table[0][chan].pos += vibr_table[0][chan].speed;
+	freq = calc_vibrato_shift(vibr_table[0][chan].depth, vibr_table[0][chan].pos);
+	direction = vibr_table[0][chan].pos & 0x20;
 	old_freq = freq_table[chan];
 	if (direction == 0)
 		portamento_down(chan, freq, nFreq(0));
@@ -2749,9 +2745,9 @@ void vibrato2(uint8_t chan)
 	uint16_t freq, old_freq;
 	uint8_t direction;
 
-	vibr_table2[chan].pos += vibr_table2[chan].speed;
-	freq = calc_vibrato_shift(vibr_table2[chan].depth, vibr_table2[chan].pos);
-	direction = vibr_table2[chan].pos & 0x20;
+	vibr_table[1][chan].pos += vibr_table[1][chan].speed;
+	freq = calc_vibrato_shift(vibr_table[1][chan].depth, vibr_table[1][chan].pos);
+	direction = vibr_table[1][chan].pos & 0x20;
 	old_freq = freq_table[chan];
 	if (direction == 0)
 		portamento_down(chan, freq, nFreq(0));
@@ -2856,7 +2852,7 @@ void update_effects()
 			break;
 
 		case ef_Vibrato:
-			if (!vibr_table[chan].fine)
+			if (!vibr_table[0][chan].fine)
 				vibrato(chan);
 			break;
 
@@ -2867,12 +2863,12 @@ void update_effects()
 
 		case ef_VibratoVolSlide:
 			volume_slide(chan, eHi / 16, eHi % 16);
-			if (!vibr_table[chan].fine)
+			if (!vibr_table[0][chan].fine)
 				vibrato(chan);
 			break;
 
 		case ef_VibratoVSlideFine:
-			if (!vibr_table[chan].fine)
+			if (!vibr_table[0][chan].fine)
 				vibrato(chan);
 			break;
 
@@ -3044,7 +3040,7 @@ void update_effects()
 			break;
 
 		case ef_Vibrato:
-			if (!vibr_table2[chan].fine)
+			if (!vibr_table[1][chan].fine)
 				vibrato2(chan);
 			break;
 
@@ -3055,12 +3051,12 @@ void update_effects()
 
 		case ef_VibratoVolSlide:
 			volume_slide(chan, eHi2 / 16, eHi2 % 16);
-			if (!vibr_table2[chan].fine)
+			if (!vibr_table[1][chan].fine)
 				vibrato2(chan);
 			break;
 
 		case ef_VibratoVSlideFine:
-			if (!vibr_table2[chan].fine)
+			if (!vibr_table[1][chan].fine)
 				vibrato2(chan);
 			break;
 
@@ -3222,7 +3218,7 @@ static void update_fine_effects(uint8_t chan)
 		break;
 
 	case ef_Vibrato:
-		if (vibr_table[chan].fine)
+		if (vibr_table[0][chan].fine)
 			vibrato(chan);
 		break;
 
@@ -3232,13 +3228,13 @@ static void update_fine_effects(uint8_t chan)
 		break;
 
 	case ef_VibratoVolSlide:
-		if (vibr_table[chan].fine)
+		if (vibr_table[0][chan].fine)
 			vibrato(chan);
 		break;
 
 	case ef_VibratoVSlideFine:
 		volume_slide(chan, eHi / 16, eHi % 16);
-		if (vibr_table[chan].fine)
+		if (vibr_table[0][chan].fine)
 			vibrato(chan);
 		break;
 
@@ -3299,7 +3295,7 @@ static void update_fine_effects(uint8_t chan)
 		break;
 
 	case ef_Vibrato:
-		if (vibr_table2[chan].fine)
+		if (vibr_table[1][chan].fine)
 			vibrato2(chan);
 		break;
 
@@ -3309,13 +3305,13 @@ static void update_fine_effects(uint8_t chan)
 		break;
 
 	case ef_VibratoVolSlide:
-		if (vibr_table2[chan].fine)
+		if (vibr_table[1][chan].fine)
 			vibrato2(chan);
 		break;
 
 	case ef_VibratoVSlideFine:
 		volume_slide(chan, eHi2 / 16, eHi2 % 16);
-		if (vibr_table2[chan].fine)
+		if (vibr_table[1][chan].fine)
 			vibrato2(chan);
 		break;
 
@@ -3373,7 +3369,7 @@ static void update_extra_fine_effects()
 			break;
 
 		case ef_ExtraFineVibrato:
-			if (!vibr_table[chan].fine)
+			if (!vibr_table[0][chan].fine)
 				vibrato(chan);
 			break;
 
@@ -3413,7 +3409,7 @@ static void update_extra_fine_effects()
 			break;
 
 		case ef_ExtraFineVibrato:
-			if (!vibr_table2[chan].fine)
+			if (!vibr_table[1][chan].fine)
 				vibrato2(chan);
 			break;
 
@@ -3917,7 +3913,6 @@ static void init_buffers()
 	memset(arpgg_table, 0, sizeof(arpgg_table));
 	memset(arpgg_table2, 0, sizeof(arpgg_table2));
 	memset(vibr_table, 0, sizeof(vibr_table));
-	memset(vibr_table2, 0, sizeof(vibr_table2));
 	memset(trem_table, 0, sizeof(trem_table));
 	memset(retrig_table, 0, sizeof(retrig_table));
 	memset(tremor_table, 0, sizeof(tremor_table));
