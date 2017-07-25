@@ -973,6 +973,7 @@ static void play_line()
 			}
 		}
 
+#if 0
 		if ((event.effect_def != ef_Vibrato) &&
 		    (event.effect_def != ef_ExtraFineVibrato) &&
 		    (event.effect_def != ef_VibratoVolSlide) &&
@@ -1000,12 +1001,14 @@ static void play_line()
 		if ((event.effect_def2 != ef_Tremolo) &&
 		    (event.effect_def2 != ef_ExtraFineTremolo))
 			memset(&trem_table[1][chan], 0, sizeof(trem_table[1][chan]));
+#endif
 
 		eLo  = LO(last_effect[0][chan]);
 		eHi  = HI(last_effect[0][chan]);
 		eLo2 = LO(last_effect[1][chan]);
 		eHi2 = HI(last_effect[1][chan]);
 
+#if 0
 		if ((arpgg_table[0][chan].state != 1) &&
 		    (event.effect_def != ef_ExtraFineArpeggio)) {
 			arpgg_table[0][chan].state = 1;
@@ -1026,7 +1029,7 @@ static void play_line()
 			change_frequency(chan, nFreq(arpgg_table[1][chan].note - 1) +
 			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
 		}
-
+#endif
 		if ((tremor_table[0][chan].pos != 0) &&
 		    (event.effect_def != ef_Tremor)) {
 			tremor_table[0][chan].pos = 0;
