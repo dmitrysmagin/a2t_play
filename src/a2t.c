@@ -373,11 +373,7 @@ struct PACK {
 struct PACK {
 	uint8_t pos, speed, depth;
 	bool fine;
-} trem_table[20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
-struct PACK {
-	uint8_t pos, speed, depth;
-	bool fine;
-} trem_table2[20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
+} trem_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
 uint8_t retrig_table[2][20];	// array[1..20] of Byte;
 struct PACK {
 	int pos;
@@ -1013,11 +1009,11 @@ static void play_line()
 
 		if ((event.effect_def != ef_Tremolo) &&
 		    (event.effect_def != ef_ExtraFineTremolo))
-			memset(&trem_table[chan], 0, sizeof(trem_table[chan]));
+			memset(&trem_table[0][chan], 0, sizeof(trem_table[0][chan]));
 
 		if ((event.effect_def2 != ef_Tremolo) &&
 		    (event.effect_def2 != ef_ExtraFineTremolo))
-			memset(&trem_table2[chan], 0, sizeof(trem_table2[chan]));
+			memset(&trem_table[1][chan], 0, sizeof(trem_table[1][chan]));
 
 		eLo  = LO(last_effect[0][chan]);
 		eHi  = HI(last_effect[0][chan]);
@@ -1256,11 +1252,11 @@ static void play_line()
 
 			if ((event.effect_def2 == ef_Extended) &&
 			    (event.effect2 == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_FineTrem)) {
-				trem_table[chan].fine = TRUE;
+				trem_table[0][chan].fine = TRUE;
 			}
 
-			trem_table[chan].speed = HI(effect_table[0][chan]) / 16;
-			trem_table[chan].depth = HI(effect_table[0][chan]) % 16;
+			trem_table[0][chan].speed = HI(effect_table[0][chan]) / 16;
+			trem_table[0][chan].depth = HI(effect_table[0][chan]) % 16;
 			break;
 
 		case ef_VibratoVolSlide:
@@ -1885,11 +1881,11 @@ static void play_line()
 
 			if ((event.effect_def == ef_Extended) &&
 			    (event.effect == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_FineTrem)) {
-				trem_table2[chan].fine = TRUE;
+				trem_table[1][chan].fine = TRUE;
 			}
 
-			trem_table2[chan].speed = HI(effect_table[1][chan]) / 16;
-			trem_table2[chan].depth = HI(effect_table[1][chan]) % 16;
+			trem_table[1][chan].speed = HI(effect_table[1][chan]) / 16;
+			trem_table[1][chan].depth = HI(effect_table[1][chan]) % 16;
 			break;
 
 		case ef_VibratoVolSlide:
@@ -2769,9 +2765,9 @@ void tremolo(uint8_t chan)
 	uint16_t vol, old_vol;
 	uint8_t direction;
 
-	trem_table[chan].pos += trem_table[chan].speed;
-	vol = calc_vibrato_shift(trem_table[chan].depth, trem_table[chan].pos);
-	direction = trem_table[chan].pos & 0x20;
+	trem_table[0][chan].pos += trem_table[0][chan].speed;
+	vol = calc_vibrato_shift(trem_table[0][chan].depth, trem_table[0][chan].pos);
+	direction = trem_table[0][chan].pos & 0x20;
 	old_vol = volume_table[chan];
 	if (direction == 0)
 		slide_volume_down(chan, vol);
@@ -2785,9 +2781,9 @@ void tremolo2(uint8_t chan)
 	uint16_t vol, old_vol;
 	uint8_t direction;
 
-	trem_table2[chan].pos += trem_table2[chan].speed;
-	vol = calc_vibrato_shift(trem_table2[chan].depth, trem_table2[chan].pos);
-	direction = trem_table2[chan].pos & 0x20;
+	trem_table[1][chan].pos += trem_table[1][chan].speed;
+	vol = calc_vibrato_shift(trem_table[1][chan].depth, trem_table[1][chan].pos);
+	direction = trem_table[1][chan].pos & 0x20;
 	old_vol = volume_table[chan];
 	if (direction == 0)
 		slide_volume_down(chan, vol);
@@ -2881,7 +2877,7 @@ void update_effects()
 			break;
 
 		case ef_Tremolo:
-			if (!trem_table[chan].fine)
+			if (!trem_table[0][chan].fine)
 				tremolo(chan);
 			break;
 
@@ -3069,7 +3065,7 @@ void update_effects()
 			break;
 
 		case ef_Tremolo:
-			if (!trem_table2[chan].fine)
+			if (!trem_table[1][chan].fine)
 				tremolo2(chan);
 			break;
 
@@ -3247,7 +3243,7 @@ static void update_fine_effects(uint8_t chan)
 		break;
 
 	case ef_Tremolo:
-		if (trem_table[chan].fine)
+		if (trem_table[0][chan].fine)
 			tremolo(chan);
 		break;
 
@@ -3324,7 +3320,7 @@ static void update_fine_effects(uint8_t chan)
 		break;
 
 	case ef_Tremolo:
-		if (trem_table2[chan].fine)
+		if (trem_table[1][chan].fine)
 			tremolo2(chan);
 		break;
 
@@ -3398,7 +3394,7 @@ static void update_extra_fine_effects()
 			break;
 
 		case ef_ExtraFineTremolo:
-			if (!trem_table[chan].fine)
+			if (!trem_table[0][chan].fine)
 				tremolo(chan);
 			break;
 		}
@@ -3438,7 +3434,7 @@ static void update_extra_fine_effects()
 			break;
 
 		case ef_ExtraFineTremolo:
-			if (!trem_table2[chan].fine)
+			if (!trem_table[1][chan].fine)
 				tremolo2(chan);
 			break;
 		}
@@ -3939,7 +3935,6 @@ static void init_buffers()
 	memset(vibr_table, 0, sizeof(vibr_table));
 	memset(vibr_table2, 0, sizeof(vibr_table2));
 	memset(trem_table, 0, sizeof(trem_table));
-	memset(trem_table2, 0, sizeof(trem_table2));
 	memset(retrig_table, 0, sizeof(retrig_table));
 	memset(tremor_table, 0, sizeof(tremor_table));
 	memset(panning_table, 0, sizeof(panning_table));
