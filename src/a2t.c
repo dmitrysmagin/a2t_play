@@ -938,8 +938,6 @@ static void play_line()
 		memcpy(&event,
 		       &pattdata[current_pattern].ch[chan].row[current_line].ev,
 		       sizeof(event));
-		//event = pattdata^[current_pattern DIV 8]
-		//                  [current_pattern MOD 8][chan][current_line];
 
 		if (effect_table[0][chan] != 0)
 			last_effect[0][chan] = effect_table[0][chan];
@@ -956,15 +954,14 @@ static void play_line()
 		} else {
 			if((event.note >= fixed_note_flag + 1) &&
 			   (event.note <= fixed_note_flag + 12 * 8 + 1))
-				event.note = event.note - fixed_note_flag;
+				event.note -= fixed_note_flag;
 		}
 
-		if ((event.note != 0) || (event.instr_def != 0)) {
-			event_table[chan].effect_def  = event.effect_def;
-			event_table[chan].effect      = event.effect;
-			event_table[chan].effect_def2 = event.effect_def2;
-			event_table[chan].effect2     = event.effect2;
-		}
+		// Always set event_table[]
+		event_table[chan].effect_def  = event.effect_def;
+		event_table[chan].effect      = event.effect;
+		event_table[chan].effect_def2 = event.effect_def2;
+		event_table[chan].effect2     = event.effect2;
 
 		if (event.instr_def != 0) {
 			// NOTE: adjust ins
@@ -2310,16 +2307,10 @@ static void play_line()
 
 		if (event.effect_def + event.effect == 0) {
 			effect_table[0][chan] = 0;
-		} else {
-			event_table[chan].effect_def = event.effect_def;
-			event_table[chan].effect = event.effect;
 		}
 
 		if (event.effect_def2 + event.effect2 == 0) {
 			 effect_table[1][chan] = 0;
-		} else {
-			event_table[chan].effect_def2 = event.effect_def2;
-			event_table[chan].effect2 = event.effect2;
 		}
 
 		if (event.note == (event.note | keyoff_flag)) {
