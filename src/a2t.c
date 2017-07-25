@@ -354,10 +354,7 @@ struct PACK {
 } porta_table[2][20];	// array[1..20] of Record freq: Word; speed: Byte; end;
 struct PACK {
 	uint8_t state, note, add1, add2;
-} arpgg_table[20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
-struct PACK {
-	uint8_t state, note, add1, add2;
-} arpgg_table2[20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
+} arpgg_table[2][20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
 struct PACK {
 	uint8_t pos, speed, depth;
 	bool fine;
@@ -1012,24 +1009,24 @@ static void play_line()
 		eLo2 = LO(last_effect[1][chan]);
 		eHi2 = HI(last_effect[1][chan]);
 
-		if ((arpgg_table[chan].state != 1) &&
+		if ((arpgg_table[0][chan].state != 1) &&
 		    (event.effect_def != ef_ExtraFineArpeggio)) {
-			arpgg_table[chan].state = 1;
-			change_frequency(chan, nFreq(arpgg_table[chan].note - 1) +
+			arpgg_table[0][chan].state = 1;
+			change_frequency(chan, nFreq(arpgg_table[0][chan].note - 1) +
 			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
 		}
 
-		if ((arpgg_table2[chan].state != 1) &&
+		if ((arpgg_table[1][chan].state != 1) &&
 		    (event.effect_def2 != ef_ExtraFineArpeggio)) {
-			arpgg_table2[chan].state = 1;
-			change_frequency(chan, nFreq(arpgg_table2[chan].note - 1) +
+			arpgg_table[1][chan].state = 1;
+			change_frequency(chan, nFreq(arpgg_table[1][chan].note - 1) +
 			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
 		}
 
-		if ((arpgg_table2[chan].state != 1) &&
+		if ((arpgg_table[1][chan].state != 1) &&
 		    (event.effect_def2 != ef_ExtraFineArpeggio)) {
-			arpgg_table2[chan].state = 1;
-			change_frequency(chan, nFreq(arpgg_table2[chan].note - 1) +
+			arpgg_table[1][chan].state = 1;
+			change_frequency(chan, nFreq(arpgg_table[1][chan].note - 1) +
 			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
 		}
 
@@ -1088,12 +1085,12 @@ static void play_line()
 
 				if (((event.note & 0x7f) >= 1) &&
 				    ((event.note & 0x7f) <= 12 * 8 + 1)) {
-					arpgg_table[chan].state = 0;
-					arpgg_table[chan].note = event.note & 0x7f;
+					arpgg_table[0][chan].state = 0;
+					arpgg_table[0][chan].note = event.note & 0x7f;
 					if ((event.effect_def == ef_Arpeggio) ||
 					    (event.effect_def == ef_ExtraFineArpeggio)) {
-						arpgg_table[chan].add1 = event.effect / 16;
-						arpgg_table[chan].add2 = event.effect % 16;
+						arpgg_table[0][chan].add1 = event.effect / 16;
+						arpgg_table[0][chan].add2 = event.effect % 16;
 					}
 				} else {
 					if ((event.note == 0) &&
@@ -1103,13 +1100,13 @@ static void play_line()
 						    (eLo != ef_ExtraFineArpeggio) &&
 						    (eLo != ef_ArpggVSlide) &&
 						    (eLo != ef_ArpggVSlideFine))
-							arpgg_table[chan].state = 0;
+							arpgg_table[0][chan].state = 0;
 
-						arpgg_table[chan].note = event_table[chan].note & 0x7f;
+						arpgg_table[0][chan].note = event_table[chan].note & 0x7f;
 						if ((event.effect_def == ef_Arpeggio) ||
 						    (event.effect_def == ef_ExtraFineArpeggio)) {
-							arpgg_table[chan].add1 = event.effect / 16;
-							arpgg_table[chan].add2 = event.effect % 16;
+							arpgg_table[0][chan].add1 = event.effect / 16;
+							arpgg_table[0][chan].add2 = event.effect % 16;
 						}
 					} else {
 						effect_table[0][chan] = 0;
@@ -1717,12 +1714,12 @@ static void play_line()
 
 				if (((event.note & 0x7f) >= 1) &&
 				    ((event.note & 0x7f) <= 12 * 8 + 1)) {
-					arpgg_table2[chan].state = 0;
-					arpgg_table2[chan].note = event.note & 0x7f;
+					arpgg_table[1][chan].state = 0;
+					arpgg_table[1][chan].note = event.note & 0x7f;
 					if ((event.effect_def2 == ef_Arpeggio) ||
 					    (event.effect_def2 == ef_ExtraFineArpeggio)) {
-						arpgg_table2[chan].add1 = event.effect2 / 16;
-						arpgg_table2[chan].add2 = event.effect2 % 16;
+						arpgg_table[1][chan].add1 = event.effect2 / 16;
+						arpgg_table[1][chan].add2 = event.effect2 % 16;
 					}
 				} else {
 					if ((event.note == 0) &&
@@ -1732,13 +1729,13 @@ static void play_line()
 						    (eLo2 != ef_ExtraFineArpeggio) &&
 						    (eLo2 != ef_ArpggVSlide) &&
 						    (eLo2 != ef_ArpggVSlideFine))
-							arpgg_table2[chan].state = 0;
+							arpgg_table[1][chan].state = 0;
 
-						arpgg_table2[chan].note = event_table[chan].note & 0x7f;
+						arpgg_table[1][chan].note = event_table[chan].note & 0x7f;
 						if ((event.effect_def2 == ef_Arpeggio) ||
 						    (event.effect_def2 == ef_ExtraFineArpeggio)) {
-							arpgg_table2[chan].add1 = event.effect2 / 16;
-							arpgg_table2[chan].add2 = event.effect2 % 16;
+							arpgg_table[1][chan].add1 = event.effect2 / 16;
+							arpgg_table[1][chan].add2 = event.effect2 % 16;
 						}
 					} else {
 						effect_table[1][chan] = 0;
@@ -2682,13 +2679,13 @@ void arpeggio(uint8_t chan)
 
 	uint16_t freq;
 
-	switch (arpgg_table[chan].state) {
-	case 0: freq = nFreq(arpgg_table[chan].note - 1); break;
-	case 1: freq = nFreq(arpgg_table[chan].note - 1 + arpgg_table[chan].add1); break;
-	case 2: freq = nFreq(arpgg_table[chan].note - 1 + arpgg_table[chan].add2); break;
+	switch (arpgg_table[0][chan].state) {
+	case 0: freq = nFreq(arpgg_table[0][chan].note - 1); break;
+	case 1: freq = nFreq(arpgg_table[0][chan].note - 1 + arpgg_table[0][chan].add1); break;
+	case 2: freq = nFreq(arpgg_table[0][chan].note - 1 + arpgg_table[0][chan].add2); break;
 	}
 
-	arpgg_table[chan].state = arpgg_state[arpgg_table[chan].state];
+	arpgg_table[0][chan].state = arpgg_state[arpgg_table[0][chan].state];
 	change_frequency(chan, freq +
 			(int8_t)(ins_parameter(event_table[chan].instr_def, 12)));
 }
@@ -2699,13 +2696,13 @@ void arpeggio2(uint8_t chan)
 
 	uint16_t freq;
 
-	switch (arpgg_table2[chan].state) {
-	case 0: freq = nFreq(arpgg_table2[chan].note - 1); break;
-	case 1: freq = nFreq(arpgg_table2[chan].note - 1 + arpgg_table2[chan].add1); break;
-	case 2: freq = nFreq(arpgg_table2[chan].note - 1 + arpgg_table2[chan].add2); break;
+	switch (arpgg_table[1][chan].state) {
+	case 0: freq = nFreq(arpgg_table[1][chan].note - 1); break;
+	case 1: freq = nFreq(arpgg_table[1][chan].note - 1 + arpgg_table[1][chan].add1); break;
+	case 2: freq = nFreq(arpgg_table[1][chan].note - 1 + arpgg_table[1][chan].add2); break;
 	}
 
-	arpgg_table2[chan].state = arpgg_state[arpgg_table2[chan].state];
+	arpgg_table[1][chan].state = arpgg_state[arpgg_table[1][chan].state];
 	change_frequency(chan, freq +
 			(int8_t)(ins_parameter(event_table[chan].instr_def, 12)));
 }
@@ -3880,7 +3877,6 @@ static void init_buffers()
 	memset(fslide_table, 0, sizeof(fslide_table));
 	memset(porta_table, 0, sizeof(porta_table));
 	memset(arpgg_table, 0, sizeof(arpgg_table));
-	memset(arpgg_table2, 0, sizeof(arpgg_table2));
 	memset(vibr_table, 0, sizeof(vibr_table));
 	memset(trem_table, 0, sizeof(trem_table));
 	memset(retrig_table, 0, sizeof(retrig_table));
@@ -3965,7 +3961,7 @@ static void init_player()
 	global_volume = 63;
 
 	for (int i = 0; i < 20; i++) {
-		arpgg_table[i].state = 1;
+		arpgg_table[0][i].state = 1;
 		voice_table[i] = i;
 	}
 }
