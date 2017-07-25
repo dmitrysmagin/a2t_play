@@ -2724,30 +2724,14 @@ void arpeggio2(uint8_t chan)
 			(int8_t)(ins_parameter(event_table[chan].instr_def, 12)));
 }
 
-void vibrato(uint8_t chan)
+static void vibrato(int slot, uint8_t chan)
 {
 	uint16_t freq, old_freq;
 	uint8_t direction;
 
-	vibr_table[0][chan].pos += vibr_table[0][chan].speed;
-	freq = calc_vibrato_shift(vibr_table[0][chan].depth, vibr_table[0][chan].pos);
-	direction = vibr_table[0][chan].pos & 0x20;
-	old_freq = freq_table[chan];
-	if (direction == 0)
-		portamento_down(chan, freq, nFreq(0));
-	else
-		portamento_up(chan, freq, nFreq(12*8+1));
-	freq_table[chan] = old_freq;
-}
-
-void vibrato2(uint8_t chan)
-{
-	uint16_t freq, old_freq;
-	uint8_t direction;
-
-	vibr_table[1][chan].pos += vibr_table[1][chan].speed;
-	freq = calc_vibrato_shift(vibr_table[1][chan].depth, vibr_table[1][chan].pos);
-	direction = vibr_table[1][chan].pos & 0x20;
+	vibr_table[slot][chan].pos += vibr_table[slot][chan].speed;
+	freq = calc_vibrato_shift(vibr_table[slot][chan].depth, vibr_table[slot][chan].pos);
+	direction = vibr_table[slot][chan].pos & 0x20;
 	old_freq = freq_table[chan];
 	if (direction == 0)
 		portamento_down(chan, freq, nFreq(0));
@@ -2853,7 +2837,7 @@ void update_effects()
 
 		case ef_Vibrato:
 			if (!vibr_table[0][chan].fine)
-				vibrato(chan);
+				vibrato(0, chan);
 			break;
 
 		case ef_Tremolo:
@@ -2864,12 +2848,12 @@ void update_effects()
 		case ef_VibratoVolSlide:
 			volume_slide(chan, eHi / 16, eHi % 16);
 			if (!vibr_table[0][chan].fine)
-				vibrato(chan);
+				vibrato(0, chan);
 			break;
 
 		case ef_VibratoVSlideFine:
 			if (!vibr_table[0][chan].fine)
-				vibrato(chan);
+				vibrato(0, chan);
 			break;
 
 		case ef_VolSlide:
@@ -3041,7 +3025,7 @@ void update_effects()
 
 		case ef_Vibrato:
 			if (!vibr_table[1][chan].fine)
-				vibrato2(chan);
+				vibrato(1, chan);
 			break;
 
 		case ef_Tremolo:
@@ -3052,12 +3036,12 @@ void update_effects()
 		case ef_VibratoVolSlide:
 			volume_slide(chan, eHi2 / 16, eHi2 % 16);
 			if (!vibr_table[1][chan].fine)
-				vibrato2(chan);
+				vibrato(1, chan);
 			break;
 
 		case ef_VibratoVSlideFine:
 			if (!vibr_table[1][chan].fine)
-				vibrato2(chan);
+				vibrato(1, chan);
 			break;
 
 		case ef_VolSlide:
@@ -3219,7 +3203,7 @@ static void update_fine_effects(uint8_t chan)
 
 	case ef_Vibrato:
 		if (vibr_table[0][chan].fine)
-			vibrato(chan);
+			vibrato(0, chan);
 		break;
 
 	case ef_Tremolo:
@@ -3229,13 +3213,13 @@ static void update_fine_effects(uint8_t chan)
 
 	case ef_VibratoVolSlide:
 		if (vibr_table[0][chan].fine)
-			vibrato(chan);
+			vibrato(0, chan);
 		break;
 
 	case ef_VibratoVSlideFine:
 		volume_slide(chan, eHi / 16, eHi % 16);
 		if (vibr_table[0][chan].fine)
-			vibrato(chan);
+			vibrato(0, chan);
 		break;
 
 	case ef_VolSlideFine:
@@ -3296,7 +3280,7 @@ static void update_fine_effects(uint8_t chan)
 
 	case ef_Vibrato:
 		if (vibr_table[1][chan].fine)
-			vibrato2(chan);
+			vibrato(1, chan);
 		break;
 
 	case ef_Tremolo:
@@ -3306,13 +3290,13 @@ static void update_fine_effects(uint8_t chan)
 
 	case ef_VibratoVolSlide:
 		if (vibr_table[1][chan].fine)
-			vibrato2(chan);
+			vibrato(1, chan);
 		break;
 
 	case ef_VibratoVSlideFine:
 		volume_slide(chan, eHi2 / 16, eHi2 % 16);
 		if (vibr_table[1][chan].fine)
-			vibrato2(chan);
+			vibrato(1, chan);
 		break;
 
 	case ef_VolSlideFine:
@@ -3370,7 +3354,7 @@ static void update_extra_fine_effects()
 
 		case ef_ExtraFineVibrato:
 			if (!vibr_table[0][chan].fine)
-				vibrato(chan);
+				vibrato(0, chan);
 			break;
 
 		case ef_ExtraFineTremolo:
@@ -3410,7 +3394,7 @@ static void update_extra_fine_effects()
 
 		case ef_ExtraFineVibrato:
 			if (!vibr_table[1][chan].fine)
-				vibrato2(chan);
+				vibrato(1, chan);
 			break;
 
 		case ef_ExtraFineTremolo:
