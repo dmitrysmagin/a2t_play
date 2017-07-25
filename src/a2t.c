@@ -4287,9 +4287,11 @@ int a2t_read_instruments(char *src)
 		memcpy(songdata->instr_data[i], dst + i * instsize, instsize);
 	}
 
+#if 0
 	FILE *f = fopen("0_inst.dmp", "wb");
 	fwrite(songdata->instr_data, 1, sizeof(songdata->instr_data), f);
 	fclose(f);
+#endif
 
 	free(dst);
 
@@ -4302,9 +4304,11 @@ int a2t_read_instmacros(char *src)
 
 	a2t_depack(src, len[1], songdata->instr_macros);
 
+#if 0
 	FILE *f = fopen("1_inst_macro.dmp", "wb");
 	fwrite(songdata->instr_macros, 1, sizeof(songdata->instr_macros), f);
 	fclose(f);
+#endif
 
 	return len[1];
 }
@@ -4315,9 +4319,11 @@ int a2t_read_macrotable(char *src)
 
 	a2t_depack(src, len[2], songdata->macro_table);
 
+#if 0
 	FILE *f = fopen("2_macrotable.dmp", "wb");
 	fwrite(songdata->macro_table, 1, sizeof(songdata->macro_table), f);
 	fclose(f);
+#endif
 
 	return len[2];
 }
@@ -4328,9 +4334,11 @@ int a2t_read_disabled_fmregs(char *src)
 
 	a2t_depack(src, len[3], songdata->dis_fmreg_col);
 
+#if 0
 	FILE *f = fopen("3_fm_disregs.dmp", "wb");
 	fwrite(songdata->dis_fmreg_col, 1, sizeof(songdata->dis_fmreg_col), f);
 	fclose(f);
+#endif
 
 	return len[3];
 }
@@ -4342,9 +4350,11 @@ int a2t_read_order(char *src)
 
 	a2t_depack(src, len[i], songdata->pattern_order);
 
+#if 0
 	FILE *f = fopen("4_order.dmp", "wb");
 	fwrite(songdata->pattern_order, 1, sizeof(songdata->pattern_order), f);
 	fclose(f);
+#endif
 
 	return len[i];
 }
@@ -4444,9 +4454,11 @@ int a2t_read_patterns(char *src)
 
 	a2_read_patterns(src, s);
 
+#if 0
 	FILE *f = fopen("5_patterns.dmp", "wb");
 	fwrite(pattdata, 1, 16*8*20*256*6, f);
 	fclose(f);
+#endif
 
 	return 0;
 }
@@ -4676,9 +4688,11 @@ static int a2m_read_songdata(char *src)
 	printf("Tempo: %d\n", songdata->tempo);
 	printf("Speed: %d\n", songdata->speed);
 
+#if 0
 	FILE *f = fopen("songdata.dmp", "wb");
 	fwrite(songdata, 1, sizeof(*songdata), f);
 	fclose(f);
+#endif
 
 	return len[0];
 }
@@ -4687,9 +4701,11 @@ int a2m_read_patterns(char *src)
 {
 	a2_read_patterns(src, 1);
 
+#if 0
 	FILE *f = fopen("patterns.dmp", "wb");
 	fwrite(pattdata, 1, sizeof(_pattdata), f);
 	fclose(f);
+#endif
 
 	return 0;
 }
