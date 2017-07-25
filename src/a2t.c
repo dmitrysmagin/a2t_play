@@ -378,8 +378,7 @@ struct PACK {
 	uint8_t pos, speed, depth;
 	bool fine;
 } trem_table2[20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
-uint8_t retrig_table[20];	// array[1..20] of Byte;
-uint8_t retrig_table2[20];	// array[1..20] of Byte;
+uint8_t retrig_table[2][20];	// array[1..20] of Byte;
 struct PACK {
 	int pos;
 	uint16_t volume;
@@ -1010,11 +1009,11 @@ static void play_line()
 
 		if ((event.effect_def != ef_RetrigNote) &&
 		    (event.effect_def != ef_MultiRetrigNote))
-			memset(&retrig_table[chan], 0, sizeof(retrig_table[chan]));
+			memset(&retrig_table[0][chan], 0, sizeof(retrig_table[0][chan]));
 
 		if ((event.effect_def2 != ef_RetrigNote) &&
 		    (event.effect_def2 != ef_MultiRetrigNote))
-			memset(&retrig_table2[chan], 0, sizeof(retrig_table2[chan]));
+			memset(&retrig_table[1][chan], 0, sizeof(retrig_table[1][chan]));
 
 		if ((event.effect_def != ef_Tremolo) &&
 		    (event.effect_def != ef_ExtraFineTremolo))
@@ -1362,7 +1361,7 @@ static void play_line()
 			if (event.effect != 0) {
 				if ((eLo != ef_RetrigNote) &&
 				    (eLo != ef_MultiRetrigNote))
-					retrig_table[chan] = 1;
+					retrig_table[0][chan] = 1;
 
 				effect_table[0][chan] = concw(ef_RetrigNote, event.effect);
 			}
@@ -1377,7 +1376,7 @@ static void play_line()
 			if (event.effect / 16 != 0) {
 				if ((eLo != ef_RetrigNote) &&
 				    (eLo != ef_MultiRetrigNote))
-					retrig_table[chan] = 1;
+					retrig_table[0][chan] = 1;
 
 				effect_table[0][chan] = concw(ef_MultiRetrigNote, event.effect);
 			}
@@ -1991,7 +1990,7 @@ static void play_line()
 			if (event.effect2 != 0) {
 				if ((eLo2 != ef_RetrigNote) &&
 				    (eLo2 != ef_MultiRetrigNote))
-					retrig_table2[chan] = 1;
+					retrig_table[1][chan] = 1;
 
 				effect_table[1][chan] = concw(ef_RetrigNote, event.effect2);
 			}
@@ -2006,7 +2005,7 @@ static void play_line()
 			if (event.effect2 / 16 != 0) {
 				if ((eLo2 != ef_RetrigNote) &&
 				    (eLo2 != ef_MultiRetrigNote))
-					retrig_table2[chan] = 1;
+					retrig_table[1][chan] = 1;
 
 				effect_table[1][chan] = concw(ef_MultiRetrigNote, event.effect2);
 			}
@@ -2906,18 +2905,18 @@ void update_effects()
 			break;
 
 		case ef_RetrigNote:
-			if (retrig_table[chan] >= eHi) {
-				retrig_table[chan] = 0;
+			if (retrig_table[0][chan] >= eHi) {
+				retrig_table[0][chan] = 0;
 				output_note(event_table[chan].note,
 					    event_table[chan].instr_def,
 					    chan, TRUE);
 			} else {
-				retrig_table[chan]++;
+				retrig_table[0][chan]++;
 			}
 			break;
 
 		case ef_MultiRetrigNote:
-			if (retrig_table[chan] >= eHi / 16) {
+			if (retrig_table[0][chan] >= eHi / 16) {
 				switch (eHi % 16) {
 				case 0: break;
 				case 8: break;
@@ -2951,12 +2950,12 @@ void update_effects()
 					break;
 				}
 
-				retrig_table[chan] = 0;
+				retrig_table[0][chan] = 0;
 				output_note(event_table[chan].note,
 					    event_table[chan].instr_def,
 					    chan,TRUE);
 			} else {
-				retrig_table[chan]++;
+				retrig_table[0][chan]++;
 			}
 			break;
 
@@ -3094,17 +3093,17 @@ void update_effects()
 			break;
 
 		case ef_RetrigNote:
-			if (retrig_table2[chan] >= eHi2) {
-				retrig_table2[chan] = 0;
+			if (retrig_table[1][chan] >= eHi2) {
+				retrig_table[1][chan] = 0;
 				output_note(event_table[chan].note,
 					    event_table[chan].instr_def, chan, TRUE);
 			} else {
-				retrig_table2[chan]++;
+				retrig_table[1][chan]++;
 			}
 			break;
 
 		case ef_MultiRetrigNote:
-			if (retrig_table2[chan] >= eHi2 / 16) {
+			if (retrig_table[1][chan] >= eHi2 / 16) {
 				switch (eHi2 % 16) {
 				case 0: break;
 				case 8: break;
@@ -3137,11 +3136,11 @@ void update_effects()
 					break;
 				}
 
-				retrig_table2[chan] = 0;
+				retrig_table[1][chan] = 0;
 				output_note(event_table[chan].note,
 					    event_table[chan].instr_def, chan, TRUE);
 			} else {
-				retrig_table2[chan]++;
+				retrig_table[1][chan]++;
 			}
 			break;
 
@@ -3946,7 +3945,6 @@ static void init_buffers()
 	memset(trem_table, 0, sizeof(trem_table));
 	memset(trem_table2, 0, sizeof(trem_table2));
 	memset(retrig_table, 0, sizeof(retrig_table));
-	memset(retrig_table2, 0, sizeof(retrig_table2));
 	memset(tremor_table, 0, sizeof(tremor_table));
 	memset(tremor_table2, 0, sizeof(tremor_table2));
 	memset(panning_table, 0, sizeof(panning_table));
