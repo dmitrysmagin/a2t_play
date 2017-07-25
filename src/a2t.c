@@ -2760,30 +2760,14 @@ void vibrato2(uint8_t chan)
 	freq_table[chan] = old_freq;
 }
 
-void tremolo(uint8_t chan)
+static void tremolo(int slot, uint8_t chan)
 {
 	uint16_t vol, old_vol;
 	uint8_t direction;
 
-	trem_table[0][chan].pos += trem_table[0][chan].speed;
-	vol = calc_vibrato_shift(trem_table[0][chan].depth, trem_table[0][chan].pos);
-	direction = trem_table[0][chan].pos & 0x20;
-	old_vol = volume_table[chan];
-	if (direction == 0)
-		slide_volume_down(chan, vol);
-	else
-		slide_volume_up(chan, vol);
-	volume_table[chan] = old_vol;
-}
-
-void tremolo2(uint8_t chan)
-{
-	uint16_t vol, old_vol;
-	uint8_t direction;
-
-	trem_table[1][chan].pos += trem_table[1][chan].speed;
-	vol = calc_vibrato_shift(trem_table[1][chan].depth, trem_table[1][chan].pos);
-	direction = trem_table[1][chan].pos & 0x20;
+	trem_table[slot][chan].pos += trem_table[slot][chan].speed;
+	vol = calc_vibrato_shift(trem_table[slot][chan].depth, trem_table[slot][chan].pos);
+	direction = trem_table[slot][chan].pos & 0x20;
 	old_vol = volume_table[chan];
 	if (direction == 0)
 		slide_volume_down(chan, vol);
@@ -2878,7 +2862,7 @@ void update_effects()
 
 		case ef_Tremolo:
 			if (!trem_table[0][chan].fine)
-				tremolo(chan);
+				tremolo(0, chan);
 			break;
 
 		case ef_VibratoVolSlide:
@@ -3066,7 +3050,7 @@ void update_effects()
 
 		case ef_Tremolo:
 			if (!trem_table[1][chan].fine)
-				tremolo2(chan);
+				tremolo(1, chan);
 			break;
 
 		case ef_VibratoVolSlide:
@@ -3244,7 +3228,7 @@ static void update_fine_effects(uint8_t chan)
 
 	case ef_Tremolo:
 		if (trem_table[0][chan].fine)
-			tremolo(chan);
+			tremolo(0, chan);
 		break;
 
 	case ef_VibratoVolSlide:
@@ -3321,7 +3305,7 @@ static void update_fine_effects(uint8_t chan)
 
 	case ef_Tremolo:
 		if (trem_table[1][chan].fine)
-			tremolo2(chan);
+			tremolo(1, chan);
 		break;
 
 	case ef_VibratoVolSlide:
@@ -3395,7 +3379,7 @@ static void update_extra_fine_effects()
 
 		case ef_ExtraFineTremolo:
 			if (!trem_table[0][chan].fine)
-				tremolo(chan);
+				tremolo(0, chan);
 			break;
 		}
 
@@ -3435,7 +3419,7 @@ static void update_extra_fine_effects()
 
 		case ef_ExtraFineTremolo:
 			if (!trem_table[1][chan].fine)
-				tremolo2(chan);
+				tremolo(1, chan);
 			break;
 		}
 	}
