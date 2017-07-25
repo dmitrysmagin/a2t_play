@@ -351,11 +351,7 @@ uint8_t fslide_table[2][20];		// array[1..20] of Byte;
 struct PACK {
 	uint16_t freq;
 	uint8_t speed;
-} porta_table[20];	// array[1..20] of Record freq: Word; speed: Byte; end;
-struct PACK {
-	uint16_t freq;
-	uint8_t speed;
-} porta_table2[20];	// array[1..20] of Record freq: Word; speed: Byte; end;
+} porta_table[2][20];	// array[1..20] of Record freq: Word; speed: Byte; end;
 struct PACK {
 	uint8_t state, note, add1, add2;
 } arpgg_table[20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
@@ -1172,8 +1168,8 @@ static void play_line()
 					}
 				}
 
-				porta_table[chan].speed = HI(effect_table[0][chan]);
-				porta_table[chan].freq = nFreq(event.note - 1) +
+				porta_table[0][chan].speed = HI(effect_table[0][chan]);
+				porta_table[0][chan].freq = nFreq(event.note - 1) +
 					(int8_t)ins_parameter(event_table[chan].instr_def, 12);
 			} else {
 				if (eLo == ef_TonePortamento) {
@@ -1187,7 +1183,7 @@ static void play_line()
 							effect_table[0][chan] = ef_TonePortamento;
 						}
 					}
-					porta_table[chan].speed = HI(effect_table[0][chan]);
+					porta_table[0][chan].speed = HI(effect_table[0][chan]);
 				}
 			}
 			break;
@@ -1801,8 +1797,8 @@ static void play_line()
 					}
 				}
 
-				porta_table2[chan].speed = HI(effect_table[1][chan]);
-				porta_table2[chan].freq = nFreq(event.note - 1) +
+				porta_table[1][chan].speed = HI(effect_table[1][chan]);
+				porta_table[1][chan].freq = nFreq(event.note - 1) +
 					(int8_t)ins_parameter(event_table[chan].instr_def, 12);
 			} else {
 				if (eLo2 == ef_TonePortamento) {
@@ -1816,7 +1812,7 @@ static void play_line()
 							effect_table[1][chan] = ef_TonePortamento;
 						}
 					}
-					porta_table2[chan].speed = HI(effect_table[1][chan]);
+					porta_table[1][chan].speed = HI(effect_table[1][chan]);
 				}
 			}
 			break;
@@ -2489,21 +2485,21 @@ void macro_vibrato__porta_down(uint8_t chan, uint8_t depth)
 
 void tone_portamento(uint8_t chan)
 {
-	if ((freq_table[chan] & 0x1fff) > porta_table[chan].freq) {
-		portamento_down(chan, porta_table[chan].speed, porta_table[chan].freq);
+	if ((freq_table[chan] & 0x1fff) > porta_table[0][chan].freq) {
+		portamento_down(chan, porta_table[0][chan].speed, porta_table[0][chan].freq);
 	} else {
-		if ((freq_table[chan] & 0x1fff) < porta_table[chan].freq)
-			portamento_up(chan, porta_table[chan].speed, porta_table[chan].freq);
+		if ((freq_table[chan] & 0x1fff) < porta_table[0][chan].freq)
+			portamento_up(chan, porta_table[0][chan].speed, porta_table[0][chan].freq);
 	}
 }
 
 void tone_portamento2(uint8_t chan)
 {
-	if ((freq_table[chan] & 0x1fff) > porta_table2[chan].freq) {
-		portamento_down(chan, porta_table2[chan].speed,porta_table2[chan].freq);
+	if ((freq_table[chan] & 0x1fff) > porta_table[1][chan].freq) {
+		portamento_down(chan, porta_table[1][chan].speed,porta_table[1][chan].freq);
 	} else {
-		if ((freq_table[chan] & 0x1fff) < porta_table2[chan].freq)
-			portamento_up(chan, porta_table2[chan].speed, porta_table2[chan].freq);
+		if ((freq_table[chan] & 0x1fff) < porta_table[1][chan].freq)
+			portamento_up(chan, porta_table[1][chan].speed, porta_table[1][chan].freq);
 	}
 }
 
@@ -3893,7 +3889,6 @@ static void init_buffers()
 	memset(effect_table, 0, sizeof(effect_table));
 	memset(fslide_table, 0, sizeof(fslide_table));
 	memset(porta_table, 0, sizeof(porta_table));
-	memset(porta_table2, 0, sizeof(porta_table2));
 	memset(arpgg_table, 0, sizeof(arpgg_table));
 	memset(arpgg_table2, 0, sizeof(arpgg_table2));
 	memset(vibr_table, 0, sizeof(vibr_table));
