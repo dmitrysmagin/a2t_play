@@ -2073,388 +2073,207 @@ uint8_t chanvol(uint8_t chan)
 		return 63 - (LO(volume_table[chan]) + HI(volume_table[chan])) / 2;
 }
 
+static void update_effects_slot(int slot, int chan)
+{
+	uint8_t eLo  = LO(effect_table[slot][chan]);
+	uint8_t eHi  = HI(effect_table[slot][chan]);
+
+	switch (eLo) {
+	case ef_Arpeggio + ef_fix1:
+		arpeggio(slot, chan);
+		break;
+
+	case ef_ArpggVSlide:
+		volume_slide(chan, eHi / 16, eHi % 16);
+		arpeggio(slot, chan);
+		break;
+
+	case ef_ArpggVSlideFine:
+		arpeggio(slot, chan);
+		break;
+
+	case ef_FSlideUp:
+		portamento_up(chan, eHi, nFreq(12*8+1));
+		break;
+
+	case ef_FSlideDown:
+		portamento_down(chan, eHi, nFreq(0));
+		break;
+
+	case ef_FSlideUpVSlide:
+		portamento_up(chan, fslide_table[slot][chan], nFreq(12*8+1));
+		volume_slide(chan, eHi / 16, eHi % 16);
+		break;
+
+	case ef_FSlUpVSlF:
+		portamento_up(chan, fslide_table[slot][chan], nFreq(12*8+1));
+		break;
+
+	case ef_FSlideDownVSlide:
+		portamento_down(chan, fslide_table[slot][chan], nFreq(0));
+		volume_slide(chan, eHi / 16, eHi % 16);
+		break;
+
+	case ef_FSlDownVSlF:
+		portamento_down(chan, fslide_table[slot][chan], nFreq(0));
+		break;
+
+	case ef_FSlUpFineVSlide:
+		volume_slide(chan, eHi / 16, eHi % 16);
+		break;
+
+	case ef_FSlDownFineVSlide:
+		volume_slide(chan, eHi / 16, eHi % 16);
+		break;
+
+	case ef_TonePortamento:
+		tone_portamento(slot, chan);
+		break;
+
+	case ef_TPortamVolSlide:
+		volume_slide(chan, eHi / 16, eHi % 16);
+		tone_portamento(slot, chan);
+		break;
+
+	case ef_TPortamVSlideFine:
+		tone_portamento(slot, chan);
+		break;
+
+	case ef_Vibrato:
+		if (!vibr_table[slot][chan].fine)
+			vibrato(slot, chan);
+		break;
+
+	case ef_Tremolo:
+		if (!trem_table[slot][chan].fine)
+			tremolo(slot, chan);
+		break;
+
+	case ef_VibratoVolSlide:
+		volume_slide(chan, eHi / 16, eHi % 16);
+		if (!vibr_table[slot][chan].fine)
+			vibrato(slot, chan);
+		break;
+
+	case ef_VibratoVSlideFine:
+		if (!vibr_table[slot][chan].fine)
+			vibrato(slot, chan);
+		break;
+
+	case ef_VolSlide:
+		volume_slide(chan, eHi / 16, eHi % 16);
+		break;
+
+	case ef_RetrigNote:
+		if (retrig_table[slot][chan] >= eHi) {
+			retrig_table[slot][chan] = 0;
+			output_note(event_table[chan].note,
+				    event_table[chan].instr_def,
+				    chan, TRUE);
+		} else {
+			retrig_table[slot][chan]++;
+		}
+		break;
+
+	case ef_MultiRetrigNote:
+		if (retrig_table[slot][chan] >= eHi / 16) {
+			switch (eHi % 16) {
+			case 0: break;
+			case 8: break;
+
+			case 1: slide_volume_down(chan, 1); break;
+			case 2: slide_volume_down(chan, 2); break;
+			case 3: slide_volume_down(chan, 4); break;
+			case 4: slide_volume_down(chan, 8); break;
+			case 5: slide_volume_down(chan, 16); break;
+
+			case 9: slide_volume_up(chan, 1); break;
+			case 10: slide_volume_up(chan, 2); break;
+			case 11: slide_volume_up(chan, 4); break;
+			case 12: slide_volume_up(chan, 8); break;
+			case 13: slide_volume_up(chan, 16); break;
+
+			case 6: slide_volume_down(chan, chanvol(chan) -
+						  chanvol(chan) * 2 / 3);
+				break;
+
+			case 7: slide_volume_down(chan, chanvol(chan) -
+						  chanvol(chan) * 1 / 2);
+				break;
+
+			case 14: slide_volume_up(chan, max(chanvol(chan) * 3 / 2 -
+						    chanvol(chan), 63));
+				break;
+
+			case 15: slide_volume_up(chan,max(chanvol(chan) * 2 -
+						    chanvol(chan), 63));
+				break;
+			}
+
+			retrig_table[slot][chan] = 0;
+			output_note(event_table[chan].note,
+				    event_table[chan].instr_def,
+				    chan,TRUE);
+		} else {
+			retrig_table[slot][chan]++;
+		}
+		break;
+
+	case ef_Tremor:
+		if (tremor_table[slot][chan].pos >= 0) {
+			if ((tremor_table[slot][chan].pos + 1) <= eHi / 16) {
+				tremor_table[slot][chan].pos++;
+			} else {
+				slide_volume_down(chan, 63);
+				tremor_table[slot][chan].pos = -1;
+			}
+		} else {
+			if ((tremor_table[slot][chan].pos - 1) >= -(eHi % 16)) {
+				tremor_table[slot][chan].pos--;
+			} else {
+				set_ins_volume(LO(tremor_table[slot][chan].volume),
+					       HI(tremor_table[slot][chan].volume), chan);
+				tremor_table[slot][chan].pos = 1;
+			}
+		}
+		break;
+
+	case ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay:
+		if (notedel_table[chan] == 0) {
+			notedel_table[chan] = NONE;
+			output_note(event_table[chan].note,
+				    event_table[chan].instr_def,
+				    chan, TRUE);
+		} else {
+			notedel_table[chan]--;
+		}
+		break;
+
+	case ef_Extended2 + ef_fix2 + ef_ex2_NoteCut:
+		if (notecut_table[chan] == 0) {
+			notecut_table[chan] = NONE;
+			key_off(chan);
+		} else {
+			notecut_table[chan]--;
+		}
+		break;
+
+	case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUp:
+		global_volume_slide(eHi, NONE);
+		break;
+
+	case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDn:
+		global_volume_slide(NONE, eHi);
+		break;
+	}
+
+}
+
 void update_effects()
 {
-	uint8_t chan, eLo, eHi, eLo2, eHi2;
-
-	for(chan = 0; chan < 20; chan++) {
-		eLo  = LO(effect_table[0][chan]);
-		eHi  = HI(effect_table[0][chan]);
-		eLo2 = LO(effect_table[1][chan]);
-		eHi2 = HI(effect_table[1][chan]);
-
-		switch (eLo) {
-		case ef_Arpeggio + ef_fix1:
-			arpeggio(0, chan);
-			break;
-
-		case ef_ArpggVSlide:
-			volume_slide(chan, eHi / 16, eHi % 16);
-			arpeggio(0, chan);
-			break;
-
-		case ef_ArpggVSlideFine:
-			arpeggio(0, chan);
-			break;
-
-		case ef_FSlideUp:
-			portamento_up(chan, eHi, nFreq(12*8+1));
-			break;
-
-		case ef_FSlideDown:
-			portamento_down(chan, eHi, nFreq(0));
-			break;
-
-		case ef_FSlideUpVSlide:
-			portamento_up(chan, fslide_table[0][chan], nFreq(12*8+1));
-			volume_slide(chan, eHi / 16, eHi % 16);
-			break;
-
-		case ef_FSlUpVSlF:
-			portamento_up(chan, fslide_table[0][chan], nFreq(12*8+1));
-			break;
-
-		case ef_FSlideDownVSlide:
-			portamento_down(chan, fslide_table[0][chan], nFreq(0));
-			volume_slide(chan, eHi / 16, eHi % 16);
-			break;
-
-		case ef_FSlDownVSlF:
-			portamento_down(chan, fslide_table[0][chan], nFreq(0));
-			break;
-
-		case ef_FSlUpFineVSlide:
-			volume_slide(chan, eHi / 16, eHi % 16);
-			break;
-
-		case ef_FSlDownFineVSlide:
-			volume_slide(chan, eHi / 16, eHi % 16);
-			break;
-
-		case ef_TonePortamento:
-			tone_portamento(0, chan);
-			break;
-
-		case ef_TPortamVolSlide:
-			volume_slide(chan, eHi / 16, eHi % 16);
-			tone_portamento(0, chan);
-			break;
-
-		case ef_TPortamVSlideFine:
-			tone_portamento(0, chan);
-			break;
-
-		case ef_Vibrato:
-			if (!vibr_table[0][chan].fine)
-				vibrato(0, chan);
-			break;
-
-		case ef_Tremolo:
-			if (!trem_table[0][chan].fine)
-				tremolo(0, chan);
-			break;
-
-		case ef_VibratoVolSlide:
-			volume_slide(chan, eHi / 16, eHi % 16);
-			if (!vibr_table[0][chan].fine)
-				vibrato(0, chan);
-			break;
-
-		case ef_VibratoVSlideFine:
-			if (!vibr_table[0][chan].fine)
-				vibrato(0, chan);
-			break;
-
-		case ef_VolSlide:
-			volume_slide(chan, eHi / 16, eHi % 16);
-			break;
-
-		case ef_RetrigNote:
-			if (retrig_table[0][chan] >= eHi) {
-				retrig_table[0][chan] = 0;
-				output_note(event_table[chan].note,
-					    event_table[chan].instr_def,
-					    chan, TRUE);
-			} else {
-				retrig_table[0][chan]++;
-			}
-			break;
-
-		case ef_MultiRetrigNote:
-			if (retrig_table[0][chan] >= eHi / 16) {
-				switch (eHi % 16) {
-				case 0: break;
-				case 8: break;
-
-				case 1: slide_volume_down(chan, 1); break;
-				case 2: slide_volume_down(chan, 2); break;
-				case 3: slide_volume_down(chan, 4); break;
-				case 4: slide_volume_down(chan, 8); break;
-				case 5: slide_volume_down(chan, 16); break;
-
-				case 9: slide_volume_up(chan, 1); break;
-				case 10: slide_volume_up(chan, 2); break;
-				case 11: slide_volume_up(chan, 4); break;
-				case 12: slide_volume_up(chan, 8); break;
-				case 13: slide_volume_up(chan, 16); break;
-
-				case 6: slide_volume_down(chan, chanvol(chan) -
-							  chanvol(chan) * 2 / 3);
-					break;
-
-				case 7: slide_volume_down(chan, chanvol(chan) -
-							  chanvol(chan) * 1 / 2);
-					break;
-
-				case 14: slide_volume_up(chan, max(chanvol(chan) * 3 / 2 -
-							    chanvol(chan), 63));
-					break;
-
-				case 15: slide_volume_up(chan,max(chanvol(chan) * 2 -
-							    chanvol(chan), 63));
-					break;
-				}
-
-				retrig_table[0][chan] = 0;
-				output_note(event_table[chan].note,
-					    event_table[chan].instr_def,
-					    chan,TRUE);
-			} else {
-				retrig_table[0][chan]++;
-			}
-			break;
-
-		case ef_Tremor:
-			if (tremor_table[0][chan].pos >= 0) {
-				if ((tremor_table[0][chan].pos + 1) <= eHi / 16) {
-					tremor_table[0][chan].pos++;
-				} else {
-					slide_volume_down(chan, 63);
-					tremor_table[0][chan].pos = -1;
-				}
-			} else {
-				if ((tremor_table[0][chan].pos - 1) >= -(eHi % 16)) {
-					tremor_table[0][chan].pos--;
-				} else {
-					set_ins_volume(LO(tremor_table[0][chan].volume),
-						       HI(tremor_table[0][chan].volume), chan);
-					tremor_table[0][chan].pos = 1;
-				}
-			}
-			break;
-
-		case ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay:
-			if (notedel_table[chan] == 0) {
-				notedel_table[chan] = NONE;
-				output_note(event_table[chan].note,
-					    event_table[chan].instr_def,
-					    chan, TRUE);
-			} else {
-				notedel_table[chan]--;
-			}
-			break;
-
-		case ef_Extended2 + ef_fix2 + ef_ex2_NoteCut:
-			if (notecut_table[chan] == 0) {
-				notecut_table[chan] = NONE;
-				key_off(chan);
-			} else {
-				notecut_table[chan]--;
-			}
-			break;
-
-		case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUp:
-			global_volume_slide(eHi, NONE);
-			break;
-
-		case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDn:
-			global_volume_slide(NONE, eHi);
-			break;
-		}
-
-		switch (eLo2) {
-		case ef_Arpeggio + ef_fix1:
-			arpeggio(1, chan);
-			break;
-
-		case ef_ArpggVSlide:
-			volume_slide(chan, eHi2 / 16, eHi2 % 16);
-			arpeggio(1, chan);
-			break;
-
-		case ef_ArpggVSlideFine:
-			arpeggio(1, chan);
-			break;
-
-		case ef_FSlideUp:
-			portamento_up(chan, eHi2, nFreq(12*8+1));
-			break;
-
-		case ef_FSlideDown:
-			portamento_down(chan, eHi2, nFreq(0));
-			break;
-
-		case ef_FSlideUpVSlide:
-			portamento_up(chan, fslide_table[1][chan], nFreq(12*8+1));
-			volume_slide(chan, eHi2 / 16, eHi2 % 16);
-			break;
-
-		case ef_FSlUpVSlF:
-			portamento_up(chan, fslide_table[1][chan], nFreq(12*8+1));
-			break;
-
-		case ef_FSlideDownVSlide:
-			portamento_down(chan, fslide_table[1][chan], nFreq(0));
-			volume_slide(chan,eHi2 / 16, eHi2 % 16);
-			break;
-
-		case ef_FSlDownVSlF:
-			portamento_down(chan, fslide_table[1][chan], nFreq(0));
-			break;
-
-		case ef_FSlUpFineVSlide:
-			volume_slide(chan, eHi2 / 16, eHi2 % 16);
-			break;
-
-		case ef_FSlDownFineVSlide:
-			volume_slide(chan, eHi2 / 16, eHi2 % 16);
-
-		case ef_TonePortamento:
-			tone_portamento(1, chan);
-			break;
-
-		case ef_TPortamVolSlide:
-			volume_slide(chan, eHi2 / 16, eHi2 % 16);
-			tone_portamento(1, chan);
-			break;
-
-		case ef_TPortamVSlideFine:
-			tone_portamento(1, chan);
-			break;
-
-		case ef_Vibrato:
-			if (!vibr_table[1][chan].fine)
-				vibrato(1, chan);
-			break;
-
-		case ef_Tremolo:
-			if (!trem_table[1][chan].fine)
-				tremolo(1, chan);
-			break;
-
-		case ef_VibratoVolSlide:
-			volume_slide(chan, eHi2 / 16, eHi2 % 16);
-			if (!vibr_table[1][chan].fine)
-				vibrato(1, chan);
-			break;
-
-		case ef_VibratoVSlideFine:
-			if (!vibr_table[1][chan].fine)
-				vibrato(1, chan);
-			break;
-
-		case ef_VolSlide:
-			volume_slide(chan, eHi2 / 16, eHi2 % 16);
-			break;
-
-		case ef_RetrigNote:
-			if (retrig_table[1][chan] >= eHi2) {
-				retrig_table[1][chan] = 0;
-				output_note(event_table[chan].note,
-					    event_table[chan].instr_def, chan, TRUE);
-			} else {
-				retrig_table[1][chan]++;
-			}
-			break;
-
-		case ef_MultiRetrigNote:
-			if (retrig_table[1][chan] >= eHi2 / 16) {
-				switch (eHi2 % 16) {
-				case 0: break;
-				case 8: break;
-
-				case 1: slide_volume_down(chan, 1); break;
-				case 2: slide_volume_down(chan, 2); break;
-				case 3: slide_volume_down(chan, 4); break;
-				case 4: slide_volume_down(chan, 8); break;
-				case 5: slide_volume_down(chan, 16); break;
-
-				case 9: slide_volume_up(chan, 1); break;
-				case 10: slide_volume_up(chan, 2); break;
-				case 11: slide_volume_up(chan, 4); break;
-				case 12: slide_volume_up(chan, 8); break;
-				case 13: slide_volume_up(chan, 16); break;
-
-
-				case 6: slide_volume_down(chan, chanvol(chan) -
-						chanvol(chan) * 2 / 3);
-					break;
-				case 7: slide_volume_down(chan, chanvol(chan) -
-						chanvol(chan) * 1 / 2);
-					break;
-
-				case 14: slide_volume_up(chan, max(chanvol(chan) * 3 / 2 -
-						chanvol(chan), 63));
-					break;
-				case 15: slide_volume_up(chan, max(chanvol(chan) * 2 -
-						chanvol(chan), 63));
-					break;
-				}
-
-				retrig_table[1][chan] = 0;
-				output_note(event_table[chan].note,
-					    event_table[chan].instr_def, chan, TRUE);
-			} else {
-				retrig_table[1][chan]++;
-			}
-			break;
-
-		case ef_Tremor:
-			if (tremor_table[1][chan].pos >= 0) {
-				if ((tremor_table[1][chan].pos + 1) <= eHi2 / 16) {
-					tremor_table[1][chan].pos++;
-				} else {
-					slide_volume_down(chan, 63);
-					tremor_table[1][chan].pos = -1;
-				}
-			} else {
-				if ((tremor_table[1][chan].pos - 1) >= -(eHi2 % 16)) {
-					tremor_table[1][chan].pos--;
-				} else {
-					set_ins_volume(LO(tremor_table[1][chan].volume),
-							HI(tremor_table[1][chan].volume), chan);
-					tremor_table[1][chan].pos = 1;
-				}
-			}
-			break;
-
-		case ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay:
-			if (notedel_table[chan] == 0) {
-				notedel_table[chan] = NONE;
-				output_note(event_table[chan].note,
-						event_table[chan].instr_def, chan, TRUE);
-			} else {
-				notedel_table[chan]--;
-			}
-			break;
-
-		case ef_Extended2 + ef_fix2 + ef_ex2_NoteCut:
-			if (notecut_table[chan] == 0) {
-				notecut_table[chan] = NONE;
-				key_off(chan);
-			} else {
-				notecut_table[chan]--;
-			}
-			break;
-
-		case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUp:
-			global_volume_slide(eHi2, NONE);
-			break;
-
-		case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDn:
-			global_volume_slide(NONE, eHi2);
-			break;
-		}
+	for (int chan = 0; chan < 20; chan++) {
+		update_effects_slot(0, chan);
+		update_effects_slot(1, chan);
 	}
 }
 
