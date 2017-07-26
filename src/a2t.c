@@ -1593,7 +1593,8 @@ static void play_line()
 				event->note -= fixed_note_flag;
 		}
 
-		// Always set event_table[]
+		// Needed for output_note() and output_note_NR() with
+		// restart_macro == TRUE
 		event_table[chan].eff[0].def = event->eff[0].def;
 		event_table[chan].eff[0].val = event->eff[0].val;
 		event_table[chan].eff[1].def = event->eff[1].def;
