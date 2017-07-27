@@ -1086,7 +1086,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 		break;
 
 	case ef_SetSpeed:
-		speed = val;
+		ticks = speed = val;
 		break;
 
 	case ef_SetTempo:
