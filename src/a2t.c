@@ -1450,14 +1450,6 @@ static void play_line()
 			set_ins_data(event->instr_def, chan);
 		}
 
-
-		if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
-			(current_order != last_order)) {
-			memset(loopbck_table, NONE, sizeof(loopbck_table));
-			memset(loop_table, NONE, sizeof(loop_table));
-			last_order = current_order;
-		}
-
 		process_effects(event, 0, chan);
 		process_effects(event, 1, chan);
 
