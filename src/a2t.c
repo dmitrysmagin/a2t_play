@@ -335,7 +335,6 @@ uint8_t overall_volume = 63;
 uint8_t global_volume = 63;
 
 const uint8_t keyoff_flag        = 0x80;
-const uint8_t fixed_note_flag    = 0x90;
 const uint8_t pattern_loop_flag  = 0xe0;
 const uint8_t pattern_break_flag = 0xf0;
 
@@ -581,7 +580,7 @@ static void key_off(uint8_t chan)
 {
 	freq_table[chan] &= ~0x2000;
 	change_frequency(chan, freq_table[chan]);
-	event_table[chan].note = event_table[chan].note | keyoff_flag;
+	event_table[chan].note |= keyoff_flag;
 }
 
 static void release_sustaining_sound(uint8_t chan)
@@ -1413,14 +1412,6 @@ static void play_line()
 
 		ftune_table[chan] = 0;
 
-		if (event->note == NONE) {
-			event->note = event_table[chan].note | keyoff_flag;
-		} else {
-			if((event->note >= fixed_note_flag + 1) &&
-			   (event->note <= fixed_note_flag + 12 * 8 + 1))
-				event->note -= fixed_note_flag;
-		}
-
 		// Needed for output_note() and output_note_NR() with
 		// restart_macro == TRUE
 		event_table[chan].eff[0].def = event->eff[0].def;
@@ -1430,12 +1421,10 @@ static void play_line()
 
 		if (event->instr_def != 0) {
 			// NOTE: adjust ins
-			if (!nul_data(songdata->instr_data[event->instr_def-1], INSTRUMENT_SIZE)) {
-				set_ins_data(event->instr_def, chan);
-			} else {
+			if (nul_data(songdata->instr_data[event->instr_def-1], INSTRUMENT_SIZE)) {
 				release_sustaining_sound(chan);
-				set_ins_data(event->instr_def, chan);
 			}
+			set_ins_data(event->instr_def, chan);
 		}
 
 #if 0
@@ -1514,7 +1503,7 @@ static void play_line()
 		process_effects(event, 0, chan);
 		process_effects(event, 1, chan);
 
-		if (event->note == (event->note | keyoff_flag)) {
+		if (event->note == NONE) {
 			key_off(chan);
 		} else {
 			if (((LO(effect_table[0][chan]) != ef_TonePortamento) &&
