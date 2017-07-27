@@ -1294,7 +1294,9 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 		break;
 
 	case ef_Extended2:
-		effect_table[slot][chan] |= concw(ef_fix2, 0);
+		// Alter effect value
+		effect_table[slot][chan] =
+			concw(def + ef_fix2 + (val / 16), val % 16);
 
 		switch (val / 16) {
 		case ef_ex2_PatDelayFrame:
