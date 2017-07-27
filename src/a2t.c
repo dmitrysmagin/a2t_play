@@ -938,6 +938,35 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
 	effect_table[slot][chan] = concw(def, val);
 
+#if 0
+	// FIXME: Check if this code is really needed
+	if ((def != ef_Vibrato) &&
+	    (def != ef_ExtraFineVibrato) &&
+	    (def != ef_VibratoVolSlide) &&
+	    (def != ef_VibratoVSlideFine))
+		memset(&vibr_table[slot][chan], 0, sizeof(vibr_table[slot][chan]));
+
+	if ((def != ef_RetrigNote) &&
+	    (def != ef_MultiRetrigNote))
+		memset(&retrig_table[slot][chan], 0, sizeof(retrig_table[slot][chan]));
+
+	if ((def != ef_Tremolo) &&
+	    (def != ef_ExtraFineTremolo))
+		memset(&trem_table[slot][chan], 0, sizeof(trem_table[slot][chan]));
+
+	if ((arpgg_table[slot][chan].state != 1) && (def != ef_ExtraFineArpeggio)) {
+		arpgg_table[slot][chan].state = 1;
+		change_frequency(chan, nFreq(arpgg_table[slot][chan].note - 1) +
+			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
+	}
+
+	if ((tremor_table[slot][chan].pos != 0) && (def != ef_Tremor)) {
+		tremor_table[slot][chan].pos = 0;
+		set_ins_volume(LO(tremor_table[slot][chan].volume),
+			       HI(tremor_table[slot][chan].volume), chan);
+	}
+#endif
+
 	switch (def) {
 	case ef_Arpeggio:
 		if (def + val == 0)
@@ -1421,72 +1450,7 @@ static void play_line()
 			set_ins_data(event->instr_def, chan);
 		}
 
-#if 0
-		if ((event->eff[0].def != ef_Vibrato) &&
-		    (event->eff[0].def != ef_ExtraFineVibrato) &&
-		    (event->eff[0].def != ef_VibratoVolSlide) &&
-		    (event->eff[0].def != ef_VibratoVSlideFine))
-			memset(&vibr_table[0][chan], 0, sizeof(vibr_table[0][chan]));
 
-		if ((event->eff[1].def != ef_Vibrato) &&
-		    (event->eff[1].def != ef_ExtraFineVibrato) &&
-		    (event->eff[1].def != ef_VibratoVolSlide) &&
-		    (event->eff[1].def != ef_VibratoVSlideFine))
-			memset(&vibr_table[1][chan], 0, sizeof(vibr_table[1][chan]));
-
-		if ((event->eff[0].def != ef_RetrigNote) &&
-		    (event->eff[0].def != ef_MultiRetrigNote))
-			memset(&retrig_table[0][chan], 0, sizeof(retrig_table[0][chan]));
-
-		if ((event->eff[1].def != ef_RetrigNote) &&
-		    (event->eff[1].def != ef_MultiRetrigNote))
-			memset(&retrig_table[1][chan], 0, sizeof(retrig_table[1][chan]));
-
-		if ((event->eff[0].def != ef_Tremolo) &&
-		    (event->eff[0].def != ef_ExtraFineTremolo))
-			memset(&trem_table[0][chan], 0, sizeof(trem_table[0][chan]));
-
-		if ((event->eff[1].def != ef_Tremolo) &&
-		    (event->eff[1].def != ef_ExtraFineTremolo))
-			memset(&trem_table[1][chan], 0, sizeof(trem_table[1][chan]));
-#endif
-
-#if 0
-		if ((arpgg_table[0][chan].state != 1) &&
-		    (event->eff[0].def != ef_ExtraFineArpeggio)) {
-			arpgg_table[0][chan].state = 1;
-			change_frequency(chan, nFreq(arpgg_table[0][chan].note - 1) +
-			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
-		}
-
-		if ((arpgg_table[1][chan].state != 1) &&
-		    (event->eff[1].def != ef_ExtraFineArpeggio)) {
-			arpgg_table[1][chan].state = 1;
-			change_frequency(chan, nFreq(arpgg_table[1][chan].note - 1) +
-			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
-		}
-
-		if ((arpgg_table[1][chan].state != 1) &&
-		    (event->eff[1].def != ef_ExtraFineArpeggio)) {
-			arpgg_table[1][chan].state = 1;
-			change_frequency(chan, nFreq(arpgg_table[1][chan].note - 1) +
-			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
-		}
-
-		if ((tremor_table[0][chan].pos != 0) &&
-		    (event->eff[0].def != ef_Tremor)) {
-			tremor_table[0][chan].pos = 0;
-			set_ins_volume(LO(tremor_table[0][chan].volume),
-				       HI(tremor_table[0][chan].volume), chan);
-		}
-
-		if ((tremor_table[1][chan].pos != 0) &&
-		    (event->eff[1].def != ef_Tremor)) {
-			tremor_table[1][chan].pos = 0;
-			set_ins_volume(LO(tremor_table[1][chan].volume),
-				       HI(tremor_table[1][chan].volume), chan);
-		}
-#endif
 		if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
 			(current_order != last_order)) {
 			memset(loopbck_table, NONE, sizeof(loopbck_table));
