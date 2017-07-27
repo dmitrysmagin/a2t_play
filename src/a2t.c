@@ -334,7 +334,6 @@ tPLAY_STATUS play_status = isStopped;
 uint8_t overall_volume = 63;
 uint8_t global_volume = 63;
 
-const uint8_t keyoff_flag        = 0x80;
 const uint8_t pattern_loop_flag  = 0xe0;
 const uint8_t pattern_break_flag = 0xf0;
 
@@ -580,7 +579,6 @@ static void key_off(uint8_t chan)
 {
 	freq_table[chan] &= ~0x2000;
 	change_frequency(chan, freq_table[chan]);
-	event_table[chan].note |= keyoff_flag;
 }
 
 static void release_sustaining_sound(uint8_t chan)
@@ -862,8 +860,6 @@ static void output_note(uint8_t note, uint8_t ins, uint8_t chan, bool restart_ma
 	change_frequency(chan, freq);
 
 	if (note != 0) {
-		event_table[chan].note = note;
-
 		if (restart_macro) {
 			if (!(((event_table[chan].eff[0].def == ef_Extended) &&
 			      (event_table[chan].eff[0].val / 16 == ef_ex_ExtendedCmd) &&
@@ -901,8 +897,6 @@ static void output_note_NR(uint8_t note, uint8_t ins, uint8_t chan, bool restart
 	change_frequency(chan, freq);
 
 	if (note != 0) {
-		event_table[chan].note = note;
-
 		if (restart_macro) {
 			if (!(((event_table[chan].eff[0].def == ef_Extended) &&
 			      (event_table[chan].eff[0].val / 16 == ef_ex_ExtendedCmd) &&
@@ -1505,7 +1499,10 @@ static void play_line()
 
 		if (event->note == NONE) {
 			key_off(chan);
+			event_table[chan].note = 0;
 		} else {
+			event_table[chan].note = event->note;
+
 			if (((LO(effect_table[0][chan]) != ef_TonePortamento) &&
 			     (LO(effect_table[0][chan]) != ef_TPortamVolSlide) &&
 			     (LO(effect_table[0][chan]) != ef_TPortamVSlideFine) &&
@@ -1528,9 +1525,6 @@ static void play_line()
 				} else {
 					output_note_NR(event->note, voice_table[chan], chan, TRUE);
 				}
-			} else {
-				if (event->note != 0)
-					event_table[chan].note = event->note;
 			}
 		}
 
