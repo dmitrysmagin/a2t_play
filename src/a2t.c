@@ -838,7 +838,7 @@ static void update_fmpar(uint8_t chan)
 		       HI(volume_table[chan]), chan);
 }
 
-static void output_note(uint8_t note, uint8_t ins, uint8_t chan, bool restart_macro)
+static void output_note(uint8_t note, uint8_t ins, uint8_t chan, bool restart_macro, int NR)
 {
 	uint16_t freq;
 
@@ -848,50 +848,14 @@ static void output_note(uint8_t note, uint8_t ins, uint8_t chan, bool restart_ma
 		freq = freq_table[chan];
 	} else {
 		freq = nFreq(note - 1) + (int8_t)ins_parameter(ins, 12);
-		opl3out(0xb0 + _chan_n[chan], 0);
+		if (!NR)
+			opl3out(0xb0 + _chan_n[chan], 0);
 		freq_table[chan] = concw(LO(freq_table[chan]),
 					  HI(freq_table[chan]) | 0x20);
 	}
 
 	if (ftune_table[chan] == -127)
 		ftune_table[chan] = 0;
-
-	freq = freq + ftune_table[chan];
-	change_frequency(chan, freq);
-
-	if (note != 0) {
-		if (restart_macro) {
-			if (!(((event_table[chan].eff[0].def == ef_Extended) &&
-			      (event_table[chan].eff[0].val / 16 == ef_ex_ExtendedCmd) &&
-			      (event_table[chan].eff[0].val % 16 == ef_ex_cmd_NoRestart)) ||
-			      ((event_table[chan].eff[1].def == ef_Extended) &&
-			      (event_table[chan].eff[1].val / 16 == ef_ex_ExtendedCmd) &&
-			      (event_table[chan].eff[1].val % 16 == ef_ex_cmd_NoRestart)))) {
-				init_macro_table(chan, note, ins, freq);
-			} else {
-				macro_table[chan].arpg_note = note;
-			}
-		}
-	}
-}
-
-static void output_note_NR(uint8_t note, uint8_t ins, uint8_t chan, bool restart_macro)
-{
-	uint16_t freq;
-
-	if ((note == 0) && (ftune_table[chan] == 0)) return;
-
-	if ((note == 0) || (note > 12*8+1)) { // If NOT (note in [1..12*8+1])
-		freq = freq_table[chan];
-	} else {
-		freq = nFreq(note - 1) + (int8_t)ins_parameter(ins, 12);
-		freq_table[chan] = concw(LO(freq_table[chan]),
-					  HI(freq_table[chan]) | 0x20);
-	}
-
-	if (ftune_table[chan] == -127)
-		ftune_table[chan] = 0;
-
 
 	freq = freq + ftune_table[chan];
 	change_frequency(chan, freq);
@@ -1428,6 +1392,40 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	}
 }
 
+static void process_note(tADTRACK2_EVENT *event, int chan)
+{
+	if (event->note == NONE) {
+		key_off(chan);
+		event_table[chan].note = 0;
+	} else {
+		event_table[chan].note = event->note;
+
+		if (((LO(effect_table[0][chan]) != ef_TonePortamento) &&
+		     (LO(effect_table[0][chan]) != ef_TPortamVolSlide) &&
+		     (LO(effect_table[0][chan]) != ef_TPortamVSlideFine) &&
+		     (LO(effect_table[0][chan]) != ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay)) &&
+		    ((LO(effect_table[1][chan]) != ef_TonePortamento) &&
+		     (LO(effect_table[1][chan]) != ef_TPortamVolSlide) &&
+		     (LO(effect_table[1][chan]) != ef_TPortamVSlideFine) &&
+		     (LO(effect_table[1][chan]) != ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay))) {
+			if (!(((event->eff[1].def == ef_SwapArpeggio) ||
+			       (event->eff[1].def == ef_SwapVibrato)) &&
+			       (event->eff[0].def == ef_Extended) &&
+			       (event->eff[0].val / 16 == ef_ex_ExtendedCmd) &&
+			       (event->eff[0].val % 16 == ef_ex_cmd_NoRestart)) &&
+			    !(((event->eff[0].def == ef_SwapArpeggio) ||
+			       (event->eff[0].def == ef_SwapVibrato)) &&
+			       (event->eff[1].def == ef_Extended) &&
+			       (event->eff[1].val / 16 == ef_ex_ExtendedCmd) &&
+			       (event->eff[1].val % 16 == ef_ex_cmd_NoRestart))) {
+				output_note(event->note, voice_table[chan], chan, TRUE, 0);
+			} else {
+				output_note(event->note, voice_table[chan], chan, TRUE, 1);
+			}
+		}
+	}
+}
+
 static void play_line()
 {
 	tADTRACK2_EVENT *event;
@@ -1437,8 +1435,7 @@ static void play_line()
 
 		ftune_table[chan] = 0;
 
-		// Needed for output_note() and output_note_NR() with
-		// restart_macro == TRUE
+		// Needed for output_note() with restart_macro == TRUE
 		event_table[chan].eff[0].def = event->eff[0].def;
 		event_table[chan].eff[0].val = event->eff[0].val;
 		event_table[chan].eff[1].def = event->eff[1].def;
@@ -1455,36 +1452,7 @@ static void play_line()
 		process_effects(event, 0, chan);
 		process_effects(event, 1, chan);
 
-		if (event->note == NONE) {
-			key_off(chan);
-			event_table[chan].note = 0;
-		} else {
-			event_table[chan].note = event->note;
-
-			if (((LO(effect_table[0][chan]) != ef_TonePortamento) &&
-			     (LO(effect_table[0][chan]) != ef_TPortamVolSlide) &&
-			     (LO(effect_table[0][chan]) != ef_TPortamVSlideFine) &&
-			     (LO(effect_table[0][chan]) != ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay)) &&
-			    ((LO(effect_table[1][chan]) != ef_TonePortamento) &&
-			     (LO(effect_table[1][chan]) != ef_TPortamVolSlide) &&
-			     (LO(effect_table[1][chan]) != ef_TPortamVSlideFine) &&
-			     (LO(effect_table[1][chan]) != ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay))) {
-				if (!(((event->eff[1].def == ef_SwapArpeggio) ||
-				       (event->eff[1].def == ef_SwapVibrato)) &&
-				       (event->eff[0].def == ef_Extended) &&
-				       (event->eff[0].val / 16 == ef_ex_ExtendedCmd) &&
-				       (event->eff[0].val % 16 == ef_ex_cmd_NoRestart)) &&
-				    !(((event->eff[0].def == ef_SwapArpeggio) ||
-				       (event->eff[0].def == ef_SwapVibrato)) &&
-				       (event->eff[1].def == ef_Extended) &&
-				       (event->eff[1].val / 16 == ef_ex_ExtendedCmd) &&
-				       (event->eff[1].val % 16 == ef_ex_cmd_NoRestart))) {
-					output_note(event->note, voice_table[chan], chan, TRUE);
-				} else {
-					output_note_NR(event->note, voice_table[chan], chan, TRUE);
-				}
-			}
-		}
+		process_note(event, chan);
 
 		check_swap_arp_vibr(event, 0, chan);
 		check_swap_arp_vibr(event, 1, chan);
@@ -1929,7 +1897,7 @@ static void update_effects_slot(int slot, int chan)
 			retrig_table[slot][chan] = 0;
 			output_note(event_table[chan].note,
 				    event_table[chan].instr_def,
-				    chan, TRUE);
+				    chan, TRUE, 0);
 		} else {
 			retrig_table[slot][chan]++;
 		}
@@ -1973,7 +1941,7 @@ static void update_effects_slot(int slot, int chan)
 			retrig_table[slot][chan] = 0;
 			output_note(event_table[chan].note,
 				    event_table[chan].instr_def,
-				    chan,TRUE);
+				    chan, TRUE, 0);
 		} else {
 			retrig_table[slot][chan]++;
 		}
@@ -2003,7 +1971,7 @@ static void update_effects_slot(int slot, int chan)
 			notedel_table[chan] = NONE;
 			output_note(event_table[chan].note,
 				    event_table[chan].instr_def,
-				    chan, TRUE);
+				    chan, TRUE, 0);
 		} else {
 			notedel_table[chan]--;
 		}
@@ -2476,7 +2444,7 @@ void macro_poll_proc()
 
 						if (!((d->fm_data.FEEDBACK_FM | 0x80) != d->fm_data.FEEDBACK_FM))
 							output_note(event_table[chan].note,
-								    event_table[chan].instr_def, chan, FALSE);
+								    event_table[chan].instr_def, chan, FALSE, 0);
 
 						if (!songdata->dis_fmreg_col[mt->fmreg_table][26]) {
 							if (d->freq_slide > 0) {
