@@ -306,8 +306,6 @@ uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 #define ef_ex3_SetKsrC         11
 #define ef_ex3_SetSustainC     12
 
-#define ef_fix2 0x90
-
 /*
   opl3port: Word = $388;
   error_code: Integer = 0;
@@ -1256,10 +1254,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 		break;
 
 	case ef_Extended2:
-		// Alter effect value
-		effect_table[slot][chan] =
-			concw(def + ef_fix2 + (val / 16), val % 16);
-
 		switch (val / 16) {
 		case ef_ex2_PatDelayFrame:
 			pattern_delay = TRUE;
@@ -1398,14 +1392,19 @@ static void process_note(tADTRACK2_EVENT *event, int chan)
 	} else {
 		event_table[chan].note = event->note;
 
+		int notedelay1 = ((event->eff[0].def == ef_Extended2) &&
+				  (event->eff[0].val / 16 == ef_ex2_NoteDelay));
+		int notedelay2 = ((event->eff[1].def == ef_Extended2) &&
+				  (event->eff[0].val / 16 == ef_ex2_NoteDelay));
+
 		if (((LO(effect_table[0][chan]) != ef_TonePortamento) &&
 		     (LO(effect_table[0][chan]) != ef_TPortamVolSlide) &&
 		     (LO(effect_table[0][chan]) != ef_TPortamVSlideFine) &&
-		     (LO(effect_table[0][chan]) != ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay)) &&
+		     (!notedelay1)) &&
 		    ((LO(effect_table[1][chan]) != ef_TonePortamento) &&
 		     (LO(effect_table[1][chan]) != ef_TPortamVolSlide) &&
 		     (LO(effect_table[1][chan]) != ef_TPortamVSlideFine) &&
-		     (LO(effect_table[1][chan]) != ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay))) {
+		     (!notedelay2))) {
 			if (!(((event->eff[1].def == ef_SwapArpeggio) ||
 			       (event->eff[1].def == ef_SwapVibrato)) &&
 			       (event->eff[0].def == ef_Extended) &&
@@ -1966,32 +1965,36 @@ static void update_effects_slot(int slot, int chan)
 		}
 		break;
 
-	case ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay:
-		if (notedel_table[chan] == 0) {
-			notedel_table[chan] = NONE;
-			output_note(event_table[chan].note,
-				    event_table[chan].instr_def,
-				    chan, TRUE, 0);
-		} else {
-			notedel_table[chan]--;
+	case ef_Extended2:
+		switch (val / 16) {
+		case ef_ex2_NoteDelay:
+			if (notedel_table[chan] == 0) {
+				notedel_table[chan] = NONE;
+				output_note(event_table[chan].note,
+					    event_table[chan].instr_def,
+					    chan, TRUE, 0);
+			} else {
+				notedel_table[chan]--;
+			}
+			break;
+
+		case ef_ex2_NoteCut:
+			if (notecut_table[chan] == 0) {
+				notecut_table[chan] = NONE;
+				key_off(chan);
+			} else {
+				notecut_table[chan]--;
+			}
+			break;
+
+		case ef_ex2_GlVolSlideUp:
+			global_volume_slide(val % 16, NONE);
+			break;
+
+		case ef_ex2_GlVolSlideDn:
+			global_volume_slide(NONE, val % 16);
+			break;
 		}
-		break;
-
-	case ef_Extended2 + ef_fix2 + ef_ex2_NoteCut:
-		if (notecut_table[chan] == 0) {
-			notecut_table[chan] = NONE;
-			key_off(chan);
-		} else {
-			notecut_table[chan]--;
-		}
-		break;
-
-	case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUp:
-		global_volume_slide(val, NONE);
-		break;
-
-	case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDn:
-		global_volume_slide(NONE, val);
 		break;
 	}
 }
@@ -2079,12 +2082,15 @@ static void update_fine_effects(int slot, int chan)
 		volume_slide(chan, val / 16, val % 16);
 		break;
 
-	case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUpF:
-		global_volume_slide(val, NONE);
-		break;
-
-	case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDnF:
-		global_volume_slide(NONE, val);
+	case ef_Extended2:
+		switch (val / 16) {
+		case ef_ex2_GlVolSlideUpF:
+			global_volume_slide(val % 16, NONE);
+			break;
+		case ef_ex2_GlVolSlideDnF:
+			global_volume_slide(NONE, val % 16);
+			break;
+		}
 		break;
 	}
 }
@@ -2097,28 +2103,15 @@ static void update_extra_fine_effects_slot(int slot, int chan)
 	val  = HI(effect_table[slot][chan]);
 
 	switch (def) {
-	case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldUpXF:
-		global_volume_slide(val, NONE);
-		break;
-
-	case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldDnXF:
-		global_volume_slide(NONE, val);
-		break;
-
-	case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideUpXF:
-		volume_slide(chan, val, 0);
-		break;
-
-	case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideDnXF:
-		volume_slide(chan, 0, val);
-		break;
-
-	case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF:
-		portamento_up(chan, val, nFreq(12*8+1));
-		break;
-
-	case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF:
-		portamento_down(chan, val, nFreq(0));
+	case ef_Extended2:
+		switch (val / 16) {
+		case ef_ex2_GlVolSldUpXF:  global_volume_slide(val % 16, NONE); break;
+		case ef_ex2_GlVolSldDnXF:  global_volume_slide(NONE, val % 16); break;
+		case ef_ex2_VolSlideUpXF:  volume_slide(chan, val % 16, 0); break;
+		case ef_ex2_VolSlideDnXF:  volume_slide(chan, 0, val % 16); break;
+		case ef_ex2_FreqSlideUpXF: portamento_up(chan, val % 16, nFreq(12*8+1)); break;
+		case ef_ex2_FreqSlideDnXF: portamento_down(chan, val % 16, nFreq(0)); break;
+		}
 		break;
 
 	case ef_ExtraFineArpeggio:
