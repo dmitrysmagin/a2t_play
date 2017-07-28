@@ -891,7 +891,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	unsigned int val = event->eff[slot].val;
 
 	// Use previous effect value if needed
-	if (!val && def)
+	if (!val && def && def == event_table[chan].eff[slot].def)
 		val = event_table[chan].eff[slot].val;
 
 	event_table[chan].eff[slot].def = def;
