@@ -306,7 +306,6 @@ uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 #define ef_ex3_SetKsrC         11
 #define ef_ex3_SetSustainC     12
 
-#define ef_fix1 0x80
 #define ef_fix2 0x90
 
 /*
@@ -935,7 +934,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	case ef_Arpeggio:
 		if (def + val == 0)
 			break;
-		effect_table[slot][chan] |= concw(ef_fix1, 0);
 
 	case ef_ExtraFineArpeggio:
 	case ef_ArpggVSlide:
@@ -952,7 +950,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 			if ((event->note == 0) &&
 				(((event_table[chan].note & 0x7f) >= 1) &&
 				(event_table[chan].note & 0x7f) <= 12 * 8 + 1)) {
-				if ((def != ef_Arpeggio + ef_fix1) &&
+				if ((def != ef_Arpeggio) &&
 					(def != ef_ExtraFineArpeggio) &&
 					(def != ef_ArpggVSlide) &&
 					(def != ef_ArpggVSlideFine))
@@ -1807,7 +1805,9 @@ static void update_effects_slot(int slot, int chan)
 	val  = HI(effect_table[slot][chan]);
 
 	switch (def) {
-	case ef_Arpeggio + ef_fix1:
+	case ef_Arpeggio:
+		if (def + val == 0)
+			break;
 		arpeggio(slot, chan);
 		break;
 
