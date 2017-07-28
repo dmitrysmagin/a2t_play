@@ -345,7 +345,6 @@ uint8_t carrier_vol[20];		// array[1..20] of Byte;
 tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
 uint8_t voice_table[20];		// array[1..20] of Byte;
 uint16_t freq_table[20];		// array[1..20] of Word;
-uint16_t effect_table[2][20];		// array[1..20] of Word;
 uint8_t fslide_table[2][20];		// array[1..20] of Byte;
 struct PACK {
 	uint16_t freq;
@@ -860,11 +859,9 @@ static void output_note(uint8_t note, uint8_t ins, uint8_t chan, bool restart_ma
 	if (note != 0) {
 		if (restart_macro) {
 			if (!(((event_table[chan].eff[0].def == ef_Extended) &&
-			      (event_table[chan].eff[0].val / 16 == ef_ex_ExtendedCmd) &&
-			      (event_table[chan].eff[0].val % 16 == ef_ex_cmd_NoRestart)) ||
+			      (event_table[chan].eff[0].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_NoRestart)) ||
 			      ((event_table[chan].eff[1].def == ef_Extended) &&
-			      (event_table[chan].eff[1].val / 16 == ef_ex_ExtendedCmd) &&
-			      (event_table[chan].eff[1].val % 16 == ef_ex_cmd_NoRestart)))) {
+			      (event_table[chan].eff[1].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_NoRestart)))) {
 				init_macro_table(chan, note, ins, freq);
 			} else {
 				macro_table[chan].arpg_note = note;
@@ -895,9 +892,10 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
 	// Use previous effect value if needed
 	if (!val && def)
-		val = HI(effect_table[slot][chan]);
+		val = event_table[chan].eff[slot].val;
 
-	effect_table[slot][chan] = concw(def, val);
+	event_table[chan].eff[slot].def = def;
+	event_table[chan].eff[slot].val = val;
 
 #if 0
 	// FIXME: Check if this code is really needed
@@ -961,7 +959,9 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 					arpgg_table[slot][chan].add2 = val % 16;
 				}
 			} else {
-				effect_table[slot][chan] = 0;
+				// Check if this really needed
+				event_table[chan].eff[slot].def = 0;
+				event_table[chan].eff[slot].val = 0;
 			}
 		}
 		break;
@@ -1397,24 +1397,25 @@ static void process_note(tADTRACK2_EVENT *event, int chan)
 		int notedelay2 = ((event->eff[1].def == ef_Extended2) &&
 				  (event->eff[0].val / 16 == ef_ex2_NoteDelay));
 
-		if (((LO(effect_table[0][chan]) != ef_TonePortamento) &&
-		     (LO(effect_table[0][chan]) != ef_TPortamVolSlide) &&
-		     (LO(effect_table[0][chan]) != ef_TPortamVSlideFine) &&
+		int def0 = event_table[chan].eff[0].def;
+		int def1 = event_table[chan].eff[1].def;
+
+		if (((def0 != ef_TonePortamento) &&
+		     (def0 != ef_TPortamVolSlide) &&
+		     (def0 != ef_TPortamVSlideFine) &&
 		     (!notedelay1)) &&
-		    ((LO(effect_table[1][chan]) != ef_TonePortamento) &&
-		     (LO(effect_table[1][chan]) != ef_TPortamVolSlide) &&
-		     (LO(effect_table[1][chan]) != ef_TPortamVSlideFine) &&
+		    ((def1 != ef_TonePortamento) &&
+		     (def1 != ef_TPortamVolSlide) &&
+		     (def1 != ef_TPortamVSlideFine) &&
 		     (!notedelay2))) {
 			if (!(((event->eff[1].def == ef_SwapArpeggio) ||
 			       (event->eff[1].def == ef_SwapVibrato)) &&
 			       (event->eff[0].def == ef_Extended) &&
-			       (event->eff[0].val / 16 == ef_ex_ExtendedCmd) &&
-			       (event->eff[0].val % 16 == ef_ex_cmd_NoRestart)) &&
+			       (event->eff[0].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_NoRestart)) &&
 			    !(((event->eff[0].def == ef_SwapArpeggio) ||
 			       (event->eff[0].def == ef_SwapVibrato)) &&
 			       (event->eff[1].def == ef_Extended) &&
-			       (event->eff[1].val / 16 == ef_ex_ExtendedCmd) &&
-			       (event->eff[1].val % 16 == ef_ex_cmd_NoRestart))) {
+			       (event->eff[1].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_NoRestart))) {
 				output_note(event->note, voice_table[chan], chan, TRUE, 0);
 			} else {
 				output_note(event->note, voice_table[chan], chan, TRUE, 1);
@@ -1431,12 +1432,6 @@ static void play_line()
 		event = &pattdata[current_pattern].ch[chan].row[current_line].ev;
 
 		ftune_table[chan] = 0;
-
-		// Needed for output_note() with restart_macro == TRUE
-		event_table[chan].eff[0].def = event->eff[0].def;
-		event_table[chan].eff[0].val = event->eff[0].val;
-		event_table[chan].eff[1].def = event->eff[1].def;
-		event_table[chan].eff[1].val = event->eff[1].val;
 
 		if (event->instr_def != 0) {
 			// NOTE: adjust ins
@@ -1800,8 +1795,8 @@ static void update_effects_slot(int slot, int chan)
 {
 	int def, val;
 
-	def  = LO(effect_table[slot][chan]);
-	val  = HI(effect_table[slot][chan]);
+	def = event_table[chan].eff[slot].def;
+	val = event_table[chan].eff[slot].val;
 
 	switch (def) {
 	case ef_Arpeggio:
@@ -2011,8 +2006,8 @@ static void update_fine_effects(int slot, int chan)
 {
 	int def, val;
 
-	def  = LO(effect_table[slot][chan]);
-	val  = HI(effect_table[slot][chan]);
+	def = event_table[chan].eff[slot].def;
+	val = event_table[chan].eff[slot].val;
 
 	switch (def) {
 	case ef_ArpggVSlideFine:
@@ -2099,8 +2094,8 @@ static void update_extra_fine_effects_slot(int slot, int chan)
 {
 	int def, val;
 
-	def  = LO(effect_table[slot][chan]);
-	val  = HI(effect_table[slot][chan]);
+	def = event_table[chan].eff[slot].def;
+	val = event_table[chan].eff[slot].val;
 
 	switch (def) {
 	case ef_Extended2:
@@ -2623,7 +2618,6 @@ static void init_buffers()
 	memset(carrier_vol, 0, sizeof(carrier_vol));
 	memset(event_table, 0, sizeof(event_table));
 	memset(freq_table, 0, sizeof(freq_table));
-	memset(effect_table, 0, sizeof(effect_table));
 	memset(fslide_table, 0, sizeof(fslide_table));
 	memset(porta_table, 0, sizeof(porta_table));
 	memset(arpgg_table, 0, sizeof(arpgg_table));
