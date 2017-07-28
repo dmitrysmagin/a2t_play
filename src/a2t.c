@@ -3226,7 +3226,7 @@ typedef struct PACK {
 typedef struct PACK {
 	char songname[43];
 	char composer[43];
-	char instr_names[255][33];
+	char instr_names[255][43];
 	uint8_t instr_data[255][14];
 	uint8_t instr_macros[255][3831];
 	uint8_t macro_table[255][521];
@@ -3297,7 +3297,7 @@ static int a2m_read_songdata(char *src)
 
 		for (int i = 0; i < 255; i++) {
 			memcpy(songdata->instr_names[i],
-				data->instr_names[i], 33);
+				data->instr_names[i], 43);
 			memcpy(songdata->instr_data[i],
 				data->instr_data[i], 14);
 		}
