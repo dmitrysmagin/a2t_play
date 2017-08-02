@@ -400,7 +400,6 @@ uint8_t current_vibrato_depth = 0;
 bool speed_update, lockvol, panlock, lockVP;
 uint8_t tremolo_depth, vibrato_depth;
 bool volume_scaling, percussion_mode;
-uint8_t last_order;
 bool reset_chan[20];	// array[1..20] of Boolean;
 
 // This would be later moved to class or struct
@@ -3165,6 +3164,15 @@ void a2t_import(char *tune)
 	// Read variable part after header, fill len[] with values
 	blockptr += a2t_read_varheader(blockptr);
 
+	speed_update    = (songdata->common_flag >> 0) & 1;
+	lockvol         = (songdata->common_flag >> 1) & 1;
+	lockVP          = (songdata->common_flag >> 2) & 1;
+	tremolo_depth   = (songdata->common_flag >> 3) & 1;
+	vibrato_depth   = (songdata->common_flag >> 4) & 1;
+	panlock         = (songdata->common_flag >> 5) & 1;
+	percussion_mode = (songdata->common_flag >> 6) & 1;
+	volume_scaling  = (songdata->common_flag >> 7) & 1;
+
 	// Read instruments; all versions
 	blockptr += a2t_read_instruments(blockptr);
 
@@ -3359,6 +3367,15 @@ static int a2m_read_songdata(char *src)
 
 		free(data);
 	}
+
+	speed_update    = (songdata->common_flag >> 0) & 1;
+	lockvol         = (songdata->common_flag >> 1) & 1;
+	lockVP          = (songdata->common_flag >> 2) & 1;
+	tremolo_depth   = (songdata->common_flag >> 3) & 1;
+	vibrato_depth   = (songdata->common_flag >> 4) & 1;
+	panlock         = (songdata->common_flag >> 5) & 1;
+	percussion_mode = (songdata->common_flag >> 6) & 1;
+	volume_scaling  = (songdata->common_flag >> 7) & 1;
 
 	printf("Tempo: %d\n", songdata->tempo);
 	printf("Speed: %d\n", songdata->speed);
