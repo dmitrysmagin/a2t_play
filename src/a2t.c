@@ -413,15 +413,15 @@ int ticks, tickD, tickXF;
 #define FreqRange  (FreqEnd - FreqStart)
 
 /* PLAYER */
-void opl_out(uint8_t port, uint8_t val); // forward def
+static void opl_out(uint8_t port, uint8_t val); // forward def
 
-void opl2out(uint16_t reg, uint16_t data)
+static void opl2out(uint16_t reg, uint16_t data)
 {
 	opl_out(0, reg);
 	opl_out(1, data);
 }
 
-void opl3out(uint16_t reg, uint16_t data)
+static void opl3out(uint16_t reg, uint16_t data)
 {
 	if (reg < 0x100) {
 		opl_out(0, reg);
@@ -432,7 +432,7 @@ void opl3out(uint16_t reg, uint16_t data)
 	}
 }
 
-void opl3exp(uint16_t data)
+static void opl3exp(uint16_t data)
 {
 	opl_out(2, data & 0xff);
 	opl_out(3, data >> 8);
@@ -1493,7 +1493,7 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
 	}
 }
 
-void portamento_up(int chan, uint16_t slide, uint16_t limit)
+static void portamento_up(int chan, uint16_t slide, uint16_t limit)
 {
 	uint16_t freq;
 
@@ -1505,7 +1505,7 @@ void portamento_up(int chan, uint16_t slide, uint16_t limit)
 	}
 }
 
-void portamento_down(int chan, uint16_t slide, uint16_t limit)
+static void portamento_down(int chan, uint16_t slide, uint16_t limit)
 {
 	uint16_t freq;
 
@@ -1517,7 +1517,7 @@ void portamento_down(int chan, uint16_t slide, uint16_t limit)
 	}
 }
 
-void macro_vibrato__porta_up(int chan, uint8_t depth)
+static void macro_vibrato__porta_up(int chan, uint8_t depth)
 {
 	uint16_t freq;
 
@@ -1529,7 +1529,7 @@ void macro_vibrato__porta_up(int chan, uint8_t depth)
 	}
 }
 
-void macro_vibrato__porta_down(int chan, uint8_t depth)
+static void macro_vibrato__porta_down(int chan, uint8_t depth)
 {
 	uint16_t freq;
 	freq = calc_freq_shift_down(macro_table[chan].vib_freq & 0x1fff, depth);
@@ -1550,7 +1550,7 @@ static void tone_portamento(int slot, int chan)
 	}
 }
 
-void slide_volume_up(int chan, uint8_t slide)
+static void slide_volume_up(int chan, uint8_t slide)
 {
 	uint16_t temp;
 	uint8_t limit1, limit2, vLo, vHi;
@@ -1634,7 +1634,7 @@ void slide_volume_up(int chan, uint8_t slide)
 	}
 }
 
-void slide_volume_down(int chan, uint8_t slide)
+static void slide_volume_down(int chan, uint8_t slide)
 {
 	uint16_t temp;
 	uint8_t vLo, vHi;
@@ -1708,7 +1708,7 @@ void slide_volume_down(int chan, uint8_t slide)
 	}
 }
 
-void volume_slide(int chan, uint8_t up_speed, uint8_t down_speed)
+static void volume_slide(int chan, uint8_t up_speed, uint8_t down_speed)
 {
 	if (up_speed != 0)
 		slide_volume_up(chan, up_speed);
@@ -1718,7 +1718,7 @@ void volume_slide(int chan, uint8_t up_speed, uint8_t down_speed)
 	}
 }
 
-void global_volume_slide(uint8_t up_speed, uint8_t down_speed)
+static void global_volume_slide(uint8_t up_speed, uint8_t down_speed)
 {
 	if (up_speed != NONE)
 		global_volume = max(global_volume + up_speed, 63);
@@ -1782,7 +1782,7 @@ static void tremolo(int slot, int chan)
 	volume_table[chan] = old_vol;
 }
 
-int chanvol(int chan)
+static int chanvol(int chan)
 {
 	if ((ins_parameter(voice_table[chan], 10) & 1) == 0)
 		return 63 - HI(volume_table[chan]);
@@ -1993,7 +1993,7 @@ static void update_effects_slot(int slot, int chan)
 	}
 }
 
-void update_effects()
+static void update_effects()
 {
 	for (int chan = 0; chan < 20; chan++) {
 		update_effects_slot(0, chan);
@@ -2948,7 +2948,7 @@ static int a2t_read_varheader(char *blockptr)
 	return 0;
 }
 
-int a2t_read_instruments(char *src)
+static int a2t_read_instruments(char *src)
 {
 	int instsize = (ffver < 9 ? 13 : 14);
 	int dstsize = ffver < 9 ? 250 * 13 : 255 * 14;
@@ -2972,7 +2972,7 @@ int a2t_read_instruments(char *src)
 	return len[0];
 }
 
-int a2t_read_instmacros(char *src)
+static int a2t_read_instmacros(char *src)
 {
 	if (ffver < 9) return 0;
 
@@ -2987,7 +2987,7 @@ int a2t_read_instmacros(char *src)
 	return len[1];
 }
 
-int a2t_read_macrotable(char *src)
+static int a2t_read_macrotable(char *src)
 {
 	if (ffver < 9) return 0;
 
@@ -3002,7 +3002,7 @@ int a2t_read_macrotable(char *src)
 	return len[2];
 }
 
-int a2t_read_disabled_fmregs(char *src)
+static int a2t_read_disabled_fmregs(char *src)
 {
 	if (ffver < 11) return 0;
 
@@ -3017,7 +3017,7 @@ int a2t_read_disabled_fmregs(char *src)
 	return len[3];
 }
 
-int a2t_read_order(char *src)
+static int a2t_read_order(char *src)
 {
 	int blocknum[11] = {1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4};
 	int i = blocknum[ffver - 1];
@@ -3121,7 +3121,7 @@ static int a2_read_patterns(char *src, int s)
 	return 0;
 }
 
-int a2t_read_patterns(char *src)
+static int a2t_read_patterns(char *src)
 {
 	int blockstart[11] = {2, 2, 2, 2, 2, 2, 2, 2, 4, 4, 5};
 	int s = blockstart[ffver - 1];
@@ -3389,7 +3389,7 @@ static int a2m_read_songdata(char *src)
 	return len[0];
 }
 
-int a2m_read_patterns(char *src)
+static int a2m_read_patterns(char *src)
 {
 	a2_read_patterns(src, 1);
 
@@ -3484,7 +3484,7 @@ static void playcallback(void *unused, Uint8 *stream, int len)
 #endif
 }
 
-void opl_out(uint8_t port, uint8_t val)
+static void opl_out(uint8_t port, uint8_t val)
 {
 	YMF262Write(ym, port, val);
 }
@@ -3498,7 +3498,7 @@ void opl_out(uint8_t port, uint8_t val)
 #include <unistd.h>
 #include <fcntl.h>
 
-int kbhit(void)
+static int kbhit(void)
 {
 	struct termios oldt, newt;
 	int ch;
