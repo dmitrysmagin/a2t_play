@@ -507,7 +507,7 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 #define LO(A) ((A) & 0xFF)
 #define HI(A) (((A) >> 8) & 0xFF)
 
-static void change_freq(uint8_t chan, uint16_t freq)
+static void change_freq(int chan, uint16_t freq)
 {
 	freq_table[chan] &= ~0x1fff;
 	freq_table[chan] |= (freq & 0x1fff);
@@ -531,7 +531,7 @@ static inline uint16_t concw(uint8_t lo, uint8_t hi)
 	return (lo | (hi << 8));
 }
 
-static void change_frequency(uint8_t chan, uint16_t freq)
+static void change_frequency(int chan, uint16_t freq)
 {
 	change_freq(chan, freq);
 	macro_table[chan].vib_freq = freq;
@@ -570,13 +570,13 @@ static void update_timer(int Hz)
 	set_clock_rate(1193180 / IRQ_freq);
 }
 
-static void key_off(uint8_t chan)
+static void key_off(int chan)
 {
 	freq_table[chan] &= ~0x2000;
 	change_frequency(chan, freq_table[chan]);
 }
 
-static void release_sustaining_sound(uint8_t chan)
+static void release_sustaining_sound(int chan)
 {
 	opl3out(_instr[2] + _chan_m[chan], 63);
 	opl3out(_instr[3] + _chan_c[chan], 63);
@@ -603,7 +603,7 @@ static uint8_t scale_volume(uint8_t volume, uint8_t scale_factor)
 		(63 - scale_factor) / 63);
 }
 
-static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
+static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 {
 	uint8_t temp;
 
@@ -647,7 +647,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 	}
 }
 
-static void reset_ins_volume(uint8_t chan)
+static void reset_ins_volume(int chan)
 {
 	if (!volume_scaling) {
 		set_ins_volume(ins_parameter(voice_table[chan], 2) & 0x3f,
@@ -682,7 +682,7 @@ void set_overall_volume(unsigned char level)
 }
 
 // FIXME: check ins
-static void init_macro_table(uint8_t chan, uint8_t note, uint8_t ins, uint16_t freq)
+static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 {
 	macro_table[chan].fmreg_count = 1;
 	macro_table[chan].fmreg_pos = 0;
@@ -702,7 +702,7 @@ static void init_macro_table(uint8_t chan, uint8_t note, uint8_t ins, uint16_t f
 		songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
 }
 
-static void set_ins_data(uint8_t ins, uint8_t chan)
+static void set_ins_data(uint8_t ins, int chan)
 {
 	uint8_t old_ins;
 
@@ -781,7 +781,7 @@ static void set_ins_data(uint8_t ins, uint8_t chan)
 		reset_ins_volume(chan);
 }
 
-static void update_modulator_adsrw(uint8_t chan)
+static void update_modulator_adsrw(int chan)
 {
 	opl3out(_instr[4] + _chan_m[chan],
 		(fmpar_table[chan].adsrw_mod.attck << 4) +
@@ -793,7 +793,7 @@ static void update_modulator_adsrw(uint8_t chan)
 		fmpar_table[chan].adsrw_mod.wform);
 }
 
-static void update_carrier_adsrw(uint8_t chan)
+static void update_carrier_adsrw(int chan)
 {
 	opl3out(_instr[5] + _chan_c[chan],
 		(fmpar_table[chan].adsrw_car.attck << 4) +
@@ -805,7 +805,7 @@ static void update_carrier_adsrw(uint8_t chan)
 		fmpar_table[chan].adsrw_car.wform);
 }
 
-static void update_fmpar(uint8_t chan)
+static void update_fmpar(int chan)
 {
 	opl3out(_instr[0] + _chan_m[chan],
 		fmpar_table[chan].multipM +
@@ -833,7 +833,7 @@ static void update_fmpar(uint8_t chan)
 		       HI(volume_table[chan]), chan);
 }
 
-static void output_note(uint8_t note, uint8_t ins, uint8_t chan, bool restart_macro, int NR)
+static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, int NR)
 {
 	uint16_t freq;
 
@@ -1493,7 +1493,7 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
 	}
 }
 
-void portamento_up(uint8_t chan, uint16_t slide, uint16_t limit)
+void portamento_up(int chan, uint16_t slide, uint16_t limit)
 {
 	uint16_t freq;
 
@@ -1505,7 +1505,7 @@ void portamento_up(uint8_t chan, uint16_t slide, uint16_t limit)
 	}
 }
 
-void portamento_down(uint8_t chan, uint16_t slide, uint16_t limit)
+void portamento_down(int chan, uint16_t slide, uint16_t limit)
 {
 	uint16_t freq;
 
@@ -1517,7 +1517,7 @@ void portamento_down(uint8_t chan, uint16_t slide, uint16_t limit)
 	}
 }
 
-void macro_vibrato__porta_up(uint8_t chan, uint8_t depth)
+void macro_vibrato__porta_up(int chan, uint8_t depth)
 {
 	uint16_t freq;
 
@@ -1529,7 +1529,7 @@ void macro_vibrato__porta_up(uint8_t chan, uint8_t depth)
 	}
 }
 
-void macro_vibrato__porta_down(uint8_t chan, uint8_t depth)
+void macro_vibrato__porta_down(int chan, uint8_t depth)
 {
 	uint16_t freq;
 	freq = calc_freq_shift_down(macro_table[chan].vib_freq & 0x1fff, depth);
@@ -1540,7 +1540,7 @@ void macro_vibrato__porta_down(uint8_t chan, uint8_t depth)
 	}
 }
 
-static void tone_portamento(int slot, uint8_t chan)
+static void tone_portamento(int slot, int chan)
 {
 	if ((freq_table[chan] & 0x1fff) > porta_table[slot][chan].freq) {
 		portamento_down(chan, porta_table[slot][chan].speed, porta_table[slot][chan].freq);
@@ -1550,7 +1550,7 @@ static void tone_portamento(int slot, uint8_t chan)
 	}
 }
 
-void slide_volume_up(uint8_t chan, uint8_t slide)
+void slide_volume_up(int chan, uint8_t slide)
 {
 	uint16_t temp;
 	uint8_t limit1, limit2, vLo, vHi;
@@ -1634,7 +1634,7 @@ void slide_volume_up(uint8_t chan, uint8_t slide)
 	}
 }
 
-void slide_volume_down(uint8_t chan, uint8_t slide)
+void slide_volume_down(int chan, uint8_t slide)
 {
 	uint16_t temp;
 	uint8_t vLo, vHi;
@@ -1708,7 +1708,7 @@ void slide_volume_down(uint8_t chan, uint8_t slide)
 	}
 }
 
-void volume_slide(uint8_t chan, uint8_t up_speed, uint8_t down_speed)
+void volume_slide(int chan, uint8_t up_speed, uint8_t down_speed)
 {
 	if (up_speed != 0)
 		slide_volume_up(chan, up_speed);
@@ -1733,7 +1733,7 @@ void global_volume_slide(uint8_t up_speed, uint8_t down_speed)
 	set_global_volume();
 }
 
-static void arpeggio(int slot, uint8_t chan)
+static void arpeggio(int slot, int chan)
 {
 	uint8_t arpgg_state[3] = {1, 2, 0};
 
@@ -1750,7 +1750,7 @@ static void arpeggio(int slot, uint8_t chan)
 			(int8_t)(ins_parameter(event_table[chan].instr_def, 12)));
 }
 
-static void vibrato(int slot, uint8_t chan)
+static void vibrato(int slot, int chan)
 {
 	uint16_t freq, old_freq;
 	uint8_t direction;
@@ -1766,7 +1766,7 @@ static void vibrato(int slot, uint8_t chan)
 	freq_table[chan] = old_freq;
 }
 
-static void tremolo(int slot, uint8_t chan)
+static void tremolo(int slot, int chan)
 {
 	uint16_t vol, old_vol;
 	uint8_t direction;
@@ -1782,7 +1782,7 @@ static void tremolo(int slot, uint8_t chan)
 	volume_table[chan] = old_vol;
 }
 
-uint8_t chanvol(uint8_t chan)
+int chanvol(int chan)
 {
 	if ((ins_parameter(voice_table[chan], 10) & 1) == 0)
 		return 63 - HI(volume_table[chan]);
