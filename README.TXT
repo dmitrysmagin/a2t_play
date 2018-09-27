@@ -14,6 +14,8 @@ A2T-Player is subz3ro's A2Replay ported to FreePascal 2.0
 
 To use the linux-port you need to copy libymf262.so to /usr/lib
 
+This software is licensed under the LGPL2.1
+
 This software is still alpha-grade software. Reports are welcome!
 
 <Da!NyL> signing off... 14.10.2006
