@@ -2168,7 +2168,7 @@ static int calc_order_jump()
 	} while (!((temp > 0x7f) || (songdata->pattern_order[current_order] < 0x80)));
 
 	if (temp > 0x7f) {
-		stop_playing();
+		a2t_stop();
 		result = -1;
 	}
 
@@ -2569,7 +2569,6 @@ static int ticklooper, macro_ticklooper;
 
 static void newtimer()
 {
-
 	if ((ticklooper == 0) &&
 	    (irq_mode))
 		poll_proc();
@@ -2708,8 +2707,11 @@ static void init_player()
 	}
 }
 
-void stop_playing()
+void a2t_stop()
 {
+	if (play_status == isStopped)
+		return;
+
 	irq_mode = FALSE;
 	play_status = isStopped;
 	global_volume = 63;
@@ -2725,19 +2727,20 @@ void stop_playing()
 	opl2out(_instr[11], 0);
 	opl3exp(0x0004);
 	opl3exp(0x0005);
+	lockvol = FALSE;
+	panlock = FALSE;
+	lockVP = FALSE;
 	init_buffers();
 
-	speed = songdata->speed;
-	update_timer(songdata->tempo);
+	speed = 4;
+	update_timer(50);
 }
 
 /* Clean songdata before importing a2t tune */
 static void init_songdata()
 {
 	if (play_status != isStopped)
-		stop_playing();
-	else
-		init_buffers();
+		a2t_stop();
 
 	memset(songdata, 0, sizeof(_songdata));
 	memset(songdata->pattern_order, 0x80, sizeof(songdata->pattern_order));
@@ -2758,13 +2761,15 @@ static void init_songdata()
 	percussion_mode = FALSE;
 }
 
-void start_playing(char *tune)
-{
-	stop_playing();
-	//a2t_import(tune);
+static int a2_import(char *tune); // forward def
 
-	//if (error_code)
-	//	return;
+void a2t_play(char *tune)
+{
+	a2t_stop();
+	int err = a2_import(tune);
+
+	if (err)
+		return;
 
 	init_player();
 
@@ -3137,7 +3142,7 @@ static int a2t_read_patterns(char *src)
 	return 0;
 }
 
-void a2t_import(char *tune)
+static void a2t_import(char *tune)
 {
 	A2T_HEADER *header = (A2T_HEADER *)tune;
 	char *blockptr = tune + sizeof(A2T_HEADER);
@@ -3402,7 +3407,7 @@ static int a2m_read_patterns(char *src)
 	return 0;
 }
 
-void a2m_import(char *tune)
+static void a2m_import(char *tune)
 {
 	A2M_HEADER *header = (A2M_HEADER *)tune;
 	char *blockptr = tune + sizeof(A2M_HEADER);
@@ -3432,24 +3437,54 @@ void a2m_import(char *tune)
 	a2m_read_patterns(blockptr);
 }
 
-#include <SDL.h>
+static int a2_import(char *tune)
+{
+	if(!strncmp(tune, "_A2module_", 10)) {
+		a2m_import(tune);
+		return 0;
+	}
 
-#define FREQHZ 44100
-#define BUFFSMPL 2048
+	if(!strncmp(tune, "_A2tiny_module_", 15)) {
+		a2t_import(tune);
+		return 0;
+	}
 
-static int framesmpl = FREQHZ / 50;
+	return -1;
+}
+
+static int freqhz = 44100;
+static int framesmpl = 44100 / 50;
 static int irq_freq = 50;
 static int ym;
 
-SDL_AudioSpec audio;
+static void opl_out(uint8_t port, uint8_t val)
+{
+	YMF262Write(ym, port, val);
+}
 
-static void playcallback(void *unused, Uint8 *stream, int len)
+void a2t_init(int freq)
+{
+	freqhz = freq;
+	framesmpl = freq / 50;
+	ym = YMF262Init(1, OPL3_INTERNAL_FREQ, freq);
+	YMF262ResetChip(ym);
+}
+
+void a2t_shut()
+{
+	YMF262Shutdown();
+}
+
+// 'len' is the buffer length in bytes, not samples!
+void a2t_update(unsigned char *stream, int len)
 {
 	static int ticklooper, macro_ticklooper;
 	static int cnt = 0;
 
-	if (play_status != isPlaying)
+	if (play_status != isPlaying) {
+		memset(stream, 0, len);
 		return;
+	}
 
 	for (int cntr = 0; cntr < len; cntr += 4) {
 		if (cnt >= framesmpl) {
@@ -3458,7 +3493,7 @@ static void playcallback(void *unused, Uint8 *stream, int len)
 				poll_proc();
 				if (irq_freq != tempo * macro_speedup) {
 					irq_freq = (tempo < 18 ? 18 : tempo) * macro_speedup;
-					framesmpl = FREQHZ / irq_freq;
+					framesmpl = freqhz / irq_freq;
 				}
 			}
 
@@ -3474,115 +3509,8 @@ static void playcallback(void *unused, Uint8 *stream, int len)
 				macro_ticklooper = 0;
 		}
 
-		YMF262UpdateOne(ym, (Sint16 *)(stream + cntr), 1);
+		// this writes 4 bytes, i.e. one 16-bit stereo sample
+		YMF262UpdateOne(ym, (int16_t *)(stream + cntr), 1);
 		cnt++;
 	}
-
-#if 0
-	if (wavwriter)
-		blockwrite(f,buf[0],len);
-#endif
-}
-
-static void opl_out(uint8_t port, uint8_t val)
-{
-	YMF262Write(ym, port, val);
-}
-
-/* MINGW has built-in kbhit() in conio.h */
-#ifdef _WIN32
-#include <conio.h>
-#else
-#include <stdio.h>
-#include <termios.h>
-#include <unistd.h>
-#include <fcntl.h>
-
-static int kbhit(void)
-{
-	struct termios oldt, newt;
-	int ch;
-	int oldf;
-
-	tcgetattr(STDIN_FILENO, &oldt);
-	newt = oldt;
-	newt.c_lflag &= ~(ICANON | ECHO);
-	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-	oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
-	fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
-
-	ch = getchar();
-
-	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-	fcntl(STDIN_FILENO, F_SETFL, oldf);
-
-	if (ch != EOF) {
-		ungetc(ch, stdin);
-		return 1;
-	}
-
-	return 0;
-}
-#endif
-
-#undef main
-int main(int argc, char *argv[])
-{
-	char *a2t;
-
-	// if no arguments
-	if(argc == 1) {
-		printf("Usage: a2t_play.exe *.a2t\n");
-		return 1;
-	}
-
-	ym = YMF262Init(1, OPL3_INTERNAL_FREQ, FREQHZ);
-	YMF262ResetChip(ym);
-
-	/* HINT: Perhaps, SDL_INIT_EVERYTHING doesn't let audio work without
-	         setting video mode with MINGW */
-	SDL_Init(SDL_INIT_AUDIO | SDL_INIT_NOPARACHUTE);
-
-	audio.freq = FREQHZ;
-	audio.format = AUDIO_S16;
-	audio.channels = 2;
-	audio.samples = BUFFSMPL;
-	audio.callback = playcallback;
-	audio.userdata = 0; // use later
-
-	if (SDL_OpenAudio(&audio, 0) < 0) {
-		printf("Error initializing SDL_OpenAudio %s\n", SDL_GetError());
-		return 1;
-	}
-
-	a2t = a2t_load(argv[1]);
-	if(a2t == NULL) {
-		printf("Error reading %s\n", argv[1]);
-		return 1;
-	}
-
-	a2t_import(a2t);
-	a2m_import(a2t);
-
-	SDL_PauseAudio(0);
-
-	start_playing(0);
-
-	printf("Playing - press anything to exit\n");
-
-	while (!kbhit()) {
-		printf("Order %03d, Pattern %03d, Row %03d\r",
-		       current_order, current_pattern, current_line);
-		SDL_Delay(10);
-	}
-
-	stop_playing();
-	SDL_PauseAudio(1);
-	SDL_CloseAudio();
-
-	SDL_Quit();
-
-	YMF262Shutdown();
-
-	return 0;
 }
