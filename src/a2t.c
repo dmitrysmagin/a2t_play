@@ -675,7 +675,7 @@ static void set_global_volume()
 	}
 }
 
-void set_overall_volume(unsigned char level)
+void a2t_volume(unsigned char level)
 {
 	overall_volume = max(level, 63);
 	set_global_volume();
@@ -2226,7 +2226,7 @@ static void update_song_position()
 	}
 }
 
-void poll_proc()
+static void poll_proc()
 {
 	if (pattern_delay) {
 		update_effects();
@@ -2256,7 +2256,7 @@ void poll_proc()
 	}
 }
 
-void macro_poll_proc()
+static void macro_poll_proc()
 {
 #define  IDLE		0xfff
 #define  FINISHED	0xffff

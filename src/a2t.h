@@ -8,9 +8,7 @@ void a2t_shut();
 char *a2t_load(char *name);
 void a2t_play(char *tune);
 void a2t_update(unsigned char *, int);
-void poll_proc();
-void macro_poll_proc();
-void set_overall_volume(unsigned char level);
+void a2t_volume(unsigned char level);
 void a2t_stop();
 
 extern uint8_t current_order;
