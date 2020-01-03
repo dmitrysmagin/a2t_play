@@ -1,0 +1,1 @@
+int LZH_decompress(char *source, char *dest, int size);

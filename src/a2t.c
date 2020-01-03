@@ -7,6 +7,7 @@
 
 #include "depack.h"
 #include "sixpack.h"
+#include "lzh.h"
 #include "ymf262.h"
 #include "a2t.h"
 
@@ -2863,6 +2864,9 @@ static inline void a2t_depack(void *src, int srcsize, void *dst)
 	case 9 ... 11:	// apack (aPlib)
 		aP_depack(src, dst);
 		break;
+	case 12 ... 14: // lzh
+		LZH_decompress(src, dst, srcsize);
+		break;
 	}
 }
 
@@ -3222,7 +3226,7 @@ static int a2m_read_varheader(char *blockptr)
 			len[i] = src16[i];
 
 		return lensize * sizeof(uint16_t);
-	case 9 ... 11:
+	case 9 ... 14:
 		for (int i = 0; i < lensize; i++)
 			len[i] = src32[i];
 
