@@ -124,6 +124,15 @@ typedef struct PACK {
 	char            pattern_names[128][43];  // array[0..$7f] of String[42];
 	//tDIS_FMREG_COL  dis_fmreg_col[255];  // array[1..255] of tDIS_FMREG_COL;
 	int8_t          dis_fmreg_col[255][28];
+	struct PACK {
+		uint8_t		num_4op;
+		uint8_t		idx_4op[128];
+	} ins_4op_flags;
+	uint8_t			reserved_data[1024];
+	struct PACK {
+		uint8_t		rows_per_beat;
+		int16_t		tempo_finetune;
+	} bpm_data;
 } tFIXED_SONGDATA;
 
 typedef enum {
@@ -3214,7 +3223,6 @@ static int a2m_read_varheader(char *blockptr)
 
 		return lensize * sizeof(uint16_t);
 	case 9 ... 11:
-
 		for (int i = 0; i < lensize; i++)
 			len[i] = src32[i];
 
@@ -3270,6 +3278,15 @@ typedef struct PACK {
 	uint8_t lock_flags[20];
 	char pattern_names[128][43];	// A2M_SONGDATA_V11
 	int8_t dis_fmreg_col[255][28];	// A2M_SONGDATA_V11
+	struct PACK {
+		uint8_t		num_4op;
+		uint8_t		idx_4op[128];
+	} ins_4op_flags;				// A2M_SONGDATA_V12_13
+	uint8_t			reserved_data[1024]; // A2M_SONGDATA_V12_13
+	struct PACK {
+		uint8_t		rows_per_beat;
+		int16_t		tempo_finetune;
+	} bpm_data;						// A2M_SONGDATA_V14
 } A2M_SONGDATA_V10;
 
 static int a2m_read_songdata(char *src)
