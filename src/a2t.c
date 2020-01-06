@@ -2950,7 +2950,7 @@ static int a2t_read_varheader(char *blockptr)
 		for (int i = 0; i < 20; i++)
 			len[i] = varheader->v10.len[i];
 		return sizeof(A2T_VARHEADER_V10);
-	case 11:
+	case 11 ... 14:
 		songdata->common_flag = varheader->v11.common_flag;
 		songdata->patt_len = varheader->v11.patt_len;
 		songdata->nm_tracks = varheader->v11.nm_tracks;
@@ -2969,11 +2969,24 @@ static int a2t_read_varheader(char *blockptr)
 static int a2t_read_instruments(char *src)
 {
 	int instsize = (ffver < 9 ? 13 : 14);
-	int dstsize = ffver < 9 ? 250 * 13 : 255 * 14;
+	int dstsize = (ffver < 9 ? 250 * 13 : 255 * 14) +
+				  (ffver > 11 ? 129 + 1024 + 3: 0);
 	char *dst = (char *)malloc(dstsize);
 	memset(dst, 0, dstsize);
 
 	a2t_depack(src, len[0], dst);
+
+	if (ffver == 14) {
+		memcpy(&songdata->bpm_data, dst, sizeof(songdata->bpm_data));
+		dst += sizeof(songdata->bpm_data);
+	}
+
+	if (ffver >= 12 && ffver <= 14) {
+		memcpy(&songdata->ins_4op_flags, dst, sizeof(songdata->ins_4op_flags));
+		dst += sizeof(songdata->ins_4op_flags);
+		memcpy(&songdata->reserved_data, dst, sizeof(songdata->reserved_data));
+		dst += sizeof(songdata->reserved_data);
+	}
 
 	for (int i = 0; i < (ffver < 9 ? 250 : 255); i++) {
 		memcpy(songdata->instr_data[i], dst + i * instsize, instsize);
@@ -3037,7 +3050,7 @@ static int a2t_read_disabled_fmregs(char *src)
 
 static int a2t_read_order(char *src)
 {
-	int blocknum[11] = {1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4};
+	int blocknum[14] = {1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4, 4, 4, 4};
 	int i = blocknum[ffver - 1];
 
 	a2t_depack(src, len[i], songdata->pattern_order);
@@ -3127,7 +3140,7 @@ static int a2_read_patterns(char *src, int s)
 		free(old);
 		break;
 		}
-	case 9 ... 11:	// [16][8][20][256][6]
+	case 9 ... 14:	// [16][8][20][256][6]
 		for (int i = 0; i < 16; i++) {
 			if (!len[i+s]) continue;
 			a2t_depack(src, len[i+s], &pattdata[i * 8]);
@@ -3141,7 +3154,7 @@ static int a2_read_patterns(char *src, int s)
 
 static int a2t_read_patterns(char *src)
 {
-	int blockstart[11] = {2, 2, 2, 2, 2, 2, 2, 2, 4, 4, 5};
+	int blockstart[14] = {2, 2, 2, 2, 2, 2, 2, 2, 4, 4, 5, 5, 5, 5};
 	int s = blockstart[ffver - 1];
 
 	a2_read_patterns(src, s);
@@ -3278,8 +3291,8 @@ typedef struct PACK {
 	uint16_t patt_len;
 	uint8_t nm_tracks;
 	uint16_t macro_speedup;
-	uint8_t flag_4op;
-	uint8_t lock_flags[20];
+	uint8_t flag_4op;				// A2M_SONGDATA_V10
+	uint8_t lock_flags[20];			// A2M_SONGDATA_V10
 	char pattern_names[128][43];	// A2M_SONGDATA_V11
 	int8_t dis_fmreg_col[255][28];	// A2M_SONGDATA_V11
 	struct PACK {
@@ -3384,12 +3397,22 @@ static int a2m_read_songdata(char *src)
 		songdata->nm_tracks = data->nm_tracks;
 		songdata->macro_speedup = data->macro_speedup;
 
-		if (ffver == 11) {
-			memcpy(songdata->pattern_names,
-				data->pattern_names, 128 * 43);
-			memcpy(songdata->dis_fmreg_col,
-				data->dis_fmreg_col, 255 * 28);
-		}
+		// v10
+		songdata->flag_4op = data->flag_4op;
+		memcpy(songdata->lock_flags, data->lock_flags, sizeof(data->lock_flags));
+
+		// v11
+		memcpy(songdata->pattern_names, data->pattern_names, 128 * 43);
+		memcpy(songdata->dis_fmreg_col, data->dis_fmreg_col, 255 * 28);
+
+		// v12-13
+		songdata->ins_4op_flags.num_4op = data->ins_4op_flags.num_4op;
+		memcpy(songdata->ins_4op_flags.idx_4op, data->ins_4op_flags.idx_4op, 128);
+		memcpy(songdata->reserved_data, data->reserved_data, 1024);
+
+		// v14
+		songdata->bpm_data.rows_per_beat = data->bpm_data.rows_per_beat;
+		songdata->bpm_data.tempo_finetune = data->bpm_data.tempo_finetune;
 
 		free(data);
 	}
