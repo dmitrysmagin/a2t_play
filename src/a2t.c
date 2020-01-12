@@ -3275,22 +3275,6 @@ typedef struct PACK {
 	uint16_t patt_len;
 	uint8_t nm_tracks;
 	uint16_t macro_speedup;
-} A2M_SONGDATA_V9;
-
-typedef struct PACK {
-	char songname[43];
-	char composer[43];
-	char instr_names[255][43];
-	uint8_t instr_data[255][14];
-	uint8_t instr_macros[255][3831];
-	uint8_t macro_table[255][521];
-	uint8_t pattern_order[128];
-	uint8_t tempo;
-	uint8_t speed;
-	uint8_t common_flag;
-	uint16_t patt_len;
-	uint8_t nm_tracks;
-	uint16_t macro_speedup;
 	uint8_t flag_4op;				// A2M_SONGDATA_V10
 	uint8_t lock_flags[20];			// A2M_SONGDATA_V10
 	char pattern_names[128][43];	// A2M_SONGDATA_V11
@@ -3304,7 +3288,7 @@ typedef struct PACK {
 		uint8_t		rows_per_beat;
 		int16_t		tempo_finetune;
 	} bpm_data;						// A2M_SONGDATA_V14
-} A2M_SONGDATA_V10;
+} A2M_SONGDATA_V9_14;
 
 static int a2m_read_songdata(char *src)
 {
@@ -3334,40 +3318,8 @@ static int a2m_read_songdata(char *src)
 		}
 
 		free(data);
-	} else if (ffver == 9) {	// 9
-		A2M_SONGDATA_V9 *data =
-			malloc(sizeof(*data));
-		a2t_depack(src, len[0], data);
-
-		memcpy(songdata->songname, data->songname, 43);
-		memcpy(songdata->composer, data->composer, 43);
-
-		for (int i = 0; i < 255; i++) {
-			memcpy(songdata->instr_names[i],
-				data->instr_names[i], 43);
-			memcpy(songdata->instr_data[i],
-				data->instr_data[i], 14);
-		}
-
-		memcpy(songdata->instr_macros,
-			data->instr_macros, 255 * 3831);
-
-		memcpy(songdata->macro_table,
-			data->macro_table, 255 * 521);
-
-		memcpy(songdata->pattern_order,
-			data->pattern_order, 128);
-
-		songdata->tempo = data->tempo;
-		songdata->speed = data->speed;
-		songdata->common_flag = data->common_flag;
-		songdata->patt_len = data->patt_len;
-		songdata->nm_tracks = data->nm_tracks;
-		songdata->macro_speedup = data->macro_speedup;
-
-		free(data);
-	} else {			// 10,11
-		A2M_SONGDATA_V10 *data =
+	} else {			// 9 - 14
+		A2M_SONGDATA_V9_14 *data =
 			malloc(sizeof(*data));
 		a2t_depack(src, len[0], data);
 
