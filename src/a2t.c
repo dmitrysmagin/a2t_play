@@ -3223,9 +3223,10 @@ static void a2t_import(char *tune)
 	a2t_read_patterns(blockptr);
 }
 
-static int a2m_read_varheader(char *blockptr)
+static int a2m_read_varheader(char *blockptr, int npatt)
 {
 	int lensize;
+	int maxblock = (ffver < 5 ? npatt / 16 : npatt / 8) + 1;
 	uint16_t *src16 = (uint16_t *)blockptr;
 	uint32_t *src32 = (uint32_t *)blockptr;
 
@@ -3235,7 +3236,8 @@ static int a2m_read_varheader(char *blockptr)
 
 	switch (ffver) {
 	case 1 ... 8:
-		for (int i = 0; i < lensize; i++)
+		// skip possible rubbish (MARIO.A2M)
+		for (int i = 0; (i < lensize) && (i <= maxblock); i++)
 			len[i] = src16[i];
 
 		return lensize * sizeof(uint16_t);
@@ -3424,7 +3426,7 @@ static void a2m_import(char *tune)
 	printf("Number of patterns: %d\n", header->npatt);
 
 	// Read variable part after header, fill len[] with values
-	blockptr += a2m_read_varheader(blockptr);
+	blockptr += a2m_read_varheader(blockptr, header->npatt);
 
 	// Read songdata
 	blockptr += a2m_read_songdata(blockptr);
