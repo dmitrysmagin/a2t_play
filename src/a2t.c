@@ -269,23 +269,23 @@ uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 #define ef_ex_PatternLoop      12
 #define ef_ex_PatternLoopRec   13
 #define ef_ex_MacroKOffLoop    14
-#define ef_ex_ExtendedCmd      15
-#define ef_ex_cmd_RSS          0
-#define ef_ex_cmd_ResetVol     1
-#define ef_ex_cmd_LockVol      2
-#define ef_ex_cmd_UnlockVol    3
-#define ef_ex_cmd_LockVP       4
-#define ef_ex_cmd_UnlockVP     5
-#define ef_ex_cmd_VSlide_mod   6
-#define ef_ex_cmd_VSlide_car   7
-#define ef_ex_cmd_VSlide_def   8
-#define ef_ex_cmd_LockPan      9
-#define ef_ex_cmd_UnlockPan    10
-#define ef_ex_cmd_VibrOff      11
-#define ef_ex_cmd_TremOff      12
-#define ef_ex_cmd_FineVibr     13
-#define ef_ex_cmd_FineTrem     14
-#define ef_ex_cmd_NoRestart    15
+#define ef_ex_ExtendedCmd2     15
+#define ef_ex_cmd2_RSS         0
+#define ef_ex_cmd2_ResetVol    1
+#define ef_ex_cmd2_LockVol     2
+#define ef_ex_cmd2_UnlockVol   3
+#define ef_ex_cmd2_LockVP      4
+#define ef_ex_cmd2_UnlockVP    5
+#define ef_ex_cmd2_VSlide_mod  6
+#define ef_ex_cmd2_VSlide_car  7
+#define ef_ex_cmd2_VSlide_def  8
+#define ef_ex_cmd2_LockPan     9
+#define ef_ex_cmd2_UnlockPan   10
+#define ef_ex_cmd2_VibrOff     11
+#define ef_ex_cmd2_TremOff     12
+#define ef_ex_cmd2_FVib_FGFS   13
+#define ef_ex_cmd2_FTrm_XFGFS  14
+#define ef_ex_cmd2_NoRestart   15
 #define ef_ex2_PatDelayFrame   0
 #define ef_ex2_PatDelayRow     1
 #define ef_ex2_NoteDelay       2
@@ -868,9 +868,9 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
 	if (note != 0) {
 		if (restart_macro) {
 			if (!(((event_table[chan].eff[0].def == ef_Extended) &&
-			      (event_table[chan].eff[0].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_NoRestart)) ||
+			      (event_table[chan].eff[0].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) ||
 			      ((event_table[chan].eff[1].def == ef_Extended) &&
-			      (event_table[chan].eff[1].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_NoRestart)))) {
+			      (event_table[chan].eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)))) {
 				init_macro_table(chan, note, ins, freq);
 			} else {
 				macro_table[chan].arpg_note = note;
@@ -1007,7 +1007,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	case ef_Vibrato:
 	case ef_ExtraFineVibrato:
 		if ((event->eff[slot ^ 1].def == ef_Extended) &&
-		    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_FineVibr)) {
+		    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
 			vibr_table[slot][chan].fine = TRUE;
 		}
 
@@ -1018,7 +1018,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	case ef_Tremolo:
 	case ef_ExtraFineTremolo:
 		if ((event->eff[slot ^ 1].def == ef_Extended) &&
-		    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_FineTrem)) {
+		    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
 			trem_table[slot][chan].fine = TRUE;
 		}
 
@@ -1029,7 +1029,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	case ef_VibratoVolSlide:
 	case ef_VibratoVSlideFine:
 		if ((event->eff[slot ^ 1].def == ef_Extended) &&
-		    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_FineVibr))
+		    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS))
 			vibr_table[slot][chan].fine = TRUE;
 		break;
 
@@ -1222,36 +1222,36 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 			}
 			break;
 
-		case ef_ex_ExtendedCmd:
+		case ef_ex_ExtendedCmd2:
 			switch (val % 16) {
-			case ef_ex_cmd_RSS:        release_sustaining_sound(chan); break;
-			case ef_ex_cmd_ResetVol:   reset_ins_volume(chan); break;
-			case ef_ex_cmd_LockVol:    volume_lock  [chan] = TRUE; break;
-			case ef_ex_cmd_UnlockVol:  volume_lock  [chan] = FALSE; break;
-			case ef_ex_cmd_LockVP:     peak_lock    [chan] = TRUE; break;
-			case ef_ex_cmd_UnlockVP:   peak_lock    [chan] = FALSE; break;
-			case ef_ex_cmd_VSlide_def: volslide_type[chan] = 0; break;
-			case ef_ex_cmd_LockPan:    pan_lock     [chan] = TRUE; break;
-			case ef_ex_cmd_UnlockPan:  pan_lock     [chan] = FALSE; break;
-			case ef_ex_cmd_VibrOff:    change_frequency(chan, freq_table[chan]); break;
-			case ef_ex_cmd_TremOff:
+			case ef_ex_cmd2_RSS:        release_sustaining_sound(chan); break;
+			case ef_ex_cmd2_ResetVol:   reset_ins_volume(chan); break;
+			case ef_ex_cmd2_LockVol:    volume_lock  [chan] = TRUE; break;
+			case ef_ex_cmd2_UnlockVol:  volume_lock  [chan] = FALSE; break;
+			case ef_ex_cmd2_LockVP:     peak_lock    [chan] = TRUE; break;
+			case ef_ex_cmd2_UnlockVP:   peak_lock    [chan] = FALSE; break;
+			case ef_ex_cmd2_VSlide_def: volslide_type[chan] = 0; break;
+			case ef_ex_cmd2_LockPan:    pan_lock     [chan] = TRUE; break;
+			case ef_ex_cmd2_UnlockPan:  pan_lock     [chan] = FALSE; break;
+			case ef_ex_cmd2_VibrOff:    change_frequency(chan, freq_table[chan]); break;
+			case ef_ex_cmd2_TremOff:
 				set_ins_volume(LO(volume_table[chan]),
 					       HI(volume_table[chan]), chan);
 				break;
-			case ef_ex_cmd_VSlide_car:
+			case ef_ex_cmd2_VSlide_car:
 				if ((event->eff[slot ^ 1].def == ef_Extended) &&
-				    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd * 16 +
-						      ef_ex_cmd_VSlide_mod)) {
+				    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 +
+						      ef_ex_cmd2_VSlide_mod)) {
 					volslide_type[chan] = 3;
 				} else {
 					volslide_type[chan] = 1;
 				}
 				break;
 
-			case ef_ex_cmd_VSlide_mod:
+			case ef_ex_cmd2_VSlide_mod:
 				if ((event->eff[slot ^ 1].def == ef_Extended) &&
-				    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd * 16 +
-						      ef_ex_cmd_VSlide_car)) {
+				    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 +
+						      ef_ex_cmd2_VSlide_car)) {
 					volslide_type[chan] = 3;
 				} else {
 					volslide_type[chan] = 2;
@@ -1420,11 +1420,11 @@ static void process_note(tADTRACK2_EVENT *event, int chan)
 			if (!(((event->eff[1].def == ef_SwapArpeggio) ||
 			       (event->eff[1].def == ef_SwapVibrato)) &&
 			       (event->eff[0].def == ef_Extended) &&
-			       (event->eff[0].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_NoRestart)) &&
+			       (event->eff[0].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) &&
 			    !(((event->eff[0].def == ef_SwapArpeggio) ||
 			       (event->eff[0].def == ef_SwapVibrato)) &&
 			       (event->eff[1].def == ef_Extended) &&
-			       (event->eff[1].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_NoRestart))) {
+			       (event->eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart))) {
 				output_note(event->note, voice_table[chan], chan, TRUE, 0);
 			} else {
 				output_note(event->note, voice_table[chan], chan, TRUE, 1);
@@ -1467,7 +1467,7 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
 {
 	// Check if second effect is ZFF - force no restart
 	bool is_norestart = ((((event->eff[slot ^ 1].def << 8) | event->eff[slot ^ 1].val)) ==
-			    ((ef_Extended << 8) | (ef_ex_ExtendedCmd << 4) | ef_ex_cmd_NoRestart));
+			    ((ef_Extended << 8) | (ef_ex_ExtendedCmd2 << 4) | ef_ex_cmd2_NoRestart));
 
 	switch (event->eff[slot].def) {
 	case ef_SwapArpeggio:
