@@ -209,6 +209,20 @@ const uint16_t _chpm_c[20] = {
 
 uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 
+int _4op_tracks_hi[] = {1, 3, 5, 10, 12, 14 };
+int _4op_tracks_lo[] = {2, 4, 6, 11, 13, 15 };
+
+#define INCLUDES(ARRAY, VALUE) \
+	({ \
+		int len = (sizeof((ARRAY))/sizeof((ARRAY)[0])); \
+		int res = FALSE; \
+		while (--len >= 0) { \
+			res = (ARRAY[len] == (VALUE)); \
+		} \
+		res; })
+
+uint8_t _4op_main_chan[6] = { 2, 4, 6, 11, 13, 15 };
+
 #define ef_Arpeggio            0
 #define ef_FSlideUp            1
 #define ef_FSlideDown          2
@@ -268,7 +282,15 @@ uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 #define ef_ex_SetPanningPos    11
 #define ef_ex_PatternLoop      12
 #define ef_ex_PatternLoopRec   13
-#define ef_ex_MacroKOffLoop    14
+#define ef_ex_ExtendedCmd      14
+#define ef_ex_cmd_MKOffLoopDi  0
+#define ef_ex_cmd_MKOffLoopEn  1
+#define ef_ex_cmd_TPortaFKdis  2
+#define ef_ex_cmd_TPortaFKenb  3
+#define ef_ex_cmd_RestartEnv   4
+#define ef_ex_cmd_4opVlockOff  5
+#define ef_ex_cmd_4opVlockOn   6
+#define ef_ex_cmd_ForceBpmSld  7
 #define ef_ex_ExtendedCmd2     15
 #define ef_ex_cmd2_RSS         0
 #define ef_ex_cmd2_ResetVol    1
@@ -360,6 +382,7 @@ struct PACK {
 	uint16_t freq;
 	uint8_t speed;
 } porta_table[2][20];	// array[1..20] of Record freq: Word; speed: Byte; end;
+bool portaFK_table[20]; // array[1..20] of Boolean;;
 struct PACK {
 	uint8_t state, note, add1, add2;
 } arpgg_table[2][20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
@@ -580,6 +603,17 @@ static void update_timer(int Hz)
 	set_clock_rate(1193180 / IRQ_freq);
 }
 
+bool is_4op_chan(int chan);
+
+static void key_on(int chan)
+{
+	if (is_4op_chan(chan) && INCLUDES(_4op_tracks_hi, chan)) {
+		opl3out(0xb0 + _chan_n[chan + 1], 0);
+	} else {
+		opl3out(0xb0 + _chan_n[chan], 0);
+	}
+}
+
 static void key_off(int chan)
 {
 	freq_table[chan] &= ~0x2000;
@@ -596,7 +630,7 @@ static void release_sustaining_sound(int chan)
 	memset(&fmpar_table[chan].adsrw_mod, 0,
 		sizeof(fmpar_table[chan].adsrw_mod));
 
-	opl3out(0xb0 + _chan_n[chan], 0);
+	key_on(chan);
 	opl3out(_instr[4] + _chan_m[chan], NONE);
 	opl3out(_instr[5] + _chan_c[chan], NONE);
 	opl3out(_instr[6] + _chan_m[chan], NONE);
@@ -841,6 +875,28 @@ static void update_fmpar(int chan)
 
 	set_ins_volume(LO(volume_table[chan]),
 		       HI(volume_table[chan]), chan);
+}
+
+bool is_4op_chan(int chan) // 0..17
+{
+	char mask[18] = {
+		(1<<0), (1<<0), (1<<1), (1<<1), (1<<2), (1<<2),
+		0, 0, 0,
+		(1<<3), (1<<3), (1<<4), (1<<4), (1<<5), (1<<5),
+		0, 0, 0
+	};
+/*
+	4-op track extension flags byte, channels 1-18
+	0  - tracks 1,2
+	1  - tracks 3,4
+	2  - tracks 5,6
+	3  - tracks 10,11
+	4  - tracks 12,13
+	5  - tracks 14,15
+	6  - %unused%
+	7  - %unused%
+*/
+	return (chan > 17 ? FALSE : songdata->flag_4op & mask[chan]);
 }
 
 static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, int NR)
@@ -1213,15 +1269,18 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 				}
 			}
 			break;
-
-		case ef_ex_MacroKOffLoop:
-			if (val % 16 != 0) {
-				keyoff_loop[chan] = TRUE;
-			} else {
-				keyoff_loop[chan] = FALSE;
+		case ef_ex_ExtendedCmd:
+			switch (val & 0x0f) {
+			case ef_ex_cmd_MKOffLoopDi: keyoff_loop[chan] = FALSE;		break;
+			case ef_ex_cmd_MKOffLoopEn: keyoff_loop[chan] = TRUE;		break;
+			case ef_ex_cmd_TPortaFKdis: portaFK_table[chan] = FALSE;	break;
+			case ef_ex_cmd_TPortaFKenb: portaFK_table[chan] = TRUE;		break;
+			case ef_ex_cmd_RestartEnv:
+				key_on(chan);
+				change_freq(chan, freq_table[chan]);
+				break;
 			}
 			break;
-
 		case ef_ex_ExtendedCmd2:
 			switch (val % 16) {
 			case ef_ex_cmd2_RSS:        release_sustaining_sound(chan); break;
@@ -2628,6 +2687,7 @@ static void init_buffers()
 	memset(freq_table, 0, sizeof(freq_table));
 	memset(fslide_table, 0, sizeof(fslide_table));
 	memset(porta_table, 0, sizeof(porta_table));
+	memset(portaFK_table, FALSE, sizeof(portaFK_table));
 	memset(arpgg_table, 0, sizeof(arpgg_table));
 	memset(vibr_table, 0, sizeof(vibr_table));
 	memset(trem_table, 0, sizeof(trem_table));
@@ -3127,7 +3187,7 @@ enum {
 };
 
 // For importing from a2m v1234
-char adsr_carrier[9];
+bool adsr_carrier[9];
 
 void convert_v1234_event(tADTRACK2_EVENT_V1234 *ev, int chan)
 {
@@ -3245,10 +3305,12 @@ void convert_v1234_event(tADTRACK2_EVENT_V1234 *ev, int chan)
 			new.effect = (ef_ex_SetFeedback << 4) | (ev->effect & 0x0f);
 			break;
 		case fx_ex_ExtendedCmd:
-			// Enable after updating effects defines
-			/*new.effect_def = ef_Extended;
+			new.effect_def = ef_Extended;
 			new.effect = ef_ex_ExtendedCmd2 << 4;
 			if ((ev->effect & 0x0f) < 10) {
+				// FIXME: Should be a parameter
+				bool whole_song = FALSE;
+
 				switch (ev->effect & 0x0f) {
 				case 0: new.effect |= ef_ex_cmd2_RSS;		break;
 				case 1: new.effect |= ef_ex_cmd2_LockVol;	break;
@@ -3266,10 +3328,10 @@ void convert_v1234_event(tADTRACK2_EVENT_V1234 *ev, int chan)
 					adsr_carrier[chan] = FALSE;
 					break;
 				case 7: new.effect |= ef_ex_cmd2_VSlide_car;	break;
-				case 4: new.effect |= ef_ex_cmd2_VSlide_mod;	break;
-				case 4: new.effect |= ef_ex_cmd2_VSlide_def;	break;
+				case 8: new.effect |= ef_ex_cmd2_VSlide_mod;	break;
+				case 9: new.effect |= ef_ex_cmd2_VSlide_def;	break;
 				}
-			} else*/ {
+			} else {
 				new.effect_def = 0;
 				new.effect = 0;
 			}
@@ -3293,6 +3355,8 @@ static int a2_read_patterns(char *src, int s)
 		{
 		tPATTERN_DATA_V1234 *old =
 			(tPATTERN_DATA_V1234 *)malloc(sizeof(*old) * 16);
+
+		memset(adsr_carrier, FALSE, sizeof(adsr_carrier));
 
 		for (int i = 0; i < 4; i++) {
 			if (!len[i+s]) continue;
