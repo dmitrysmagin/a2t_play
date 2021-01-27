@@ -557,6 +557,19 @@ static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
 	return songdata->instr_data[ins-1][param];
 }
 
+static bool is_chan_adsr_data_empty(int chan)
+{
+	return
+		((fmpar_table[chan].adsrw_car.attck == 0) &&
+		(fmpar_table[chan].adsrw_mod.attck == 0) &&
+		(fmpar_table[chan].adsrw_car.dec == 0) &&
+		(fmpar_table[chan].adsrw_mod.dec == 0) &&
+		(fmpar_table[chan].adsrw_car.sustn == 0) &&
+		(fmpar_table[chan].adsrw_mod.sustn == 0) &&
+		(fmpar_table[chan].adsrw_car.rel == 0) &&
+		(fmpar_table[chan].adsrw_mod.rel == 0));
+}
+
 static bool is_ins_adsr_data_empty(int ins)
 {
 	return
@@ -674,6 +687,15 @@ static bool _4op_vol_valid_chan(int chan)
 static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 {
 	uint8_t temp;
+
+	// ** OPL3 emulation workaround **
+	// force muted instrument volume with missing channel ADSR data
+	// when there is additionally no FM-reg macro defined for this instrument
+	if (is_chan_adsr_data_empty(chan) &&
+		!(songdata->instr_macros[voice_table[chan]].length)) {
+			modulator = 63;
+			carrier = 63;
+	}
 
 	if (modulator != NONE) {
 		temp = modulator;
