@@ -362,12 +362,14 @@ const uint8_t max_patterns = 128;
 tPLAY_STATUS play_status = isStopped;
 uint8_t overall_volume = 63;
 uint8_t global_volume = 63;
+bool force_macro_keyon = FALSE;
 
 const uint8_t pattern_loop_flag  = 0xe0;
 const uint8_t pattern_break_flag = 0xf0;
 
 tFM_PARAMETER_TABLE fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
 bool volume_lock[20];			// array[1..20] of Boolean;
+bool vol4op_lock[20] ;			// array[1..20] of Boolean;
 uint16_t volume_table[20];		// array[1..20] of Word;
 uint16_t vscale_table[20];		// array[1..20] of Word;
 bool peak_lock[20];			// array[1..20] of Boolean;
@@ -377,6 +379,7 @@ uint8_t carrier_vol[20];		// array[1..20] of Byte;
 tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
 uint8_t voice_table[20];		// array[1..20] of Byte;
 uint16_t freq_table[20];		// array[1..20] of Word;
+uint16_t zero_fq_table[20];		// array[1..20] of Word;
 uint8_t fslide_table[2][20];		// array[1..20] of Byte;
 struct PACK {
 	uint16_t freq;
@@ -554,6 +557,19 @@ static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
 	return songdata->instr_data[ins-1][param];
 }
 
+static bool is_ins_adsr_data_empty(int ins)
+{
+	return
+		(((ins_parameter(ins, 5) >> 4) == 0) &&
+		 ((ins_parameter(ins, 4) >> 4) == 0) &&
+		 ((ins_parameter(ins, 5) & 0x0f) == 0) &&
+		 ((ins_parameter(ins, 4) & 0x0f) == 0) &&
+		 ((ins_parameter(ins, 7) >> 4) == 0) &&
+		 ((ins_parameter(ins, 6) >> 4) == 0) &&
+		 ((ins_parameter(ins, 7) & 0x0f) == 0) &&
+		 ((ins_parameter(ins, 6) & 0x0f) == 0));
+}
+
 static inline uint16_t max(uint16_t value, uint16_t maximum)
 {
 	return (value > maximum ? maximum : value);
@@ -645,6 +661,14 @@ static uint8_t scale_volume(uint8_t volume, uint8_t scale_factor)
 {
 	return 63 - ((63 - volume) *
 		(63 - scale_factor) / 63);
+}
+
+static bool _4op_vol_valid_chan(int chan)
+{
+	uint32_t _4op_flag = 0; // = _4op_data_flag(chan);
+	return ((_4op_flag & 1) && vol4op_lock[chan] &&
+			((_4op_flag >> 11) & 1) &&
+			((_4op_flag >> 19) & 1));
 }
 
 static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
@@ -744,6 +768,7 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 	macro_table[chan].vib_freq = freq;
 	macro_table[chan].vib_delay =
 		songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
+	zero_fq_table[chan] = 0;
 }
 
 static void set_ins_data(uint8_t ins, int chan)
@@ -1278,6 +1303,26 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 			case ef_ex_cmd_RestartEnv:
 				key_on(chan);
 				change_freq(chan, freq_table[chan]);
+				break;
+			case ef_ex_cmd_4opVlockOff:
+				if (is_4op_chan(chan)) {
+					vol4op_lock[chan] = FALSE;
+					if (INCLUDES(_4op_tracks_hi, chan)) {
+						vol4op_lock[chan + 1] = FALSE;
+					} else {
+						vol4op_lock[chan - 1] = FALSE;
+					}
+				}
+				break;
+			case ef_ex_cmd_4opVlockOn:
+				if (is_4op_chan(chan)) {
+					vol4op_lock[chan] = TRUE;
+					if (INCLUDES(_4op_tracks_hi, chan)) {
+						vol4op_lock[chan + 1] = TRUE;
+					} else {
+						vol4op_lock[chan - 1] = TRUE;
+					}
+				}
 				break;
 			}
 			break;
@@ -2386,6 +2431,22 @@ static void macro_poll_proc()
 					if (mt->fmreg_duration != 0) {
 						tREGISTER_TABLE_DEF *d = &rt->data[mt->fmreg_pos];
 
+						// force KEY-ON with missing ADSR instrument data
+						force_macro_keyon = FALSE;
+						if (mt->fmreg_pos == 1) {
+							if (is_ins_adsr_data_empty(voice_table[chan]) &&
+								!(songdata->dis_fmreg_col[mt->fmreg_table][0] &&
+								  songdata->dis_fmreg_col[mt->fmreg_table][1] &&
+								  songdata->dis_fmreg_col[mt->fmreg_table][2] &&
+								  songdata->dis_fmreg_col[mt->fmreg_table][3] &&
+								  songdata->dis_fmreg_col[mt->fmreg_table][12] &&
+								  songdata->dis_fmreg_col[mt->fmreg_table][13] &&
+								  songdata->dis_fmreg_col[mt->fmreg_table][14] &&
+								  songdata->dis_fmreg_col[mt->fmreg_table][15])) {
+								force_macro_keyon = TRUE;
+							}
+						}
+
 						if (!songdata->dis_fmreg_col[mt->fmreg_table][0])
 							fmpar_table[chan].adsrw_mod.attck =
 								d->fm_data.ATTCK_DEC_modulator >> 4;
@@ -2498,9 +2559,34 @@ static void macro_poll_proc()
 						update_carrier_adsrw(chan);
 						update_fmpar(chan);
 
-						if (!((d->fm_data.FEEDBACK_FM | 0x80) != d->fm_data.FEEDBACK_FM))
-							output_note(event_table[chan].note,
-								    event_table[chan].instr_def, chan, FALSE, 0);
+						if (force_macro_keyon ||
+							!((d->fm_data.FEEDBACK_FM | 0x80) != d->fm_data.FEEDBACK_FM)) { // MACRO_NOTE_RETRIG_FLAG
+							if (!((is_4op_chan(chan) && INCLUDES(_4op_tracks_hi, chan)))) {
+								output_note(event_table[chan].note,
+											event_table[chan].instr_def, chan, FALSE, 0);
+								if ((is_4op_chan(chan) && INCLUDES(_4op_tracks_lo, chan)))
+									init_macro_table(chan - 1, 0, voice_table[chan - 1], 0);
+							}
+						} else {
+							if (!((d->fm_data.FEEDBACK_FM | 0x40) != d->fm_data.FEEDBACK_FM)) { // MACRO_ENVELOPE_RESTART_FLAG
+								key_on(chan);
+								change_freq(chan, freq_table[chan]);
+							} else {
+								if (!((d->fm_data.FEEDBACK_FM | 0x40) != d->fm_data.FEEDBACK_FM)) { // MACRO_ZERO_FREQ_FLAG
+									if (freq_table[chan]) {
+										zero_fq_table[chan] = freq_table[chan];
+										freq_table[chan] = freq_table[chan] & ~0x1fff;
+										change_freq(chan, freq_table[chan]);
+									} else {} // ??? original has 'else else'
+								} else {
+									if (zero_fq_table[chan]) {
+										freq_table[chan] = zero_fq_table[chan];
+										zero_fq_table[chan] = 0;
+										change_freq(chan, freq_table[chan]);
+									}
+								}
+							}
+						}
 
 						if (!songdata->dis_fmreg_col[mt->fmreg_table][26]) {
 							if (d->freq_slide > 0) {
@@ -2723,6 +2809,14 @@ static void init_buffers()
 	} else {
 		for (int i = 0; i < 20; i++)
 			  peak_lock[i] = (bool)((songdata->lock_flags[i] >> 5) & 1);
+	}
+
+	memset(vol4op_lock, FALSE, sizeof(vol4op_lock));
+	for (int i = 0; i < 6; i++) {
+		vol4op_lock[_4op_main_chan[i]] =
+			((songdata->lock_flags[_4op_main_chan[i]] | 0x40) == songdata->lock_flags[_4op_main_chan[i]]);
+		vol4op_lock[_4op_main_chan[i] - 1] =
+			((songdata->lock_flags[_4op_main_chan[i] - 1] | 0x40) == songdata->lock_flags[_4op_main_chan[i] - 1]);
 	}
 
 	for (int i = 0; i < 20; i++)
