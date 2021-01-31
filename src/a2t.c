@@ -380,7 +380,9 @@ tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
 uint8_t voice_table[20];		// array[1..20] of Byte;
 uint16_t freq_table[20];		// array[1..20] of Word;
 uint16_t zero_fq_table[20];		// array[1..20] of Word;
+uint16_t effect_table[2][20];	// array[1..20] of Word;
 uint8_t fslide_table[2][20];		// array[1..20] of Byte;
+uint16_t glfsld_table[2][20];	// array[1..20] of Word;
 struct PACK {
 	uint16_t freq;
 	uint8_t speed;
@@ -390,11 +392,11 @@ struct PACK {
 	uint8_t state, note, add1, add2;
 } arpgg_table[2][20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
 struct PACK {
-	uint8_t pos, speed, depth;
+	uint8_t pos, dir, speed, depth;
 	bool fine;
 } vibr_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
 struct PACK {
-	uint8_t pos, speed, depth;
+	uint8_t pos, dir, speed, depth;
 	bool fine;
 } trem_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
 uint8_t retrig_table[2][20];	// array[1..20] of Byte;
@@ -403,7 +405,9 @@ struct PACK {
 	uint16_t volume;
 } tremor_table[2][20];		// array[1..20] of Record pos: Integer; volume: Word; end;
 uint8_t panning_table[20];	// array[1..20] of Byte;
+uint16_t last_effect[2][20];	// array[1..20] of Byte;
 uint8_t volslide_type[20];	// array[1..20] of Byte;
+bool event_new[20];			// array[1..20] of Boolean;
 uint8_t notedel_table[20];	// array[1..20] of Byte;
 uint8_t notecut_table[20];	// array[1..20] of Byte;
 int8_t ftune_table[20];		// array[1..20] of Shortint;
@@ -436,11 +440,14 @@ uint8_t current_vibrato_depth = 0;
 bool speed_update, lockvol, panlock, lockVP;
 uint8_t tremolo_depth, vibrato_depth;
 bool volume_scaling, percussion_mode;
+uint8_t last_order;
 bool reset_chan[20];	// array[1..20] of Boolean;
 
 // This would be later moved to class or struct
 tFIXED_SONGDATA _songdata, *songdata = &_songdata;
 tPATTERN_DATA _pattdata[128], *pattdata = _pattdata;
+
+double time_playing;
 
 int ticks, tickD, tickXF;
 
@@ -474,7 +481,7 @@ static void opl3exp(uint16_t data)
 	opl_out(3, data >> 8);
 }
 
-static bool nul_data(void *data, unsigned int size)
+static bool is_data_empty(void *data, unsigned int size)
 {
 	while (size--) {
 		if (*(char *)data++)
@@ -1559,18 +1566,42 @@ static void process_note(tADTRACK2_EVENT *event, int chan)
 	}
 }
 
+static int calc_following_order(uint8_t order);
+
 static void play_line()
 {
 	tADTRACK2_EVENT *event;
 
+	if ((current_line == 0) &&
+		(current_order == calc_following_order(0)))
+		time_playing = 0;
+
+	if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
+		 (current_order != last_order)) {
+		memset(loopbck_table, NONE, sizeof(loopbck_table));
+		memset(loop_table, NONE, sizeof(loop_table));
+		last_order = current_order;
+	}
+
 	for (int chan = 0; chan < songdata->nm_tracks; chan++) {
 		event = &pattdata[current_pattern].ch[chan].row[current_line].ev;
 
+		// put inside process_effects ?
+		for (int slot = 0; slot < 2; slot++) {
+			if (effect_table[slot][chan] != 0) {
+				last_effect[slot][chan] = effect_table[slot][chan];
+			}
+			if (glfsld_table[slot][chan] != 0) {
+				effect_table[slot][chan] = glfsld_table[slot][chan];
+			} else {
+				effect_table[slot][chan] = effect_table[slot][chan] & 0xff00;
+			}
+		}
 		ftune_table[chan] = 0;
 
 		if (event->instr_def != 0) {
 			// NOTE: adjust ins
-			if (nul_data(songdata->instr_data[event->instr_def-1], INSTRUMENT_SIZE)) {
+			if (is_data_empty(songdata->instr_data[event->instr_def-1], INSTRUMENT_SIZE)) {
 				release_sustaining_sound(chan);
 			}
 			set_ins_data(event->instr_def, chan);
@@ -2333,7 +2364,11 @@ static void update_song_position()
 				loop_table[temp][current_line]--;
 		} else {
 			if (pattern_break && ((next_line & 0xf0) == pattern_break_flag)) {
-				current_order = event_table[next_line - pattern_break_flag].eff[0].val;
+				if (event_table[next_line - pattern_break_flag].eff[1].def == ef_PositionJump) {
+					current_order = event_table[next_line - pattern_break_flag].eff[1].val;
+				} else {
+					current_order = event_table[next_line - pattern_break_flag].eff[0].val;
+				}
 				pattern_break = FALSE;
 			} else {
 				if (current_order >= 0x7f)
@@ -2352,6 +2387,11 @@ static void update_song_position()
 			pattern_break = FALSE;
 			current_line = next_line;
 		}
+	}
+
+	for (int chan = 0; chan < songdata->nm_tracks; chan++) {
+		glfsld_table[0][chan] = 0;
+		glfsld_table[1][chan] = 0;
 	}
 
 	if ((current_line == 0) &&
@@ -2793,7 +2833,10 @@ static void init_buffers()
 	memset(carrier_vol, 0, sizeof(carrier_vol));
 	memset(event_table, 0, sizeof(event_table));
 	memset(freq_table, 0, sizeof(freq_table));
+	memset(zero_fq_table, 0, sizeof(zero_fq_table));
+	memset(effect_table, 0, sizeof(effect_table));
 	memset(fslide_table, 0, sizeof(fslide_table));
+	memset(glfsld_table, 0, sizeof(glfsld_table));
 	memset(porta_table, 0, sizeof(porta_table));
 	memset(portaFK_table, FALSE, sizeof(portaFK_table));
 	memset(arpgg_table, 0, sizeof(arpgg_table));
@@ -2801,8 +2844,9 @@ static void init_buffers()
 	memset(trem_table, 0, sizeof(trem_table));
 	memset(retrig_table, 0, sizeof(retrig_table));
 	memset(tremor_table, 0, sizeof(tremor_table));
-	memset(panning_table, 0, sizeof(panning_table));
+	memset(last_effect, 0, sizeof(last_effect));
 	memset(voice_table, 0, sizeof(voice_table));
+	memset(event_new, FALSE, sizeof(event_new));
 	memset(notedel_table, NONE, sizeof(notedel_table));
 	memset(notecut_table, NONE, sizeof(notecut_table));
 	memset(ftune_table, 0, sizeof(ftune_table));
@@ -2949,7 +2993,7 @@ static void init_songdata()
 
 static int a2_import(char *tune); // forward def
 
-void a2t_play(char *tune)
+void a2t_play(char *tune) // start_playing()
 {
 	a2t_stop();
 	int err = a2_import(tune);
@@ -2973,6 +3017,7 @@ void a2t_play(char *tune)
 	irq_mode = TRUE;
 	play_status = isPlaying;
 
+	time_playing = 0;
 	ticklooper = 0;
 	macro_ticklooper = 0;
 	speed = songdata->speed;
