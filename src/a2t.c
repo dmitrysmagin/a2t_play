@@ -179,19 +179,19 @@ const uint8_t _instr[12] = {
 #define INSTRUMENT_SIZE sizeof(tADTRACK2_INS)
 #define CHUNK_SIZE sizeof(tADTRACK2_EVENT)
 #define PATTERN_SIZE (20*256*CHUNK_SIZE)
-#define NONE 0xFF
+#define BYTE_NULL (uint8_t)(0xFFFFFFFF)
 
 const uint16_t _chmm_n[20] = {
 	0x003,0x000,0x004,0x001,0x005,0x002,0x006,0x007,0x008,0x103,
-	0x100,0x104,0x101,0x105,0x102,0x106,0x107,0x108,NONE,NONE
+	0x100,0x104,0x101,0x105,0x102,0x106,0x107,0x108,BYTE_NULL,BYTE_NULL
 };
 const uint16_t _chmm_m[20] = {
 	0x008,0x000,0x009,0x001,0x00a,0x002,0x010,0x011,0x012,0x108,
-	0x100,0x109,0x101,0x10a,0x102,0x110,0x111,0x112,NONE,NONE
+	0x100,0x109,0x101,0x10a,0x102,0x110,0x111,0x112,BYTE_NULL,BYTE_NULL
 };
 const uint16_t _chmm_c[20] = {
 	0x00b,0x003,0x00c,0x004,0x00d,0x005,0x013,0x014,0x015,0x10b,
-	0x103,0x10c,0x104,0x10d,0x105,0x113,0x114,0x115,NONE,NONE
+	0x103,0x10c,0x104,0x10d,0x105,0x113,0x114,0x115,BYTE_NULL,BYTE_NULL
 };
 
 const uint16_t _chpm_n[20] = {
@@ -204,7 +204,7 @@ const uint16_t _chpm_m[20] = {
 };
 const uint16_t _chpm_c[20] = {
 	0x00b,0x003,0x00c,0x004,0x00d,0x005,0x113,0x114,0x115,0x10b,
-	0x103,0x10c,0x104,0x10d,0x105,0x013,NONE,NONE,NONE,NONE
+	0x103,0x10c,0x104,0x10d,0x105,0x013,BYTE_NULL,BYTE_NULL,BYTE_NULL,BYTE_NULL
 };
 
 uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
@@ -457,6 +457,8 @@ int ticks, tickD, tickXF;
 
 /* PLAYER */
 static void opl_out(uint8_t port, uint8_t val); // forward def
+static bool is_4op_chan(int chan); // forward def
+
 
 static void opl2out(uint16_t reg, uint16_t data)
 {
@@ -556,6 +558,10 @@ static void change_freq(int chan, uint16_t freq)
 	freq_table[chan] |= (freq & 0x1fff);
 	opl3out(0xa0 + _chan_n[chan], LO(freq_table[chan]));
 	opl3out(0xb0 + _chan_n[chan], HI(freq_table[chan]));
+
+	if (is_4op_chan(chan)) {
+		freq_table[chan - 1] = freq_table[chan];
+	}
 }
 
 static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
@@ -639,8 +645,6 @@ static void update_timer(int Hz)
 	set_clock_rate(1193180 / IRQ_freq);
 }
 
-bool is_4op_chan(int chan);
-
 static void key_on(int chan)
 {
 	if (is_4op_chan(chan) && INCLUDES(_4op_tracks_hi, chan)) {
@@ -667,10 +671,10 @@ static void release_sustaining_sound(int chan)
 		sizeof(fmpar_table[chan].adsrw_mod));
 
 	key_on(chan);
-	opl3out(_instr[4] + _chan_m[chan], NONE);
-	opl3out(_instr[5] + _chan_c[chan], NONE);
-	opl3out(_instr[6] + _chan_m[chan], NONE);
-	opl3out(_instr[7] + _chan_c[chan], NONE);
+	opl3out(_instr[4] + _chan_m[chan], BYTE_NULL);
+	opl3out(_instr[5] + _chan_c[chan], BYTE_NULL);
+	opl3out(_instr[6] + _chan_m[chan], BYTE_NULL);
+	opl3out(_instr[7] + _chan_c[chan], BYTE_NULL);
 
 	key_off(chan);
 	event_table[chan].instr_def = 0;
@@ -704,7 +708,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 			carrier = 63;
 	}
 
-	if (modulator != NONE) {
+	if (modulator != BYTE_NULL) {
 		temp = modulator;
 
 		if (volume_scaling)
@@ -730,7 +734,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 			modulator_vol[chan] = 63 - modulator;
 	}
 
-	if (carrier != NONE) {
+	if (carrier != BYTE_NULL) {
 	      temp = carrier;
 	      if (volume_scaling)
 		carrier = scale_volume(ins_parameter(voice_table[chan], 3) & 0x3f, carrier);
@@ -764,7 +768,7 @@ static void set_global_volume()
 		if (!((carrier_vol[chan] == 0) &&
 		    (modulator_vol[chan] == 0))) {
 			if ((ins_parameter(voice_table[chan], 10) & 1) == 0) {
-				set_ins_volume(NONE, HI(volume_table[chan]), chan);
+				set_ins_volume(BYTE_NULL, HI(volume_table[chan]), chan);
 			} else {
 				set_ins_volume(LO(volume_table[chan]), HI(volume_table[chan]), chan);
 			}
@@ -931,7 +935,7 @@ static void update_fmpar(int chan)
 		       HI(volume_table[chan]), chan);
 }
 
-bool is_4op_chan(int chan) // 0..17
+static bool is_4op_chan(int chan) // 0..17
 {
 	char mask[18] = {
 		(1<<0), (1<<0), (1<<1), (1<<1), (1<<2), (1<<2),
@@ -995,7 +999,7 @@ static bool no_loop(uint8_t current_chan, uint8_t current_line)
 {
 	for (int chan = 0; chan < current_chan; chan++) {
 		if ((loop_table[chan][current_line] != 0) &&
-		    (loop_table[chan][current_line] != NONE))
+		    (loop_table[chan][current_line] != BYTE_NULL))
 			return FALSE;
 	}
 
@@ -1144,19 +1148,19 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 		break;
 
 	case ef_SetCarrierVol:
-		set_ins_volume(NONE, 63 - val, chan);
+		set_ins_volume(BYTE_NULL, 63 - val, chan);
 		break;
 
 	case ef_SetModulatorVol:
-		set_ins_volume(63 - val, NONE, chan);
+		set_ins_volume(63 - val, BYTE_NULL, chan);
 		break;
 
 	case ef_SetInsVolume:
 		if (percussion_mode && ((chan >= 16) && (chan <= 19))) { //  in [17..20]
-			set_ins_volume(63 - val, NONE, chan);
+			set_ins_volume(63 - val, BYTE_NULL, chan);
 		} else {
 			if ((ins_parameter(voice_table[chan], 10) & 1) == 0) {
-				set_ins_volume(NONE, 63 - val, chan);
+				set_ins_volume(BYTE_NULL, 63 - val, chan);
 			} else {
 				set_ins_volume(63 - val, 63 - val, chan);
 			}
@@ -1165,7 +1169,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
 	case ef_ForceInsVolume:
 		if (percussion_mode && ((chan >= 16) && (chan <= 19))) { //  in [17..20]
-			set_ins_volume(63 - val, NONE, chan);
+			set_ins_volume(63 - val, BYTE_NULL, chan);
 		} else {
 			set_ins_volume(scale_volume(ins_parameter(voice_table[chan], 2) & 0x3f,
 				       63 - val), 63 - val, chan);
@@ -1309,8 +1313,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 			if (val % 16 == 0) {
 				loopbck_table[chan] = current_line;
 			} else {
-				if (loopbck_table[chan] != NONE) {
-					if (loop_table[chan][current_line] == NONE)
+				if (loopbck_table[chan] != BYTE_NULL) {
+					if (loop_table[chan][current_line] == BYTE_NULL)
 						loop_table[chan][current_line] = val % 16;
 
 					if (loop_table[chan][current_line] != 0) {
@@ -1318,7 +1322,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 						next_line = pattern_loop_flag + chan;
 					} else {
 						if (val / 16 == ef_ex_PatternLoopRec)
-							loop_table[chan][current_line] = NONE;
+							loop_table[chan][current_line] = BYTE_NULL;
 					}
 				}
 			}
@@ -1528,7 +1532,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
 static void process_note(tADTRACK2_EVENT *event, int chan)
 {
-	if (event->note == NONE) {
+	if (event->note == BYTE_NULL) {
 		key_off(chan);
 		event_table[chan].note = 0;
 	} else {
@@ -1578,8 +1582,8 @@ static void play_line()
 
 	if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
 		 (current_order != last_order)) {
-		memset(loopbck_table, NONE, sizeof(loopbck_table));
-		memset(loop_table, NONE, sizeof(loop_table));
+		memset(loopbck_table, BYTE_NULL, sizeof(loopbck_table));
+		memset(loop_table, BYTE_NULL, sizeof(loop_table));
 		last_order = current_order;
 	}
 
@@ -1599,6 +1603,8 @@ static void play_line()
 		}
 		ftune_table[chan] = 0;
 
+        process_note(event, chan);
+
 		if (event->instr_def != 0) {
 			// NOTE: adjust ins
 			if (is_data_empty(songdata->instr_data[event->instr_def-1], INSTRUMENT_SIZE)) {
@@ -1610,7 +1616,7 @@ static void play_line()
 		process_effects(event, 0, chan);
 		process_effects(event, 1, chan);
 
-		process_note(event, chan);
+		// process_note(event, chan); // was here
 
 		check_swap_arp_vibr(event, 0, chan);
 		check_swap_arp_vibr(event, 1, chan);
@@ -1743,7 +1749,7 @@ static void slide_volume_up(int chan, uint8_t slide)
 		else
 			temp = concw(vLo, limit1);
 
-		set_ins_volume(NONE, HI(temp), chan);
+		set_ins_volume(BYTE_NULL, HI(temp), chan);
 		volume_table[chan] = temp;
 		if (((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
 		     (percussion_mode && (chan >= 17 && chan <= 20))) {
@@ -1753,7 +1759,7 @@ static void slide_volume_up(int chan, uint8_t slide)
 				temp = concw(vLo - slide, vHi);
 			else
 				temp = concw(limit2, vHi);
-			set_ins_volume(LO(temp), NONE, chan);
+			set_ins_volume(LO(temp), BYTE_NULL, chan);
 			volume_table[chan] = temp;
 		}
 	break;
@@ -1765,7 +1771,7 @@ static void slide_volume_up(int chan, uint8_t slide)
 			temp = concw(vLo, vHi - slide);
 		else
 			temp = concw(vLo, limit1);
-		set_ins_volume(NONE, HI(temp), chan);
+		set_ins_volume(BYTE_NULL, HI(temp), chan);
 		volume_table[chan] = temp;
 	break;
 
@@ -1776,7 +1782,7 @@ static void slide_volume_up(int chan, uint8_t slide)
 			temp = concw(vLo - slide, vHi);
 		else
 			temp = concw(limit2, vHi);
-		set_ins_volume(LO(temp), NONE, chan);
+		set_ins_volume(LO(temp), BYTE_NULL, chan);
 		volume_table[chan] = temp;
 	break;
 
@@ -1787,7 +1793,7 @@ static void slide_volume_up(int chan, uint8_t slide)
 			temp = concw(vLo, vHi - slide);
 		else
 			temp = concw(vLo, limit1);
-		set_ins_volume(NONE, HI(temp), chan);
+		set_ins_volume(BYTE_NULL, HI(temp), chan);
 		volume_table[chan] = temp;
 		vLo = LO(temp);
 		vHi = HI(temp);
@@ -1795,7 +1801,7 @@ static void slide_volume_up(int chan, uint8_t slide)
 			temp = concw(vLo - slide, vHi);
 		else
 			temp = concw(limit2, vHi);
-		set_ins_volume(LO(temp), NONE, chan);
+		set_ins_volume(LO(temp), BYTE_NULL, chan);
 		volume_table[chan] = temp;
 	break;
 	}
@@ -1817,7 +1823,7 @@ static void slide_volume_down(int chan, uint8_t slide)
 			temp = concw(vLo, vHi + slide);
 		else
 			temp = concw(vLo, 63);
-		set_ins_volume(NONE, HI(temp), chan);
+		set_ins_volume(BYTE_NULL, HI(temp), chan);
 		volume_table[chan] = temp;
 		if (((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
 		     (percussion_mode && (chan >= 17 && chan <= 20))) {
@@ -1827,7 +1833,7 @@ static void slide_volume_down(int chan, uint8_t slide)
 				temp = concw(vLo + slide, vHi);
 			else
 				temp = concw(63, vHi);
-			set_ins_volume(LO(temp), NONE, chan);
+			set_ins_volume(LO(temp), BYTE_NULL, chan);
 			volume_table[chan] = temp;
 		}
 	break;
@@ -1839,7 +1845,7 @@ static void slide_volume_down(int chan, uint8_t slide)
 			temp = concw(vLo, vHi + slide);
 		else
 			temp = concw(vLo, 63);
-		set_ins_volume(NONE, HI(temp), chan);
+		set_ins_volume(BYTE_NULL, HI(temp), chan);
 		volume_table[chan] = temp;
 	break;
 
@@ -1850,7 +1856,7 @@ static void slide_volume_down(int chan, uint8_t slide)
 			temp = concw(vLo + slide, vHi);
 		else
 			temp = concw(63, vHi);
-		set_ins_volume(LO(temp), NONE, chan);
+		set_ins_volume(LO(temp), BYTE_NULL, chan);
 		volume_table[chan] = temp;
 	break;
 
@@ -1861,7 +1867,7 @@ static void slide_volume_down(int chan, uint8_t slide)
 			temp = concw(vLo, vHi + slide);
 		else
 			temp = concw(vLo, 63);
-		set_ins_volume(NONE, HI(temp), chan);
+		set_ins_volume(BYTE_NULL, HI(temp), chan);
 		volume_table[chan] = temp;
 		vLo = LO(temp);
 		vHi = HI(temp);
@@ -1869,7 +1875,7 @@ static void slide_volume_down(int chan, uint8_t slide)
 			temp = concw(vLo + slide, vHi);
 		else
 			temp = concw(63, vHi);
-		set_ins_volume(LO(temp), NONE, chan);
+		set_ins_volume(LO(temp), BYTE_NULL, chan);
 		volume_table[chan] = temp;
 	break;
 	}
@@ -1887,10 +1893,10 @@ static void volume_slide(int chan, uint8_t up_speed, uint8_t down_speed)
 
 static void global_volume_slide(uint8_t up_speed, uint8_t down_speed)
 {
-	if (up_speed != NONE)
+	if (up_speed != BYTE_NULL)
 		global_volume = max(global_volume + up_speed, 63);
 
-	if (down_speed != NONE) {
+	if (down_speed != BYTE_NULL) {
 		if (global_volume >= down_speed)
 			global_volume -= down_speed;
 		else
@@ -2130,7 +2136,7 @@ static void update_effects_slot(int slot, int chan)
 		switch (val / 16) {
 		case ef_ex2_NoteDelay:
 			if (notedel_table[chan] == 0) {
-				notedel_table[chan] = NONE;
+				notedel_table[chan] = BYTE_NULL;
 				output_note(event_table[chan].note,
 					    event_table[chan].instr_def,
 					    chan, TRUE, 0);
@@ -2141,7 +2147,7 @@ static void update_effects_slot(int slot, int chan)
 
 		case ef_ex2_NoteCut:
 			if (notecut_table[chan] == 0) {
-				notecut_table[chan] = NONE;
+				notecut_table[chan] = BYTE_NULL;
 				key_off(chan);
 			} else {
 				notecut_table[chan]--;
@@ -2149,11 +2155,11 @@ static void update_effects_slot(int slot, int chan)
 			break;
 
 		case ef_ex2_GlVolSlideUp:
-			global_volume_slide(val % 16, NONE);
+			global_volume_slide(val % 16, BYTE_NULL);
 			break;
 
 		case ef_ex2_GlVolSlideDn:
-			global_volume_slide(NONE, val % 16);
+			global_volume_slide(BYTE_NULL, val % 16);
 			break;
 		}
 		break;
@@ -2246,10 +2252,10 @@ static void update_fine_effects(int slot, int chan)
 	case ef_Extended2:
 		switch (val / 16) {
 		case ef_ex2_GlVolSlideUpF:
-			global_volume_slide(val % 16, NONE);
+			global_volume_slide(val % 16, BYTE_NULL);
 			break;
 		case ef_ex2_GlVolSlideDnF:
-			global_volume_slide(NONE, val % 16);
+			global_volume_slide(BYTE_NULL, val % 16);
 			break;
 		}
 		break;
@@ -2266,8 +2272,8 @@ static void update_extra_fine_effects_slot(int slot, int chan)
 	switch (def) {
 	case ef_Extended2:
 		switch (val / 16) {
-		case ef_ex2_GlVolSldUpXF:  global_volume_slide(val % 16, NONE); break;
-		case ef_ex2_GlVolSldDnXF:  global_volume_slide(NONE, val % 16); break;
+		case ef_ex2_GlVolSldUpXF:  global_volume_slide(val % 16, BYTE_NULL); break;
+		case ef_ex2_GlVolSldDnXF:  global_volume_slide(BYTE_NULL, val % 16); break;
 		case ef_ex2_VolSlideUpXF:  volume_slide(chan, val % 16, 0); break;
 		case ef_ex2_VolSlideDnXF:  volume_slide(chan, 0, val % 16); break;
 		case ef_ex2_FreqSlideUpXF: portamento_up(chan, val % 16, nFreq(12*8+1)); break;
@@ -2349,8 +2355,8 @@ static void update_song_position()
 	} else {
 		if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
 		     (current_order < 0x7f)) {
-			memset(loopbck_table, NONE, sizeof(loopbck_table));
-			memset(loop_table, NONE, sizeof(loop_table));
+			memset(loopbck_table, BYTE_NULL, sizeof(loopbck_table));
+			memset(loop_table, BYTE_NULL, sizeof(loop_table));
 			current_order++;
 		}
 
@@ -2611,10 +2617,10 @@ static void macro_poll_proc()
 
 						if (!songdata->dis_fmreg_col[mt->fmreg_table][5])
 							set_ins_volume(63 - (d->fm_data.KSL_VOLUM_modulator & 0x3f),
-								       NONE, chan);
+								       BYTE_NULL, chan);
 
 						if (!songdata->dis_fmreg_col[mt->fmreg_table][17])
-							set_ins_volume(NONE,
+							set_ins_volume(BYTE_NULL,
 									63 - (d->fm_data.KSL_VOLUM_carrier & 0x3f), chan);
 
 						update_modulator_adsrw(chan);
@@ -2847,11 +2853,11 @@ static void init_buffers()
 	memset(last_effect, 0, sizeof(last_effect));
 	memset(voice_table, 0, sizeof(voice_table));
 	memset(event_new, FALSE, sizeof(event_new));
-	memset(notedel_table, NONE, sizeof(notedel_table));
-	memset(notecut_table, NONE, sizeof(notecut_table));
+	memset(notedel_table, BYTE_NULL, sizeof(notedel_table));
+	memset(notecut_table, BYTE_NULL, sizeof(notecut_table));
 	memset(ftune_table, 0, sizeof(ftune_table));
-	memset(loopbck_table, NONE, sizeof(loopbck_table));
-	memset(loop_table, NONE, sizeof(loop_table));
+	memset(loopbck_table, BYTE_NULL, sizeof(loopbck_table));
+	memset(loop_table, BYTE_NULL, sizeof(loop_table));
 	memset(reset_chan, FALSE, sizeof(reset_chan));
 	memset(keyoff_loop, FALSE, sizeof(keyoff_loop));
 	memset(macro_table, 0, sizeof(macro_table));
@@ -2897,10 +2903,10 @@ static void init_player()
 		opl2out(0xb0 + _chan_n[i], 0);
 
 	for (int i = 0x80; i <= 0x8d; i++)
-		opl2out(i, NONE);
+		opl2out(i, BYTE_NULL);
 
 	for (int i = 0x90; i <= 0x95; i++)
-		opl2out(i, NONE);
+		opl2out(i, BYTE_NULL);
 
 	misc_register = (tremolo_depth << 7) +
 			(vibrato_depth << 6) +
