@@ -268,6 +268,9 @@ uint8_t _4op_main_chan[6] = { 2, 4, 6, 11, 13, 15 };
 #define ef_ExtraFineArpeggio   42
 #define ef_ExtraFineVibrato    43
 #define ef_ExtraFineTremolo    44
+//ef_SetCustomSpeedTab  = 45;
+//ef_GlobalFSlideUp     = 46;
+//ef_GlobalFSlideDown   = 47;
 #define ef_ex_SetTremDepth     0
 #define ef_ex_SetVibDepth      1
 #define ef_ex_SetAttckRateM    2
@@ -337,6 +340,9 @@ uint8_t _4op_main_chan[6] = { 2, 4, 6, 11, 13, 15 };
 #define ef_ex3_SetVibratoC     10
 #define ef_ex3_SetKsrC         11
 #define ef_ex3_SetSustainC     12
+
+#define ef_fix1 0x80
+#define ef_fix2 0x90
 
 /*
   opl3port: Word = $388;
@@ -1008,10 +1014,43 @@ static bool no_loop(uint8_t current_chan, uint8_t current_line)
 
 static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan); // forward
 
+// Helper macro for copy-pasted code, duh ;(
+// to be used inside process_effects() only
+#define ARR_INIT(...) __VA_ARGS__
+#define UPDATE_effect_table(EFFECTS) \
+    do { \
+        int effects[] = {ARR_INIT EFFECTS}; \
+        if (val) { \
+            effect_table[slot][chan] = concw(def, val); \
+        } else { \
+            if (INCLUDES(effects, eLo[chan]) && eHi[chan]) { \
+                effect_table[slot][chan] = concw(def, eHi[chan]); \
+            } else { \
+                effect_table[slot][chan] &= 0xff00; \
+            } \
+        } \
+    } while(0)
+
+#define UPDATE_effect_table_def(EFFECTS) \
+    do { \
+        int effects[] = {ARR_INIT EFFECTS}; \
+        if (val) { \
+            effect_table[slot][chan] = concw(def, val); \
+        } else { \
+            if (INCLUDES(effects, eLo[chan]) && eHi[chan]) { \
+                effect_table[slot][chan] = concw(def, eHi[chan]); \
+            } else { \
+                effect_table[slot][chan] = def; \
+            } \
+        } \
+    } while(0)
+
 static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 {
 	unsigned int def = event->eff[slot].def;
 	unsigned int val = event->eff[slot].val;
+
+    uint8_t eLo[20] = { 0 }, eHi[20] = { 0 };
 
 	// Use previous effect value if needed
 	if (!val && def && def == event_table[chan].eff[slot].def)
@@ -1020,8 +1059,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	event_table[chan].eff[slot].def = def;
 	event_table[chan].eff[slot].val = val;
 
-#if 0
-	// FIXME: Check if this code is really needed
 	if ((def != ef_Vibrato) &&
 	    (def != ef_ExtraFineVibrato) &&
 	    (def != ef_VibratoVolSlide) &&
@@ -1036,32 +1073,64 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	    (def != ef_ExtraFineTremolo))
 		memset(&trem_table[slot][chan], 0, sizeof(trem_table[slot][chan]));
 
-	if ((arpgg_table[slot][chan].state != 1) && (def != ef_ExtraFineArpeggio)) {
+    if (!(((def == ef_Arpeggio) && (val != 0)) || (def == ef_ExtraFineArpeggio)) &&
+        (arpgg_table[slot][chan].note != 0) && (arpgg_table[slot][chan].state != 1)) {
 		arpgg_table[slot][chan].state = 1;
 		change_frequency(chan, nFreq(arpgg_table[slot][chan].note - 1) +
 			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
 	}
+
+    /*
+        TODO: ef_GlobalFSlideUp || ef_GlobalFSlideDown
+
+    if ((def == ef_GlobalFSlideUp) || (def == ef_GlobalFSlideDown)) {
+
+    }
+
+    */
+
+    if (event_new[chan] && is_4op_chan(chan)) {
+        if (INCLUDES(_4op_tracks_hi, chan)) {
+            event_new[chan + 1] = TRUE;
+        } else {
+            event_new[chan - 1] = TRUE;
+        }
+    }
 
 	if ((tremor_table[slot][chan].pos != 0) && (def != ef_Tremor)) {
 		tremor_table[slot][chan].pos = 0;
 		set_ins_volume(LO(tremor_table[slot][chan].volume),
 			       HI(tremor_table[slot][chan].volume), chan);
 	}
-#endif
+
+    eLo[chan] = LO(last_effect[slot][chan]);
+    eHi[chan] = HI(last_effect[slot][chan]);
 
 	switch (def) {
 	case ef_Arpeggio:
-		if (def + val == 0)
+		if (!val)
 			break;
 
 	case ef_ExtraFineArpeggio:
 	case ef_ArpggVSlide:
 	case ef_ArpggVSlideFine:
+        switch (def) {
+        case ef_Arpeggio:
+            effect_table[slot][chan] = concw(ef_Arpeggio + ef_fix1, val);
+            break;
+        case ef_ExtraFineArpeggio:
+            effect_table[slot][chan] = concw(ef_ExtraFineArpeggio, val);
+            break;
+        case ef_ArpggVSlide:
+        case ef_ArpggVSlideFine:
+            UPDATE_effect_table((ef_ArpggVSlide, ef_ArpggVSlideFine));
+            break;
+        }
+
 		if (((event->note & 0x7f) >= 1) && ((event->note & 0x7f) <= 12 * 8 + 1)) {
 			arpgg_table[slot][chan].state = 0;
 			arpgg_table[slot][chan].note = event->note & 0x7f;
-			if ((def == ef_Arpeggio) ||
-				(def == ef_ExtraFineArpeggio)) {
+			if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
 				arpgg_table[slot][chan].add1 = val / 16;
 				arpgg_table[slot][chan].add2 = val % 16;
 			}
@@ -1082,9 +1151,10 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 					arpgg_table[slot][chan].add2 = val % 16;
 				}
 			} else {
+                effect_table[slot][chan] = 0;
 				// Check if this really needed
-				event_table[chan].eff[slot].def = 0;
-				event_table[chan].eff[slot].val = 0;
+				//event_table[chan].eff[slot].def = 0;
+				//event_table[chan].eff[slot].val = 0;
 			}
 		}
 		break;
@@ -1093,6 +1163,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	case ef_FSlideDown:
 	case ef_FSlideUpFine:
 	case ef_FSlideDownFine:
+        effect_table[slot][chan] = concw(def, val);
 		fslide_table[slot][chan] = val;
 		break;
 
@@ -1104,18 +1175,50 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	case ef_FSlUpFineVSlF:
 	case ef_FSlDownFineVSlide:
 	case ef_FSlDownFineVSlF:
+        UPDATE_effect_table((ef_FSlideUpVSlide, ef_FSlUpVSlF, ef_FSlideDownVSlide,
+                             ef_FSlDownVSlF, ef_FSlUpFineVSlide, ef_FSlUpFineVSlF,
+                             ef_FSlDownFineVSlide, ef_FSlDownFineVSlF));
 		break;
 
 	case ef_TonePortamento:
 		if ((event->note >= 1) && (event->note <= 12 * 8 + 1)) {
+            UPDATE_effect_table_def((ef_TonePortamento));
+/*
+            if (val) {
+                effect_table[slot][chan] = concw(ef_TonePortamento, val);
+            } else {
+                if ((eLo[chan] == ef_TonePortamento) && (eHi[chan] != 0)) {
+                   effect_table[slot][chan] = concw(ef_TonePortamento, eHi[chan]);
+                } else {
+                    effect_table[slot][chan] = ef_TonePortamento;
+                }
+            }
+*/
+            porta_table[slot][chan].speed = val;
 			porta_table[slot][chan].freq = nFreq(event->note - 1) +
 				(int8_t)ins_parameter(event_table[chan].instr_def, 12);
-		}
-		porta_table[slot][chan].speed = val;
+		} else {
+            if (eLo[chan] == ef_TonePortamento) {
+                UPDATE_effect_table_def((ef_TonePortamento));
+/*
+                if (val) {
+                   effect_table[slot][chan] = concw(ef_TonePortamento, val);
+                } else {
+                    if ((eLo[chan] == ef_TonePortamento) && (eHi[chan] != 0)) {
+                        effect_table[slot][chan] = concw(ef_TonePortamento, eHi[chan]);
+                    } else{
+                        effect_table[slot][chan] = ef_TonePortamento;
+                    }
+                }
+*/
+                porta_table[slot][chan].speed = HI(effect_table[slot][chan]);
+            }
+        }
 		break;
 
 	case ef_TPortamVolSlide:
 	case ef_TPortamVSlideFine:
+        UPDATE_effect_table((ef_TPortamVolSlide, ef_TPortamVSlideFine));
 		break;
 
 	case ef_Vibrato:
