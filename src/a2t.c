@@ -29,6 +29,11 @@ typedef signed char bool;
 #define TRUE !FALSE
 #endif
 
+#define keyoff_flag			0x80
+//#define fixed_note_flag		0x90
+//#define pattern_loop_flag	0xe0
+//#define pattern_break_flag	0xf0
+
 typedef struct PACK {
 	uint8_t AM_VIB_EG_modulator;
 	uint8_t AM_VIB_EG_carrier;
@@ -413,7 +418,9 @@ struct PACK {
 uint8_t panning_table[20];	// array[1..20] of Byte;
 uint16_t last_effect[2][20];	// array[1..20] of Byte;
 uint8_t volslide_type[20];	// array[1..20] of Byte;
+#if 0
 bool event_new[20];			// array[1..20] of Boolean;
+#endif
 uint8_t notedel_table[20];	// array[1..20] of Byte;
 uint8_t notecut_table[20];	// array[1..20] of Byte;
 int8_t ftune_table[20];		// array[1..20] of Shortint;
@@ -664,6 +671,7 @@ static void key_off(int chan)
 {
 	freq_table[chan] &= ~0x2000;
 	change_frequency(chan, freq_table[chan]);
+	event_table[chan].note |= keyoff_flag;
 }
 
 static void release_sustaining_sound(int chan)
@@ -973,7 +981,7 @@ static bool is_4op_chan(int chan) // 0..17
 	return (chan > 17 ? FALSE : songdata->flag_4op & mask[chan]);
 }
 
-static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, int NR)
+static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, /*int NR*/ bool restart_adsr)
 {
 	uint16_t freq;
 
@@ -983,10 +991,13 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
 		freq = freq_table[chan];
 	} else {
 		freq = nFreq(note - 1) + (int8_t)ins_parameter(ins, 12);
-		if (!NR)
-			opl3out(0xb0 + _chan_n[chan], 0);
-		freq_table[chan] = concw(LO(freq_table[chan]),
-					  HI(freq_table[chan]) | 0x20);
+
+		if (restart_adsr)
+			key_on(chan);
+
+		freq_table[chan] |= 0x2000; // freq_table[chan] = concw(LO(freq_table[chan]), HI(freq_table[chan]) | 0x20);
+
+		// TODO here
 	}
 
 	if (ftune_table[chan] == -127)
@@ -995,7 +1006,12 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
 	freq = freq + ftune_table[chan];
 	change_frequency(chan, freq);
 
-	if (note != 0) {
+	if (note) {
+		event_table[chan].note = note;
+
+		if (is_4op_chan(chan))
+			event_table[chan - 1].note = note;
+
 		if (restart_macro) {
 			if (!(((event_table[chan].eff[0].def == ef_Extended) &&
 				  (event_table[chan].eff[0].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) ||
@@ -1098,7 +1114,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	}
 
 	*/
-
+#if 0
 	if (event_new[chan] && is_4op_chan(chan)) {
 		if (INCLUDES(_4op_tracks_hi, chan)) {
 			event_new[chan + 1] = TRUE;
@@ -1106,7 +1122,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 			event_new[chan - 1] = TRUE;
 		}
 	}
-
+#endif
 	if ((tremor_table[slot][chan].pos != 0) && (def != ef_Tremor)) {
 		tremor_table[slot][chan].pos = 0;
 		set_ins_volume(LO(tremor_table[slot][chan].volume),
@@ -1635,6 +1651,35 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	}
 }
 
+static void before_process_note(tADTRACK2_EVENT *event, int chan)
+{
+	if (event->note == BYTE_NULL) {
+		event->note = event_table[chan].note | keyoff_flag;
+	} /* else if (event->note > fixed_note_flag) {
+		event->note -= fixed_note_flag;
+		// Omitted stuff with fixed_note_flag, probably used in editor only
+	} */
+
+#if 0
+	if (!is_data_empty(event, sizeof(tADTRACK2_EVENT))) {
+		event_new[chan] = TRUE;
+	} else {
+		event_new[chan] = FALSE;
+	}
+#endif
+
+	if (event->note || event->instr_def ||
+		(event->eff[0].def | event->eff[0].val) ||
+		(event->eff[1].def | event->eff[1].val))
+	{
+		event_table[chan].eff[0].def = event->eff[0].def;
+		event_table[chan].eff[0].val = event->eff[0].val;
+		event_table[chan].eff[1].def = event->eff[1].def;
+		event_table[chan].eff[1].val = event->eff[1].val;
+
+	}
+}
+
 static void process_note(tADTRACK2_EVENT *event, int chan)
 {
 	if (event->note == BYTE_NULL) {
@@ -1667,9 +1712,69 @@ static void process_note(tADTRACK2_EVENT *event, int chan)
 				   (event->eff[0].def == ef_SwapVibrato)) &&
 				   (event->eff[1].def == ef_Extended) &&
 				   (event->eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart))) {
-				output_note(event->note, voice_table[chan], chan, TRUE, 0);
+				output_note(event->note, voice_table[chan], chan, TRUE, TRUE);
 			} else {
-				output_note(event->note, voice_table[chan], chan, TRUE, 1);
+				output_note(event->note, voice_table[chan], chan, TRUE, FALSE);
+			}
+		}
+	}
+}
+
+static void new_process_note(tADTRACK2_EVENT *event, int chan)
+{
+	int effects[] = { ef_TonePortamento, ef_TPortamVolSlide, ef_TPortamVSlideFine };
+	bool tporta_flag = INCLUDES(effects, event->eff[0].def) || INCLUDES(effects, event->eff[1].def);
+	//bool single_play = FALSE;
+
+	for (int slot = 0; slot < 2; slot++) {
+		if (event->eff[slot].def | event->eff[slot].val) {
+			event_table[chan].eff[slot].def = event->eff[slot].def;
+			event_table[chan].eff[slot].val = event->eff[slot].val;
+		} else if (glfsld_table[slot][chan] == 0) {
+			effect_table[slot][chan] = 0;
+		}
+	}
+
+	// treat Tone Portamento based effects
+	//   vs. note Key-Off's
+	//   vs. step-playing with Spacebar in Pattern Editor window
+	if (event->note & keyoff_flag) {
+		key_off(chan);
+	} else {
+		int effects[] = { ef_TonePortamento, ef_TPortamVolSlide, ef_TPortamVSlideFine, ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay };
+
+		if (!INCLUDES(effects, LO(effect_table[0][chan])) && !INCLUDES(effects, LO(effect_table[1][chan]))) {
+			if (!(((event->eff[1].def == ef_SwapArpeggio) ||
+				   (event->eff[1].def == ef_SwapVibrato)) &&
+				   (event->eff[0].def == ef_Extended) &&
+				   (event->eff[0].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) &&
+				!(((event->eff[0].def == ef_SwapArpeggio) ||
+				   (event->eff[0].def == ef_SwapVibrato)) &&
+				   (event->eff[1].def == ef_Extended) &&
+				   (event->eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart))) {
+				output_note(event->note, voice_table[chan], chan, TRUE, TRUE);
+			} else {
+				output_note(event->note, voice_table[chan], chan, TRUE, FALSE);
+			}
+		} else {
+			if (/*!single_play &&*/ event->note && tporta_flag) {
+				if (event_table[chan].note & keyoff_flag) {
+					output_note(event_table[chan].note & ~keyoff_flag, voice_table[chan], chan, FALSE, TRUE);
+				} else if (portaFK_table[chan]) {
+					output_note(event_table[chan].note & ~keyoff_flag, voice_table[chan], chan, FALSE, TRUE);
+				} else if (event->note) {
+					event_table[chan].note = event->note;
+				}
+			} else {
+				/*if (single_play && !(event->note & keyoff_flag) && !event_table[chan].note && event->instr_def && tporta_flag) {
+					output_note(event->note, event->instr_def, chan, FALSE, TRUE);
+				} else*/ if (event->note) {
+					if (portaFK_table[chan] && tporta_flag) {
+						output_note(event->note, event->instr_def, chan, FALSE, TRUE);
+					} else {
+						event_table[chan].note = event[chan].note;
+					}
+				}
 			}
 		}
 	}
@@ -1708,7 +1813,8 @@ static void play_line()
 		}
 		ftune_table[chan] = 0;
 
-		process_note(event, chan);
+		before_process_note(event, chan);
+		//process_note(event, chan);
 
 		if (event->instr_def != 0) {
 			// NOTE: adjust ins
@@ -1721,8 +1827,7 @@ static void play_line()
 		process_effects(event, 0, chan);
 		process_effects(event, 1, chan);
 
-		// process_portamento(event, 0, chan);
-		// process_portamento(event, 1, chan);
+		new_process_note(event, chan);
 
 		check_swap_arp_vibr(event, 0, chan);
 		check_swap_arp_vibr(event, 1, chan);
@@ -2172,9 +2277,7 @@ static void update_effects_slot(int slot, int chan)
 	case ef_RetrigNote:
 		if (retrig_table[slot][chan] >= val) {
 			retrig_table[slot][chan] = 0;
-			output_note(event_table[chan].note,
-					event_table[chan].instr_def,
-					chan, TRUE, 0);
+			output_note(event_table[chan].note, event_table[chan].instr_def, chan, TRUE, TRUE);
 		} else {
 			retrig_table[slot][chan]++;
 		}
@@ -2216,9 +2319,7 @@ static void update_effects_slot(int slot, int chan)
 			}
 
 			retrig_table[slot][chan] = 0;
-			output_note(event_table[chan].note,
-					event_table[chan].instr_def,
-					chan, TRUE, 0);
+			output_note(event_table[chan].note, event_table[chan].instr_def, chan, TRUE, TRUE);
 		} else {
 			retrig_table[slot][chan]++;
 		}
@@ -2248,9 +2349,7 @@ static void update_effects_slot(int slot, int chan)
 		case ef_ex2_NoteDelay:
 			if (notedel_table[chan] == 0) {
 				notedel_table[chan] = BYTE_NULL;
-				output_note(event_table[chan].note,
-						event_table[chan].instr_def,
-						chan, TRUE, 0);
+				output_note(event_table[chan].note,	event_table[chan].instr_def, chan, TRUE, TRUE);
 			} else {
 				notedel_table[chan]--;
 			}
@@ -2740,7 +2839,7 @@ static void macro_poll_proc()
 							!((d->fm_data.FEEDBACK_FM | 0x80) != d->fm_data.FEEDBACK_FM)) { // MACRO_NOTE_RETRIG_FLAG
 							if (!((is_4op_chan(chan) && INCLUDES(_4op_tracks_hi, chan)))) {
 								output_note(event_table[chan].note,
-											event_table[chan].instr_def, chan, FALSE, 0);
+											event_table[chan].instr_def, chan, FALSE, TRUE);
 								if ((is_4op_chan(chan) && INCLUDES(_4op_tracks_lo, chan)))
 									init_macro_table(chan - 1, 0, voice_table[chan - 1], 0);
 							}
@@ -2961,7 +3060,9 @@ static void init_buffers()
 	memset(tremor_table, 0, sizeof(tremor_table));
 	memset(last_effect, 0, sizeof(last_effect));
 	memset(voice_table, 0, sizeof(voice_table));
-	memset(event_new, FALSE, sizeof(event_new));
+#if 0
+	memset(event_new, FALSE, sizeof(event_new)); // CHECK! might not be needed at all!
+#endif
 	memset(notedel_table, BYTE_NULL, sizeof(notedel_table));
 	memset(notecut_table, BYTE_NULL, sizeof(notecut_table));
 	memset(ftune_table, 0, sizeof(ftune_table));
