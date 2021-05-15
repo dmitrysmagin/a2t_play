@@ -30,7 +30,7 @@ typedef signed char bool;
 #endif
 
 #define keyoff_flag			0x80
-//#define fixed_note_flag		0x90
+#define fixed_note_flag		0x90
 //#define pattern_loop_flag	0xe0
 //#define pattern_break_flag	0xf0
 
@@ -1655,10 +1655,9 @@ static void before_process_note(tADTRACK2_EVENT *event, int chan)
 {
 	if (event->note == BYTE_NULL) {
 		event->note = event_table[chan].note | keyoff_flag;
-	} /* else if (event->note > fixed_note_flag) {
+	}  else if ((event->note >= fixed_note_flag + 1) && (event->note <= fixed_note_flag + 12*8+1)) { // in [fixed_note_flag+1..fixed_note_flag+12*8+1]
 		event->note -= fixed_note_flag;
-		// Omitted stuff with fixed_note_flag, probably used in editor only
-	} */
+	}
 
 #if 0
 	if (!is_data_empty(event, sizeof(tADTRACK2_EVENT))) {
@@ -1679,7 +1678,7 @@ static void before_process_note(tADTRACK2_EVENT *event, int chan)
 
 	}
 }
-
+#if 0
 static void process_note(tADTRACK2_EVENT *event, int chan)
 {
 	if (event->note == BYTE_NULL) {
@@ -1719,7 +1718,7 @@ static void process_note(tADTRACK2_EVENT *event, int chan)
 		}
 	}
 }
-
+#endif
 static void new_process_note(tADTRACK2_EVENT *event, int chan)
 {
 	int effects[] = { ef_TonePortamento, ef_TPortamVolSlide, ef_TPortamVSlideFine };
@@ -4033,7 +4032,7 @@ static int a2m_read_patterns(char *src)
 {
 	a2_read_patterns(src, 1);
 
-#if 0
+#if 1
 	FILE *f = fopen("patterns.dmp", "wb");
 	fwrite(pattdata, 1, sizeof(_pattdata), f);
 	fclose(f);
