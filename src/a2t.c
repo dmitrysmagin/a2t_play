@@ -1783,7 +1783,7 @@ static int calc_following_order(uint8_t order);
 
 static void play_line()
 {
-	tADTRACK2_EVENT *event;
+	tADTRACK2_EVENT _event, *event = &_event;
 
 	if ((current_line == 0) &&
 		(current_order == calc_following_order(0)))
@@ -1797,7 +1797,9 @@ static void play_line()
 	}
 
 	for (int chan = 0; chan < songdata->nm_tracks; chan++) {
-		event = &pattdata[current_pattern].ch[chan].row[current_line].ev;
+		//event = &pattdata[current_pattern].ch[chan].row[current_line].ev;
+		// Do a full copy of the event, because we may modify event->note in before_process_note()
+		memcpy(event, &pattdata[current_pattern].ch[chan].row[current_line].ev, sizeof(tADTRACK2_EVENT));
 
 		// put inside process_effects ?
 		for (int slot = 0; slot < 2; slot++) {
@@ -1885,6 +1887,8 @@ static void portamento_up(int chan, uint16_t slide, uint16_t limit)
 {
 	uint16_t freq;
 
+	if ((freq_table[chan] & 0x1fff) == 0) return;
+
 	freq = calc_freq_shift_up(freq_table[chan] & 0x1fff, slide);
 	if (freq <= limit) {
 		change_frequency(chan, freq);
@@ -1896,6 +1900,8 @@ static void portamento_up(int chan, uint16_t slide, uint16_t limit)
 static void portamento_down(int chan, uint16_t slide, uint16_t limit)
 {
 	uint16_t freq;
+
+	if ((freq_table[chan] & 0x1fff) == 0) return;
 
 	freq = calc_freq_shift_down(freq_table[chan] & 0x1fff, slide);
 	if (freq >= limit) {
