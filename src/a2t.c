@@ -788,7 +788,7 @@ static void reset_ins_volume(int chan)
 
 static void set_global_volume()
 {
-	for (int chan = 0; chan < 20; chan++) {
+	for (int chan = 0; chan < songdata->nm_tracks; chan++) {
 		if (!((carrier_vol[chan] == 0) &&
 			(modulator_vol[chan] == 0))) {
 			if ((ins_parameter(voice_table[chan], 10) & 1) == 0) {
@@ -815,16 +815,14 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 	macro_table[chan].fmreg_table = ins-1;
 	macro_table[chan].arpg_count = 1;
 	macro_table[chan].arpg_pos = 0;
-	macro_table[chan].arpg_table =
-		songdata->instr_macros[ins-1].arpeggio_table;
+	macro_table[chan].arpg_table = songdata->instr_macros[ins-1].arpeggio_table;
 	macro_table[chan].arpg_note = note;
 	macro_table[chan].vib_count = 1;
+	// macro_table[chan].vib_paused = FALSE; // TODO
 	macro_table[chan].vib_pos = 0;
-	macro_table[chan].vib_table =
-		songdata->instr_macros[ins-1].vibrato_table;
+	macro_table[chan].vib_table = songdata->instr_macros[ins-1].vibrato_table;
 	macro_table[chan].vib_freq = freq;
-	macro_table[chan].vib_delay =
-		songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
+	macro_table[chan].vib_delay = songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
 	zero_fq_table[chan] = 0;
 }
 
@@ -2383,7 +2381,7 @@ static void update_effects_slot(int slot, int chan)
 
 static void update_effects()
 {
-	for (int chan = 0; chan < 20; chan++) {
+	for (int chan = 0; chan < songdata->nm_tracks; chan++) {
 		update_effects_slot(0, chan);
 		update_effects_slot(1, chan);
 	}
@@ -2477,22 +2475,21 @@ static void update_fine_effects(int slot, int chan)
 
 static void update_extra_fine_effects_slot(int slot, int chan)
 {
-	int def, val;
+	//int def, val;
+	uint8_t eLo, eHi;
 
-	def = event_table[chan].eff[slot].def;
-	val = event_table[chan].eff[slot].val;
+	//def = event_table[chan].eff[slot].def;
+	//val = event_table[chan].eff[slot].val;
+	eLo = LO(effect_table[slot][chan]);
+	eHi = HI(effect_table[slot][chan]);
 
-	switch (def) {
-	case ef_Extended2:
-		switch (val / 16) {
-		case ef_ex2_GlVolSldUpXF:  global_volume_slide(val % 16, BYTE_NULL); break;
-		case ef_ex2_GlVolSldDnXF:  global_volume_slide(BYTE_NULL, val % 16); break;
-		case ef_ex2_VolSlideUpXF:  volume_slide(chan, val % 16, 0); break;
-		case ef_ex2_VolSlideDnXF:  volume_slide(chan, 0, val % 16); break;
-		case ef_ex2_FreqSlideUpXF: portamento_up(chan, val % 16, nFreq(12*8+1)); break;
-		case ef_ex2_FreqSlideDnXF: portamento_down(chan, val % 16, nFreq(0)); break;
-		}
-		break;
+	switch (eLo) {
+	case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldUpXF:  global_volume_slide(eHi, BYTE_NULL); break;
+	case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldDnXF:  global_volume_slide(BYTE_NULL, eHi); break;
+	case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideUpXF:  volume_slide(chan, eHi, 0); break;
+	case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideDnXF:  volume_slide(chan, 0, eHi); break;
+	case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF: portamento_up(chan, eHi, nFreq(12*8+1)); break;
+	case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF: portamento_down(chan, eHi, nFreq(0)); break;
 
 	case ef_ExtraFineArpeggio:
 		arpeggio(slot, chan);
@@ -2512,7 +2509,7 @@ static void update_extra_fine_effects_slot(int slot, int chan)
 
 static void update_extra_fine_effects()
 {
-	for (int chan = 0; chan < 20; chan++) {
+	for (int chan = 0; chan < songdata->nm_tracks; chan++) {
 		update_extra_fine_effects_slot(0, chan);
 		update_extra_fine_effects_slot(1, chan);
 	}
