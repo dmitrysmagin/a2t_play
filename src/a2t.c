@@ -438,6 +438,7 @@ typedef struct PACK {
 		 arpg_table,
 		 vib_table,
 		 arpg_note;
+	bool vib_paused;
 	uint16_t vib_freq;
 } tCH_MACRO_TABLE;
 
@@ -496,16 +497,6 @@ static void opl3exp(uint16_t data)
 	opl_out(3, data >> 8);
 }
 
-static bool is_data_empty(void *data, unsigned int size)
-{
-	while (size--) {
-		if (*(char *)data++)
-			return FALSE;
-	}
-
-	return TRUE;
-}
-
 static uint16_t nFreq(uint8_t note)
 {
 	static uint16_t Fnum[13] = {0x156,0x16b,0x181,0x198,0x1b0,0x1ca,0x1e5,
@@ -551,6 +542,7 @@ static uint16_t calc_freq_shift_down(uint16_t freq, uint16_t shift)
 	return (uint16_t)((oc << 10) | fr);
 }
 
+/* == calc_vibtrem_shift() in AT2 */
 static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 {
 	uint8_t vibr[32] = {
@@ -574,6 +566,7 @@ static void change_freq(int chan, uint16_t freq)
 
 	if (is_4op_chan(chan)) {
 		freq_table[chan - 1] = freq_table[chan];
+		//freqtable2[chan - 1] := freqtable2[chan];
 	}
 }
 
@@ -609,6 +602,16 @@ static bool is_ins_adsr_data_empty(int ins)
 		 ((ins_parameter(ins, 6) & 0x0f) == 0));
 }
 
+static bool is_data_empty(void *data, unsigned int size)
+{
+	while (size--) {
+		if (*(char *)data++)
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
 static inline uint16_t max(uint16_t value, uint16_t maximum)
 {
 	return (value > maximum ? maximum : value);
@@ -622,7 +625,26 @@ static inline uint16_t concw(uint8_t lo, uint8_t hi)
 static void change_frequency(int chan, uint16_t freq)
 {
 	change_freq(chan, freq);
+	macro_table[chan].vib_paused = TRUE;
+
+	if (is_4op_chan(chan)) {
+		if (INCLUDES(_4op_tracks_hi, chan)) {
+			macro_table[chan + 1].vib_count = 1;
+			macro_table[chan + 1].vib_pos = 0;
+			macro_table[chan + 1].vib_freq = freq;
+			macro_table[chan + 1].vib_paused = FALSE;
+		} else {
+			macro_table[chan - 1].vib_count = 1;
+			macro_table[chan - 1].vib_pos = 0;
+			macro_table[chan - 1].vib_freq = freq;
+			macro_table[chan - 1].vib_paused = FALSE;
+		}
+	}
+
+	macro_table[chan].vib_count = 1;
+	macro_table[chan].vib_pos = 0;
 	macro_table[chan].vib_freq = freq;
+	macro_table[chan].vib_paused = FALSE;
 }
 
 static inline uint16_t _macro_speedup()
@@ -701,14 +723,62 @@ static uint8_t scale_volume(uint8_t volume, uint8_t scale_factor)
 		(63 - scale_factor) / 63);
 }
 
+static uint32_t _4op_data_flag(uint8_t chan)
+{
+	uint8_t _4op_conn;
+	bool _4op_mode;
+	uint8_t _4op_ch1, _4op_ch2;
+	uint8_t _4op_ins1, _4op_ins2;
+
+	_4op_mode = FALSE;
+
+	if (is_4op_chan(chan)) {
+		_4op_mode = TRUE;
+		if (INCLUDES(_4op_tracks_hi, chan)) {
+			_4op_ch1 = chan;
+			_4op_ch2 = chan + 1;
+		} else {
+			_4op_ch1 = chan - 1;
+			_4op_ch2 = chan;
+		}
+		_4op_ins1 = event_table[_4op_ch1].instr_def;
+		if (_4op_ins1 == 0) _4op_ins1 = voice_table[_4op_ch1];
+
+		_4op_ins2 = event_table[_4op_ch2].instr_def;
+		if (_4op_ins2 == 0) _4op_ins2 = voice_table[_4op_ch2];
+
+		if (_4op_ins1 && _4op_ins2) {
+			_4op_mode = TRUE;
+			_4op_conn = ((songdata->instr_data[_4op_ins1][11] & 1) << 1) |
+						 (songdata->instr_data[_4op_ins2][11] & 1);
+		}
+	}
+/*
+  {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
+  { BIT  |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0 }
+  {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
+  { DATA |..|..|..|..|..|F7|F6|F5|F4|F3|F2|F1|F0|E7|E6|E5|E4|E3|E2|E1|E0|D3|D2|D1|D0|C3|C2|C1|C0|B1|B0|A0 }
+  {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
+*/
+
+	return
+		 (_4op_mode ? 1 : 0) |		// {1-bit: A0}
+		((_4op_conn & 3) << 1) |	// {2-bit: B1-B0}
+		((_4op_ch1 & 15) << 3) |	// {4-bit: C3-C0}
+		((_4op_ch2 & 15) << 7) |	// {4-bit: D3-D0}
+		 (_4op_ins1 << 11) |		// {8-bit: E7-E0}
+		 (_4op_ins2 << 19);			// {8-bit: F7-F0}
+}
+
 static bool _4op_vol_valid_chan(int chan)
 {
-	uint32_t _4op_flag = 0; // = _4op_data_flag(chan);
+	uint32_t _4op_flag = _4op_data_flag(chan);
 	return ((_4op_flag & 1) && vol4op_lock[chan] &&
 			((_4op_flag >> 11) & 1) &&
 			((_4op_flag >> 19) & 1));
 }
 
+// TODO here: fade_out_volume
 static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 {
 	uint8_t temp;
@@ -749,16 +819,16 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 	}
 
 	if (carrier != BYTE_NULL) {
-		  temp = carrier;
-		  if (volume_scaling)
-		carrier = scale_volume(ins_parameter(voice_table[chan], 3) & 0x3f, carrier);
+		temp = carrier;
+		if (volume_scaling)
+			carrier = scale_volume(ins_parameter(voice_table[chan], 3) & 0x3f, carrier);
 
-		  opl3out(_instr[3] + _chan_c[chan],
-			  scale_volume(scale_volume(carrier, 63 - global_volume),
-				   63 - overall_volume) + HI(vscale_table[chan]));
+		opl3out(_instr[3] + _chan_c[chan],
+			scale_volume(scale_volume(carrier, 63 - global_volume),
+			63 - overall_volume) + HI(vscale_table[chan]));
 
-		  volume_table[chan] = concw(LO(volume_table[chan]), temp);
-		  carrier_vol[chan] = 63 - scale_volume(carrier, 63 - global_volume);
+		volume_table[chan] = concw(LO(volume_table[chan]), temp);
+		carrier_vol[chan] = 63 - scale_volume(carrier, 63 - global_volume);
 	}
 }
 
