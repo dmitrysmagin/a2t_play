@@ -214,8 +214,8 @@ const uint16_t _chpm_c[20] = {
 
 uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 
-int _4op_tracks_hi[] = {1, 3, 5, 10, 12, 14 };
-int _4op_tracks_lo[] = {2, 4, 6, 11, 13, 15 };
+int _4op_tracks_hi[] = { 0, 2, 4, 9, 11, 13 }; // 0-based
+int _4op_tracks_lo[] = { 1, 3, 5, 10, 12, 14 }; // 0-based
 
 #define INCLUDES(ARRAY, VALUE) \
 	({ \
@@ -226,7 +226,7 @@ int _4op_tracks_lo[] = {2, 4, 6, 11, 13, 15 };
 		} \
 		res; })
 
-uint8_t _4op_main_chan[6] = { 2, 4, 6, 11, 13, 15 };
+uint8_t _4op_main_chan[6] = { 1, 3, 5, 10, 12, 14 }; // 0-based
 
 #define ef_Arpeggio            0
 #define ef_FSlideUp            1
@@ -559,6 +559,11 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 
 static void change_freq(int chan, uint16_t freq)
 {
+	if (is_4op_chan(chan) && INCLUDES(_4op_tracks_hi, chan)) {
+		freq_table[chan + 1] = freq_table[chan];
+		chan++;
+	}
+
 	freq_table[chan] &= ~0x1fff;
 	freq_table[chan] |= (freq & 0x1fff);
 	opl3out(0xa0 + _chan_n[chan], LO(freq_table[chan]));
@@ -566,7 +571,6 @@ static void change_freq(int chan, uint16_t freq)
 
 	if (is_4op_chan(chan)) {
 		freq_table[chan - 1] = freq_table[chan];
-		//freqtable2[chan - 1] := freqtable2[chan];
 	}
 }
 
@@ -884,6 +888,7 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
 
 	// TO DO
 	// Seems to be used with 4op volume lock only
+	printf("set_ins_volume_4op() not implemented\n");
 }
 
 static void reset_ins_volume(int chan)
@@ -1090,7 +1095,7 @@ static bool is_4op_chan(int chan) // 0..17
 	6  - %unused%
 	7  - %unused%
 */
-	return (chan > 17 ? FALSE : songdata->flag_4op & mask[chan]);
+	return (chan >= 16 ? FALSE : !!(songdata->flag_4op & mask[chan]));
 }
 
 static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, /*int NR*/ bool restart_adsr)
@@ -1121,8 +1126,9 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
 	if (note) {
 		event_table[chan].note = note;
 
-		if (is_4op_chan(chan))
+		if (is_4op_chan(chan) && !INCLUDES(_4op_tracks_hi, chan)) {
 			event_table[chan - 1].note = note;
+		}
 
 		if (restart_macro) {
 			if (!(((event_table[chan].eff[0].def == ef_Extended) &&
@@ -3242,6 +3248,7 @@ static void init_player()
 	opl2out(0x08, 0x40);
 	opl3exp(0x0105);
 	opl3exp(0x04 + (songdata->flag_4op << 8));
+	printf("flag_4op: %04x\n", songdata->flag_4op);
 
 	key_off(16);
 	key_off(17);
@@ -3265,6 +3272,7 @@ static void init_player()
 
 	for (int i = 0; i < 20; i++) {
 		arpgg_table[0][i].state = 1;
+		arpgg_table[1][i].state = 1;
 		voice_table[i] = i;
 	}
 }
