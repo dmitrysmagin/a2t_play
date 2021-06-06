@@ -793,7 +793,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 	// force muted instrument volume with missing channel ADSR data
 	// when there is additionally no FM-reg macro defined for this instrument
 	if (is_chan_adsr_data_empty(chan) &&
-		!(songdata->instr_macros[voice_table[chan]].length)) {
+		!(songdata->instr_macros[voice_table[chan] - 1].length)) {
 			modulator = 63;
 			carrier = 63;
 	}
@@ -846,7 +846,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 	// force muted instrument volume with missing channel ADSR data
 	// when there is additionally no FM-reg macro defined for this instrument
 	if (is_chan_adsr_data_empty(chan) &&
-		!(songdata->instr_macros[voice_table[chan]].length)) {
+		!(songdata->instr_macros[voice_table[chan] - 1].length)) {
 			modulator = 63;
 			carrier = 63;
 	}
@@ -931,13 +931,13 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 	macro_table[chan].fmreg_count = 1;
 	macro_table[chan].fmreg_pos = 0;
 	macro_table[chan].fmreg_duration = 0;
-	macro_table[chan].fmreg_table = ins-1;
+	macro_table[chan].fmreg_table = ins;
 	macro_table[chan].arpg_count = 1;
 	macro_table[chan].arpg_pos = 0;
 	macro_table[chan].arpg_table = songdata->instr_macros[ins-1].arpeggio_table;
 	macro_table[chan].arpg_note = note;
 	macro_table[chan].vib_count = 1;
-	// macro_table[chan].vib_paused = FALSE; // TODO
+	macro_table[chan].vib_paused = FALSE;
 	macro_table[chan].vib_pos = 0;
 	macro_table[chan].vib_table = songdata->instr_macros[ins-1].vibrato_table;
 	macro_table[chan].vib_freq = freq;
@@ -1667,7 +1667,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
 		case ef_ex2_NoteDelay:
 			effect_table[slot][chan] = concw(ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay, 0);
-			printf("SET notedel_table[%d] = %02x\n", chan, val);
 			notedel_table[chan] = val % 16;
 			break;
 
@@ -1969,9 +1968,9 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
 	case ef_SwapArpeggio:
 		if (is_norestart) {
 			if (macro_table[chan].arpg_pos >
-				songdata->macro_table[event->eff[slot].val-1].arpeggio.length)
+				songdata->macro_table[event->eff[slot].val - 1].arpeggio.length)
 				macro_table[chan].arpg_pos =
-					songdata->macro_table[event->eff[slot].val-1].arpeggio.length;
+					songdata->macro_table[event->eff[slot].val - 1].arpeggio.length;
 			macro_table[chan].arpg_table = event->eff[slot].val;
 		} else {
 			macro_table[chan].arpg_count = 1;
@@ -1984,16 +1983,16 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
 	case ef_SwapVibrato:
 		if (is_norestart) {
 			if (macro_table[chan].vib_table >
-				songdata->macro_table[event->eff[slot].val-1].vibrato.length)
+				songdata->macro_table[event->eff[slot].val - 1].vibrato.length)
 				macro_table[chan].vib_pos =
-					songdata->macro_table[event->eff[slot].val-1].vibrato.length;
+					songdata->macro_table[event->eff[slot].val - 1].vibrato.length;
 			macro_table[chan].vib_table = event->eff[slot].val;
 		} else {
 			macro_table[chan].vib_count = 1;
 			macro_table[chan].vib_pos = 0;
 			macro_table[chan].vib_table = event->eff[slot].val;
 			macro_table[chan].vib_delay =
-				songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
+				songdata->macro_table[macro_table[chan].vib_table - 1].vibrato.delay;
 		}
 		break;
 	case ef_SetCustomSpeedTab:
@@ -2774,7 +2773,8 @@ static void macro_poll_proc()
 		}
 
 		tCH_MACRO_TABLE *mt = &macro_table[chan];
-		tREGISTER_TABLE *rt = &songdata->instr_macros[mt->fmreg_table];
+		tREGISTER_TABLE *rt = &songdata->instr_macros[mt->fmreg_table - 1];
+		uint8_t fmregi = mt->fmreg_table - 1;
 
 		if ((mt->fmreg_table != 0) && (speed != 0)) { // FIXME: what speed?
 			if (mt->fmreg_duration > 1) {
@@ -2816,131 +2816,131 @@ static void macro_poll_proc()
 
 				if ((mt->fmreg_pos != 0) &&
 					(mt->fmreg_pos != IDLE) && (mt->fmreg_pos != finished_flag)) {
-					mt->fmreg_duration = rt->data[mt->fmreg_pos].duration;
+					mt->fmreg_duration = rt->data[mt->fmreg_pos - 1].duration;
 					if (mt->fmreg_duration != 0) {
-						tREGISTER_TABLE_DEF *d = &rt->data[mt->fmreg_pos];
+						tREGISTER_TABLE_DEF *d = &rt->data[mt->fmreg_pos - 1];
 
 						// force KEY-ON with missing ADSR instrument data
 						force_macro_keyon = FALSE;
 						if (mt->fmreg_pos == 1) {
 							if (is_ins_adsr_data_empty(voice_table[chan]) &&
-								!(songdata->dis_fmreg_col[mt->fmreg_table][0] &&
-								  songdata->dis_fmreg_col[mt->fmreg_table][1] &&
-								  songdata->dis_fmreg_col[mt->fmreg_table][2] &&
-								  songdata->dis_fmreg_col[mt->fmreg_table][3] &&
-								  songdata->dis_fmreg_col[mt->fmreg_table][12] &&
-								  songdata->dis_fmreg_col[mt->fmreg_table][13] &&
-								  songdata->dis_fmreg_col[mt->fmreg_table][14] &&
-								  songdata->dis_fmreg_col[mt->fmreg_table][15])) {
+								!(songdata->dis_fmreg_col[fmregi][0] &&
+								  songdata->dis_fmreg_col[fmregi][1] &&
+								  songdata->dis_fmreg_col[fmregi][2] &&
+								  songdata->dis_fmreg_col[fmregi][3] &&
+								  songdata->dis_fmreg_col[fmregi][12] &&
+								  songdata->dis_fmreg_col[fmregi][13] &&
+								  songdata->dis_fmreg_col[fmregi][14] &&
+								  songdata->dis_fmreg_col[fmregi][15])) {
 								force_macro_keyon = TRUE;
 							}
 						}
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][0])
+						if (!songdata->dis_fmreg_col[fmregi][0])
 							fmpar_table[chan].adsrw_mod.attck =
 								d->fm_data.ATTCK_DEC_modulator >> 4;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][1])
+						if (!songdata->dis_fmreg_col[fmregi][1])
 							fmpar_table[chan].adsrw_mod.dec =
 								d->fm_data.ATTCK_DEC_modulator & 0x0f;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][2])
+						if (!songdata->dis_fmreg_col[fmregi][2])
 							fmpar_table[chan].adsrw_mod.sustn =
 								d->fm_data.SUSTN_REL_modulator >> 4;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][3])
+						if (!songdata->dis_fmreg_col[fmregi][3])
 							fmpar_table[chan].adsrw_mod.rel =
 								d->fm_data.SUSTN_REL_modulator & 0x0f;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][4])
+						if (!songdata->dis_fmreg_col[fmregi][4])
 							fmpar_table[chan].adsrw_mod.wform =
 								d->fm_data.WAVEFORM_modulator & 0x07;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][6])
+						if (!songdata->dis_fmreg_col[fmregi][6])
 							fmpar_table[chan].kslM =
 								d->fm_data.KSL_VOLUM_modulator >> 6;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][7])
+						if (!songdata->dis_fmreg_col[fmregi][7])
 							fmpar_table[chan].multipM =
 								d->fm_data.AM_VIB_EG_modulator & 0x0f;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][8])
+						if (!songdata->dis_fmreg_col[fmregi][8])
 							fmpar_table[chan].tremM =
 								d->fm_data.AM_VIB_EG_modulator >> 7;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][9])
+						if (!songdata->dis_fmreg_col[fmregi][9])
 							fmpar_table[chan].vibrM =
 								(d->fm_data.AM_VIB_EG_modulator >> 6) & 1;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][10])
+						if (!songdata->dis_fmreg_col[fmregi][10])
 							fmpar_table[chan].ksrM =
 								(d->fm_data.AM_VIB_EG_modulator >> 4) & 1;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][11])
+						if (!songdata->dis_fmreg_col[fmregi][11])
 							fmpar_table[chan].sustM =
 								(d->fm_data.AM_VIB_EG_modulator >> 5) & 1;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][12])
+						if (!songdata->dis_fmreg_col[fmregi][12])
 							fmpar_table[chan].adsrw_car.attck =
 								d->fm_data.ATTCK_DEC_carrier >> 4;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][13])
+						if (!songdata->dis_fmreg_col[fmregi][13])
 							fmpar_table[chan].adsrw_car.dec =
 								d->fm_data.ATTCK_DEC_carrier & 0x0f;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][14])
+						if (!songdata->dis_fmreg_col[fmregi][14])
 							fmpar_table[chan].adsrw_car.sustn =
 								d->fm_data.SUSTN_REL_carrier >> 4;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][15])
+						if (!songdata->dis_fmreg_col[fmregi][15])
 							fmpar_table[chan].adsrw_car.rel =
 								d->fm_data.SUSTN_REL_carrier & 0xf;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][16])
+						if (!songdata->dis_fmreg_col[fmregi][16])
 							fmpar_table[chan].adsrw_car.wform =
 								d->fm_data.WAVEFORM_carrier & 0x07;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][18])
+						if (!songdata->dis_fmreg_col[fmregi][18])
 							fmpar_table[chan].kslC =
 								d->fm_data.KSL_VOLUM_carrier >> 6;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][19])
+						if (!songdata->dis_fmreg_col[fmregi][19])
 							fmpar_table[chan].multipC =
 								d->fm_data.AM_VIB_EG_carrier & 0x0f;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][20])
+						if (!songdata->dis_fmreg_col[fmregi][20])
 							fmpar_table[chan].tremC =
 								d->fm_data.AM_VIB_EG_carrier >> 7;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][21])
+						if (!songdata->dis_fmreg_col[fmregi][21])
 							fmpar_table[chan].vibrC =
 								(d->fm_data.AM_VIB_EG_carrier >> 6) & 1;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][22])
+						if (!songdata->dis_fmreg_col[fmregi][22])
 							fmpar_table[chan].ksrC =
 								(d->fm_data.AM_VIB_EG_carrier >> 4) & 1;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][23])
+						if (!songdata->dis_fmreg_col[fmregi][23])
 							fmpar_table[chan].sustC =
 								(d->fm_data.AM_VIB_EG_carrier >> 5) & 1;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][24])
+						if (!songdata->dis_fmreg_col[fmregi][24])
 							fmpar_table[chan].connect =
 								d->fm_data.FEEDBACK_FM & 1;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][25])
+						if (!songdata->dis_fmreg_col[fmregi][25])
 							fmpar_table[chan].feedb =
 								(d->fm_data.FEEDBACK_FM >> 1) & 7;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][27] &&
+						if (!songdata->dis_fmreg_col[fmregi][27] &&
 							!pan_lock[chan])
 							panning_table[chan] = d->panning;
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][5])
+						if (!songdata->dis_fmreg_col[fmregi][5])
 							set_ins_volume(63 - (d->fm_data.KSL_VOLUM_modulator & 0x3f),
 									   BYTE_NULL, chan);
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][17])
+						if (!songdata->dis_fmreg_col[fmregi][17])
 							set_ins_volume(BYTE_NULL,
 									63 - (d->fm_data.KSL_VOLUM_carrier & 0x3f), chan);
 
@@ -2977,7 +2977,7 @@ static void macro_poll_proc()
 							}
 						}
 
-						if (!songdata->dis_fmreg_col[mt->fmreg_table][26]) {
+						if (!songdata->dis_fmreg_col[fmregi][26]) {
 							if (d->freq_slide > 0) {
 								portamento_up(chan, d->freq_slide, nFreq(12*8+1));
 							} else {
@@ -3029,7 +3029,7 @@ static void macro_poll_proc()
 
 				if ((mt->arpg_pos != 0) &&
 					(mt->arpg_pos != IDLE) && (mt->arpg_pos != finished_flag)) {
-					switch (at->data[mt->arpg_pos]) {
+					switch (at->data[mt->arpg_pos - 1]) {
 					case 0:
 						change_frequency(chan, nFreq(mt->arpg_note - 1) +
 							(int8_t)ins_parameter(event_table[chan].instr_def, 12));
@@ -3041,7 +3041,7 @@ static void macro_poll_proc()
 						break;
 
 					case 0x80 ... 0x80+12*8+1:
-						change_frequency(chan, nFreq(at->data[mt->arpg_pos] - 0x80 - 1) +
+						change_frequency(chan, nFreq(at->data[mt->arpg_pos - 1] - 0x80 - 1) +
 							(int8_t)ins_parameter(event_table[chan].instr_def, 12));
 						break;
 					}
@@ -3053,7 +3053,7 @@ static void macro_poll_proc()
 
 		tVIBRATO_TABLE *vt = &songdata->macro_table[mt->vib_table-1].vibrato;
 
-		if ((mt->vib_table != 0) && (vt->speed != 0)) {
+		if (!mt->vib_paused && (mt->vib_table != 0) && (vt->speed != 0)) {
 			if (mt->vib_count == vt->speed) {
 				if (mt->vib_delay != 0) {
 					mt->vib_delay--;
@@ -3093,10 +3093,10 @@ static void macro_poll_proc()
 
 					if ((mt->vib_pos != 0) &&
 						(mt->vib_pos != IDLE) && (mt->vib_pos != finished_flag)) {
-						if (vt->data[mt->vib_pos] > 0)
+						if (vt->data[mt->vib_pos - 1] > 0)
 							macro_vibrato__porta_up(chan, vt->data[mt->vib_pos]);
 					} else {
-						if (vt->data[mt->vib_pos] < 0)
+						if (vt->data[mt->vib_pos - 1] < 0)
 							macro_vibrato__porta_down(chan, abs(vt->data[mt->vib_pos]));
 						else
 							change_freq(chan, mt->vib_freq);
