@@ -214,9 +214,6 @@ const uint16_t _chpm_c[20] = {
 
 uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 
-int _4op_tracks_hi[] = { 0, 2, 4, 9, 11, 13 }; // 0-based
-int _4op_tracks_lo[] = { 1, 3, 5, 10, 12, 14 }; // 0-based
-
 #define INCLUDES(ARRAY, VALUE) \
 	({ \
 		int len = (sizeof((ARRAY))/sizeof((ARRAY)[0])); \
@@ -225,8 +222,6 @@ int _4op_tracks_lo[] = { 1, 3, 5, 10, 12, 14 }; // 0-based
 			res = (ARRAY[len] == (VALUE)); \
 		} \
 		res; })
-
-uint8_t _4op_main_chan[6] = { 1, 3, 5, 10, 12, 14 }; // 0-based
 
 #define ef_Arpeggio            0
 #define ef_FSlideUp            1
@@ -471,7 +466,9 @@ int ticks, tickD, tickXF;
 
 /* PLAYER */
 static void opl_out(uint8_t port, uint8_t val); // forward def
-static bool is_4op_chan(int chan); // forward def
+static inline bool is_4op_chan(int chan); // forward def
+static inline bool is_4op_chan_hi(int chan); // forward def
+static inline bool is_4op_chan_lo(int chan); // forward def
 
 
 static void opl2out(uint16_t reg, uint16_t data)
@@ -559,7 +556,7 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 
 static void change_freq(int chan, uint16_t freq)
 {
-	if (is_4op_chan(chan) && INCLUDES(_4op_tracks_hi, chan)) {
+	if (is_4op_chan(chan) && is_4op_chan_hi(chan)) {
 		freq_table[chan + 1] = freq_table[chan];
 		chan++;
 	}
@@ -569,7 +566,7 @@ static void change_freq(int chan, uint16_t freq)
 	opl3out(0xa0 + _chan_n[chan], LO(freq_table[chan]));
 	opl3out(0xb0 + _chan_n[chan], HI(freq_table[chan]));
 
-	if (is_4op_chan(chan) && INCLUDES(_4op_tracks_lo, chan)) {
+	if (is_4op_chan(chan) && is_4op_chan_lo(chan)) {
 		freq_table[chan - 1] = freq_table[chan];
 	}
 }
@@ -632,7 +629,7 @@ static void change_frequency(int chan, uint16_t freq)
 	macro_table[chan].vib_paused = TRUE;
 
 	if (is_4op_chan(chan)) {
-		if (INCLUDES(_4op_tracks_hi, chan)) {
+		if (is_4op_chan_hi(chan)) {
 			macro_table[chan + 1].vib_count = 1;
 			macro_table[chan + 1].vib_pos = 0;
 			macro_table[chan + 1].vib_freq = freq;
@@ -686,7 +683,7 @@ static void update_timer(int Hz)
 
 static void key_on(int chan)
 {
-	if (is_4op_chan(chan) && INCLUDES(_4op_tracks_hi, chan)) {
+	if (is_4op_chan(chan) && is_4op_chan_hi(chan)) {
 		opl3out(0xb0 + _chan_n[chan + 1], 0);
 	} else {
 		opl3out(0xb0 + _chan_n[chan], 0);
@@ -738,7 +735,7 @@ static uint32_t _4op_data_flag(uint8_t chan)
 
 	if (is_4op_chan(chan)) {
 		_4op_mode = TRUE;
-		if (INCLUDES(_4op_tracks_hi, chan)) {
+		if (is_4op_chan_hi(chan)) {
 			_4op_ch1 = chan;
 			_4op_ch2 = chan + 1;
 		} else {
@@ -1076,13 +1073,13 @@ static void update_fmpar(int chan)
 			   HI(volume_table[chan]), chan);
 }
 
-static bool is_4op_chan(int chan) // 0..17
+static inline bool is_4op_chan(int chan) // 0..19
 {
-	char mask[18] = {
+	char mask[20] = {
 		(1<<0), (1<<0), (1<<1), (1<<1), (1<<2), (1<<2),
 		0, 0, 0,
 		(1<<3), (1<<3), (1<<4), (1<<4), (1<<5), (1<<5),
-		0, 0, 0
+		0, 0, 0, 0, 0
 	};
 /*
 	4-op track extension flags byte, channels 1-18
@@ -1095,7 +1092,31 @@ static bool is_4op_chan(int chan) // 0..17
 	6  - %unused%
 	7  - %unused%
 */
-	return (chan >= 16 ? FALSE : !!(songdata->flag_4op & mask[chan]));
+	return (chan > 14 ? FALSE : !!(songdata->flag_4op & mask[chan]));
+}
+
+static inline bool is_4op_chan_hi(int chan)
+{
+	//int _4op_tracks_hi[] = { 0, 2, 4, 9, 11, 13 }; // 0-based
+	bool _4op_hi[20] = {
+		TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE,					// 0, 2, 4
+		TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE	// 9, 10, 13
+	};
+
+	return _4op_hi[chan];
+	//return INCLUDES(_4op_tracks_hi, chan);
+}
+
+static inline bool is_4op_chan_lo(int chan)
+{
+	//int _4op_tracks_lo[] = { 1, 3, 5, 10, 12, 14 }; // 0-based
+	bool _4op_lo[20] = {
+		FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE,					// 1, 3, 5
+		FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE	// 10, 12, 14
+	};
+
+	return _4op_lo[chan];
+	//return INCLUDES(_4op_tracks_lo, chan);
 }
 
 static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, /*int NR*/ bool restart_adsr)
@@ -1126,7 +1147,7 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
 	if (note) {
 		event_table[chan].note = note;
 
-		if (is_4op_chan(chan) && !INCLUDES(_4op_tracks_hi, chan)) {
+		if (is_4op_chan(chan) && !is_4op_chan_hi(chan)) {
 			event_table[chan - 1].note = note;
 		}
 
@@ -1234,7 +1255,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 	*/
 #if 0
 	if (event_new[chan] && is_4op_chan(chan)) {
-		if (INCLUDES(_4op_tracks_hi, chan)) {
+		if (is_4op_chan_hi(chan)) {
 			event_new[chan + 1] = TRUE;
 		} else {
 			event_new[chan - 1] = TRUE;
@@ -1590,7 +1611,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 			case ef_ex_cmd_4opVlockOff:
 				if (is_4op_chan(chan)) {
 					vol4op_lock[chan] = FALSE;
-					if (INCLUDES(_4op_tracks_hi, chan)) {
+					if (is_4op_chan_hi(chan)) {
 						vol4op_lock[chan + 1] = FALSE;
 					} else {
 						vol4op_lock[chan - 1] = FALSE;
@@ -1600,7 +1621,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 			case ef_ex_cmd_4opVlockOn:
 				if (is_4op_chan(chan)) {
 					vol4op_lock[chan] = TRUE;
-					if (INCLUDES(_4op_tracks_hi, chan)) {
+					if (is_4op_chan_hi(chan)) {
 						vol4op_lock[chan + 1] = TRUE;
 					} else {
 						vol4op_lock[chan - 1] = TRUE;
@@ -2950,10 +2971,10 @@ static void macro_poll_proc()
 
 						if (force_macro_keyon ||
 							!((d->fm_data.FEEDBACK_FM | 0x80) != d->fm_data.FEEDBACK_FM)) { // MACRO_NOTE_RETRIG_FLAG
-							if (!((is_4op_chan(chan) && INCLUDES(_4op_tracks_hi, chan)))) {
+							if (!((is_4op_chan(chan) && is_4op_chan_hi(chan)))) {
 								output_note(event_table[chan].note,
 											event_table[chan].instr_def, chan, FALSE, TRUE);
-								if ((is_4op_chan(chan) && INCLUDES(_4op_tracks_lo, chan)))
+								if ((is_4op_chan(chan) && is_4op_chan_lo(chan)))
 									init_macro_table(chan - 1, 0, voice_table[chan - 1], 0);
 							}
 						} else {
@@ -3205,6 +3226,8 @@ static void init_buffers()
 		for (int i = 0; i < 20; i++)
 			  peak_lock[i] = (bool)((songdata->lock_flags[i] >> 5) & 1);
 	}
+
+	static uint8_t _4op_main_chan[6] = { 1, 3, 5, 10, 12, 14 }; // 0-based
 
 	memset(vol4op_lock, FALSE, sizeof(vol4op_lock));
 	for (int i = 0; i < 6; i++) {
