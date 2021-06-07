@@ -569,7 +569,7 @@ static void change_freq(int chan, uint16_t freq)
 	opl3out(0xa0 + _chan_n[chan], LO(freq_table[chan]));
 	opl3out(0xb0 + _chan_n[chan], HI(freq_table[chan]));
 
-	if (is_4op_chan(chan)) {
+	if (is_4op_chan(chan) && INCLUDES(_4op_tracks_lo, chan)) {
 		freq_table[chan - 1] = freq_table[chan];
 	}
 }
