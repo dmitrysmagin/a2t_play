@@ -1447,7 +1447,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 		break;
 
 	case ef_SetSpeed:
-		ticks = speed = val;
+		speed = val;
 		break;
 
 	case ef_SetTempo:
@@ -2760,16 +2760,12 @@ static void poll_proc()
 		}
 	} else {
 		if (ticks == 0) {
-			ticks = speed;
-		}
-		if (ticks == speed)
 			play_line();
-		update_effects();
-		ticks--;
-		if (ticks == 0) {
 			ticks = speed;
 			update_song_position();
 		}
+		update_effects();
+		ticks--;
 	}
 
 	tickXF++;
