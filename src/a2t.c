@@ -814,7 +814,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 
 		volume_table[chan] = concw(temp, HI(volume_table[chan]));
 
-		if (((ins_parameter(voice_table[chan],10) & 1) == 1) ||
+		if (((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
 			(percussion_mode && (chan >= 16 && chan <= 19))) // in [17..20]
 			modulator_vol[chan] = 63 - scale_volume(modulator, 63 - global_volume);
 		else
@@ -1119,7 +1119,7 @@ static inline bool is_4op_chan_lo(int chan)
 	//return INCLUDES(_4op_tracks_lo, chan);
 }
 
-static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, /*int NR*/ bool restart_adsr)
+static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, bool restart_adsr)
 {
 	uint16_t freq;
 
@@ -1130,8 +1130,11 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
 	} else {
 		freq = nFreq(note - 1) + (int8_t)ins_parameter(ins, 12);
 
-		if (restart_adsr)
+		if (restart_adsr) {
 			key_on(chan);
+		} else {
+			printf("restart_adsr=false\n");
+		}
 
 		freq_table[chan] |= 0x2000; // freq_table[chan] = concw(LO(freq_table[chan]), HI(freq_table[chan]) | 0x20);
 
@@ -1147,7 +1150,7 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
 	if (note) {
 		event_table[chan].note = note;
 
-		if (is_4op_chan(chan) && !is_4op_chan_hi(chan)) {
+		if (is_4op_chan(chan) && is_4op_chan_lo(chan)) {
 			event_table[chan - 1].note = note;
 		}
 
@@ -1817,52 +1820,30 @@ static void before_process_note(tADTRACK2_EVENT *event, int chan)
 
 	}
 }
-#if 0
-static void process_note(tADTRACK2_EVENT *event, int chan)
+
+static bool no_swap_and_restart(tADTRACK2_EVENT *event)
 {
-	if (event->note == BYTE_NULL) {
-		key_off(chan);
-		event_table[chan].note = 0;
-	} else {
-		event_table[chan].note = event->note;
-
-		int notedelay1 = ((event->eff[0].def == ef_Extended2) &&
-				  (event->eff[0].val / 16 == ef_ex2_NoteDelay));
-		int notedelay2 = ((event->eff[1].def == ef_Extended2) &&
-				  (event->eff[1].val / 16 == ef_ex2_NoteDelay));
-
-		int def0 = event_table[chan].eff[0].def;
-		int def1 = event_table[chan].eff[1].def;
-
-		if (((def0 != ef_TonePortamento) &&
-			 (def0 != ef_TPortamVolSlide) &&
-			 (def0 != ef_TPortamVSlideFine) &&
-			 (!notedelay1)) &&
-			((def1 != ef_TonePortamento) &&
-			 (def1 != ef_TPortamVolSlide) &&
-			 (def1 != ef_TPortamVSlideFine) &&
-			 (!notedelay2))) {
-			if (!(((event->eff[1].def == ef_SwapArpeggio) ||
-				   (event->eff[1].def == ef_SwapVibrato)) &&
-				   (event->eff[0].def == ef_Extended) &&
-				   (event->eff[0].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) &&
-				!(((event->eff[0].def == ef_SwapArpeggio) ||
-				   (event->eff[0].def == ef_SwapVibrato)) &&
-				   (event->eff[1].def == ef_Extended) &&
-				   (event->eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart))) {
-				output_note(event->note, voice_table[chan], chan, TRUE, TRUE);
-			} else {
-				output_note(event->note, voice_table[chan], chan, TRUE, FALSE);
-			}
-		}
-	}
+	// [!xx/@xx] swap arp/swap vib + [zff] no force restart
+	return
+		!(((event->eff[1].def == ef_SwapArpeggio) ||
+			(event->eff[1].def == ef_SwapVibrato)) &&
+			(event->eff[0].def == ef_Extended) &&
+			(event->eff[0].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) &&
+		!(((event->eff[0].def == ef_SwapArpeggio) ||
+			(event->eff[0].def == ef_SwapVibrato)) &&
+			(event->eff[1].def == ef_Extended) &&
+			(event->eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart));
 }
-#endif
-static void new_process_note(tADTRACK2_EVENT *event, int chan)
+
+static bool is_eff_porta(tADTRACK2_EVENT *event)
 {
 	int effects[] = { ef_TonePortamento, ef_TPortamVolSlide, ef_TPortamVSlideFine };
-	bool tporta_flag = INCLUDES(effects, event->eff[0].def) || INCLUDES(effects, event->eff[1].def);
-	//bool single_play = FALSE;
+	return INCLUDES(effects, event->eff[0].def) || INCLUDES(effects, event->eff[1].def);
+}
+
+static void new_process_note(tADTRACK2_EVENT *event, int chan)
+{
+	bool tporta_flag = is_eff_porta(event);
 
 	for (int slot = 0; slot < 2; slot++) {
 		if (event->eff[slot].def | event->eff[slot].val) {
@@ -1873,45 +1854,28 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
 		}
 	}
 
-	// treat Tone Portamento based effects
-	//   vs. note Key-Off's
-	//   vs. step-playing with Spacebar in Pattern Editor window
+	// Treat Tone Portamento based effects vs. note Key-Off's
 	if (event->note & keyoff_flag) {
 		key_off(chan);
 	} else {
-		int effects[] = { ef_TonePortamento, ef_TPortamVolSlide, ef_TPortamVSlideFine, ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay };
+		int effects[] = {
+				ef_TonePortamento, ef_TPortamVolSlide, ef_TPortamVSlideFine,
+				ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay
+			};
+		bool no_previous_porta_or_delay =
+			!INCLUDES(effects, LO(effect_table[0][chan])) && !INCLUDES(effects, LO(effect_table[1][chan]));
 
-		if (!INCLUDES(effects, LO(effect_table[0][chan])) && !INCLUDES(effects, LO(effect_table[1][chan]))) {
-			if (!(((event->eff[1].def == ef_SwapArpeggio) ||
-				   (event->eff[1].def == ef_SwapVibrato)) &&
-				   (event->eff[0].def == ef_Extended) &&
-				   (event->eff[0].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) &&
-				!(((event->eff[0].def == ef_SwapArpeggio) ||
-				   (event->eff[0].def == ef_SwapVibrato)) &&
-				   (event->eff[1].def == ef_Extended) &&
-				   (event->eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart))) {
-				output_note(event->note, voice_table[chan], chan, TRUE, TRUE);
-			} else {
-				output_note(event->note, voice_table[chan], chan, TRUE, FALSE);
-			}
+		if (no_previous_porta_or_delay) {
+			output_note(event->note, voice_table[chan], chan,
+				TRUE, no_swap_and_restart(event));
 		} else {
-			if (/*!single_play &&*/ event->note && tporta_flag) {
-				if (event_table[chan].note & keyoff_flag) {
+			if (event->note && tporta_flag) {
+				// if previous note was off'ed or restart_adsr enabled for channel
+				// and we are doing portamento to a new note
+				if (event_table[chan].note & keyoff_flag || portaFK_table[chan]) {
 					output_note(event_table[chan].note & ~keyoff_flag, voice_table[chan], chan, FALSE, TRUE);
-				} else if (portaFK_table[chan]) {
-					output_note(event_table[chan].note & ~keyoff_flag, voice_table[chan], chan, FALSE, TRUE);
-				} else if (event->note) {
+				} else {
 					event_table[chan].note = event->note;
-				}
-			} else {
-				/*if (single_play && !(event->note & keyoff_flag) && !event_table[chan].note && event->instr_def && tporta_flag) {
-					output_note(event->note, event->instr_def, chan, FALSE, TRUE);
-				} else*/ if (event->note) {
-					if (portaFK_table[chan] && tporta_flag) {
-						output_note(event->note, event->instr_def, chan, FALSE, TRUE);
-					} else {
-						event_table[chan].note = event[chan].note;
-					}
 				}
 			}
 		}
@@ -1954,7 +1918,6 @@ static void play_line()
 		ftune_table[chan] = 0;
 
 		before_process_note(event, chan);
-		//process_note(event, chan);
 
 		if (event->instr_def != 0) {
 			// NOTE: adjust ins
@@ -3283,7 +3246,7 @@ static void init_player()
 	for (int i = 0; i < 20; i++) {
 		arpgg_table[0][i].state = 1;
 		arpgg_table[1][i].state = 1;
-		voice_table[i] = i;
+		voice_table[i] = i + 1;
 	}
 }
 
