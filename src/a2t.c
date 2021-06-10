@@ -1,4 +1,9 @@
-
+/*
+	TODO:
+	- Implement ef_GlobalFSlideUp/ef_GlobalFSlideDown
+	- Implement generate_custom_vibrato()
+	- Implement fade_out_volume in set_ins_volume()
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -269,8 +274,8 @@ uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 #define ef_ExtraFineVibrato    43
 #define ef_ExtraFineTremolo    44
 #define ef_SetCustomSpeedTab   45
-//ef_GlobalFSlideUp     = 46;
-//ef_GlobalFSlideDown   = 47;
+#define ef_GlobalFSlideUp      46
+#define ef_GlobalFSlideDown    47
 #define ef_ex_SetTremDepth     0
 #define ef_ex_SetVibDepth      1
 #define ef_ex_SetAttckRateM    2
@@ -413,9 +418,6 @@ struct PACK {
 uint8_t panning_table[20];	// array[1..20] of Byte;
 uint16_t last_effect[2][20];	// array[1..20] of Byte;
 uint8_t volslide_type[20];	// array[1..20] of Byte;
-#if 0
-bool event_new[20];			// array[1..20] of Boolean;
-#endif
 uint8_t notedel_table[20];	// array[1..20] of Byte;
 uint8_t notecut_table[20];	// array[1..20] of Byte;
 int8_t ftune_table[20];		// array[1..20] of Shortint;
@@ -796,26 +798,25 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 	}
 
 	if (modulator != BYTE_NULL) {
+		bool is_perc_chan = ((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
+							(percussion_mode && (chan >= 16 && chan <= 19)); // in [17..20]
+
 		temp = modulator;
 
-		if (volume_scaling)
-			if (((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
-				(percussion_mode && (chan >= 16 && chan <= 19))) // in [17..20]
+		if (is_perc_chan) { // in [17..20]
+			if (volume_scaling)
 				modulator = scale_volume(ins_parameter(voice_table[chan], 2) & 0x3f, modulator);
 
-		if (((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
-			(percussion_mode && (chan >= 16 && chan <= 19))) // in [17..20]
 			opl3out(_instr[2] + _chan_m[chan],
 				scale_volume(scale_volume(modulator, 63 - global_volume),
-						 63 - overall_volume) + LO(vscale_table[chan]));
-		else
-			opl3out(_instr[2] + _chan_m[chan],
-				temp + LO(vscale_table[chan]));
+						63 - overall_volume) + LO(vscale_table[chan]));
+		} else {
+			opl3out(_instr[2] + _chan_m[chan], temp + LO(vscale_table[chan]));
+		}
 
 		volume_table[chan] = concw(temp, HI(volume_table[chan]));
 
-		if (((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
-			(percussion_mode && (chan >= 16 && chan <= 19))) // in [17..20]
+		if (is_perc_chan) // in [17..20]
 			modulator_vol[chan] = 63 - scale_volume(modulator, 63 - global_volume);
 		else
 			modulator_vol[chan] = 63 - modulator;
@@ -883,9 +884,44 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
 	_4op_ch1 = (_4op_flag >> 3) & 15;
 	_4op_ch2 = (_4op_flag >> 7) & 15;
 
-	// TO DO
-	// Seems to be used with 4op volume lock only
-	printf("set_ins_volume_4op() not implemented\n");
+	if (_4op_vol_valid_chan(chan)) {
+		switch (_4op_conn) {
+			case 0: // FM/FM
+				if (volume == BYTE_NULL) {
+					set_volume(BYTE_NULL, HI(volume_table[_4op_ch1]), _4op_ch1);
+				} else {
+					set_volume(BYTE_NULL, volume, _4op_ch1);
+				}
+				break;
+			case 1: // FM/AM
+				if (volume == BYTE_NULL) {
+					set_volume(BYTE_NULL, HI(volume_table[_4op_ch1]), _4op_ch1);
+					set_volume(LO(volume_table[_4op_ch2]), BYTE_NULL, _4op_ch2);
+				} else {
+					set_volume(BYTE_NULL, volume, _4op_ch1);
+					set_volume(volume, BYTE_NULL, _4op_ch2);
+				}
+				break;
+			case 2: // AM/FM
+				if (volume == BYTE_NULL) {
+					set_volume(BYTE_NULL, HI(volume_table[_4op_ch1]), _4op_ch1);
+					set_volume(BYTE_NULL, HI(volume_table[_4op_ch2]), _4op_ch2);
+				} else {
+					set_volume(BYTE_NULL, volume, _4op_ch1);
+					set_volume(BYTE_NULL, volume, _4op_ch2);
+				}
+				break;
+			case 3:// AM/AM
+				if (volume == BYTE_NULL) {
+					set_volume(LO(volume_table[_4op_ch1]), HI(volume_table[_4op_ch1]), _4op_ch1);
+					set_volume(LO(volume_table[_4op_ch2]), BYTE_NULL, _4op_ch2);
+				} else {
+					set_volume(volume, volume, _4op_ch1);
+					set_volume(volume, BYTE_NULL, _4op_ch2);
+				}
+				break;
+		}
+	}
 }
 
 static void reset_ins_volume(int chan)
@@ -1073,6 +1109,11 @@ static void update_fmpar(int chan)
 			   HI(volume_table[chan]), chan);
 }
 
+static void reset_chan_data(int chan)
+{
+	// TODO
+}
+
 static inline bool is_4op_chan(int chan) // 0..19
 {
 	char mask[20] = {
@@ -1097,26 +1138,22 @@ static inline bool is_4op_chan(int chan) // 0..19
 
 static inline bool is_4op_chan_hi(int chan)
 {
-	//int _4op_tracks_hi[] = { 0, 2, 4, 9, 11, 13 }; // 0-based
 	bool _4op_hi[20] = {
 		TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE,					// 0, 2, 4
 		TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE	// 9, 10, 13
 	};
 
 	return _4op_hi[chan];
-	//return INCLUDES(_4op_tracks_hi, chan);
 }
 
 static inline bool is_4op_chan_lo(int chan)
 {
-	//int _4op_tracks_lo[] = { 1, 3, 5, 10, 12, 14 }; // 0-based
 	bool _4op_lo[20] = {
 		FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE,					// 1, 3, 5
 		FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE	// 10, 12, 14
 	};
 
 	return _4op_lo[chan];
-	//return INCLUDES(_4op_tracks_lo, chan);
 }
 
 static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, bool restart_adsr)
@@ -1133,12 +1170,10 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
 		if (restart_adsr) {
 			key_on(chan);
 		} else {
-			printf("restart_adsr=false\n");
+			//printf("restart_adsr=false\n");
 		}
 
-		freq_table[chan] |= 0x2000; // freq_table[chan] = concw(LO(freq_table[chan]), HI(freq_table[chan]) | 0x20);
-
-		// TODO here
+		freq_table[chan] |= 0x2000;
 	}
 
 	if (ftune_table[chan] == -127)
@@ -1194,7 +1229,8 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan); // 
 			if (INCLUDES(effects, eLo) && eHi) { \
 				effect_table[slot][chan] = concw(def, eHi); \
 			} else { \
-				effect_table[slot][chan] &= 0xff00; \
+				printf("\nCAAATCH\n"); \
+				effect_table[slot][chan] = def; \
 			} \
 		} \
 	} while(0)
@@ -1248,23 +1284,11 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 			(int8_t)ins_parameter(event_table[chan].instr_def, 12));
 	}
 
-	/*
-		TODO: ef_GlobalFSlideUp || ef_GlobalFSlideDown
-
 	if ((def == ef_GlobalFSlideUp) || (def == ef_GlobalFSlideDown)) {
-
+		// TODO
+		printf("\n ef_GlobalFSlideUp or ef_GlobalFSlideDown \n");
 	}
 
-	*/
-#if 0
-	if (event_new[chan] && is_4op_chan(chan)) {
-		if (is_4op_chan_hi(chan)) {
-			event_new[chan + 1] = TRUE;
-		} else {
-			event_new[chan - 1] = TRUE;
-		}
-	}
-#endif
 	if ((tremor_table[slot][chan].pos != 0) && (def != ef_Tremor)) {
 		tremor_table[slot][chan].pos = 0;
 		set_ins_volume(LO(tremor_table[slot][chan].volume),
@@ -1800,14 +1824,6 @@ static void before_process_note(tADTRACK2_EVENT *event, int chan)
 	}  else if ((event->note >= fixed_note_flag + 1) && (event->note <= fixed_note_flag + 12*8+1)) { // in [fixed_note_flag+1..fixed_note_flag+12*8+1]
 		event->note -= fixed_note_flag;
 	}
-
-#if 0
-	if (!is_data_empty(event, sizeof(tADTRACK2_EVENT))) {
-		event_new[chan] = TRUE;
-	} else {
-		event_new[chan] = FALSE;
-	}
-#endif
 
 	if (event->note || event->instr_def ||
 		(event->eff[0].def | event->eff[0].val) ||
@@ -3153,9 +3169,6 @@ static void init_buffers()
 	memset(tremor_table, 0, sizeof(tremor_table));
 	memset(last_effect, 0, sizeof(last_effect));
 	memset(voice_table, 0, sizeof(voice_table));
-#if 0
-	memset(event_new, FALSE, sizeof(event_new)); // CHECK! might not be needed at all!
-#endif
 	memset(notedel_table, BYTE_NULL, sizeof(notedel_table));
 	memset(notecut_table, BYTE_NULL, sizeof(notecut_table));
 	memset(ftune_table, 0, sizeof(ftune_table));
@@ -3938,6 +3951,7 @@ static void a2t_import(char *tune)
 	percussion_mode = (songdata->common_flag >> 6) & 1;
 	volume_scaling  = (songdata->common_flag >> 7) & 1;
 
+	printf("Volume scaling: %d\n", volume_scaling);
 	printf("Percussion mode: %d\n", percussion_mode);
 
 	// Read instruments; all versions
@@ -4118,6 +4132,7 @@ static int a2m_read_songdata(char *src)
 
 	printf("Tempo: %d\n", songdata->tempo);
 	printf("Speed: %d\n", songdata->speed);
+	printf("Volume scaling: %d\n", volume_scaling);
 	printf("Percussion mode: %d\n", percussion_mode);
 
 #if 0
