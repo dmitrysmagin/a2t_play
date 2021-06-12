@@ -119,8 +119,7 @@ typedef struct PACK {
 	char            songname[43];        // pascal String[42];
 	char            composer[43];        // pascal String[42];
 	char            instr_names[255][43];// array[1..255] of String[42];
-	//tADTRACK2_INS   instr_data[255];     // array[1..255] of tADTRACK2_INS;
-	uint8_t         instr_data[255][14];
+	tADTRACK2_INS   instr_data[255];     // array[1..255] of tADTRACK2_INS;
 	tREGISTER_TABLE instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
 	tMACRO_TABLE    macro_table[255];    // array[1..255] of tMACRO_TABLE;
 	uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
@@ -576,7 +575,7 @@ static void change_freq(int chan, uint16_t freq)
 static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
 {
 	// NOTE: adjust ins
-	return songdata->instr_data[ins-1][param];
+    return *(uint8_t *)((uint8_t *)&songdata->instr_data[ins - 1] + param);
 }
 
 static bool is_chan_adsr_data_empty(int chan)
@@ -752,8 +751,8 @@ static uint32_t _4op_data_flag(uint8_t chan)
 
 		if (_4op_ins1 && _4op_ins2) {
 			_4op_mode = TRUE;
-			_4op_conn = ((songdata->instr_data[_4op_ins1][11] & 1) << 1) |
-						 (songdata->instr_data[_4op_ins2][11] & 1);
+			_4op_conn = ((ins_parameter(_4op_ins1, 10) & 1) << 1) |
+					     (ins_parameter(_4op_ins2, 10) & 1);
 		}
 /*
   {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
@@ -967,14 +966,14 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 	macro_table[chan].fmreg_table = ins;
 	macro_table[chan].arpg_count = 1;
 	macro_table[chan].arpg_pos = 0;
-	macro_table[chan].arpg_table = songdata->instr_macros[ins-1].arpeggio_table;
+	macro_table[chan].arpg_table = songdata->instr_macros[ins - 1].arpeggio_table;
 	macro_table[chan].arpg_note = note;
 	macro_table[chan].vib_count = 1;
 	macro_table[chan].vib_paused = FALSE;
 	macro_table[chan].vib_pos = 0;
-	macro_table[chan].vib_table = songdata->instr_macros[ins-1].vibrato_table;
+	macro_table[chan].vib_table = songdata->instr_macros[ins - 1].vibrato_table;
 	macro_table[chan].vib_freq = freq;
-	macro_table[chan].vib_delay = songdata->macro_table[macro_table[chan].vib_table-1].vibrato.delay;
+	macro_table[chan].vib_delay = songdata->macro_table[macro_table[chan].vib_table - 1].vibrato.delay;
 	zero_fq_table[chan] = 0;
 }
 
@@ -1937,7 +1936,7 @@ static void play_line()
 
 		if (event->instr_def != 0) {
 			// NOTE: adjust ins
-			if (is_data_empty(songdata->instr_data[event->instr_def-1], INSTRUMENT_SIZE)) {
+			if (is_data_empty(&songdata->instr_data[event->instr_def - 1], INSTRUMENT_SIZE)) {
 				release_sustaining_sound(chan);
 			}
 			set_ins_data(event->instr_def, chan);
@@ -2986,7 +2985,7 @@ static void macro_poll_proc()
 			}
 		}
 
-		tARPEGGIO_TABLE *at = &songdata->macro_table[mt->arpg_table-1].arpeggio;
+		tARPEGGIO_TABLE *at = &songdata->macro_table[mt->arpg_table - 1].arpeggio;
 
 		if ((mt->arpg_table != 0) && (at->speed != 0)) {
 			if (mt->arpg_count == at->speed) {
@@ -3047,7 +3046,7 @@ static void macro_poll_proc()
 			}
 		}
 
-		tVIBRATO_TABLE *vt = &songdata->macro_table[mt->vib_table-1].vibrato;
+		tVIBRATO_TABLE *vt = &songdata->macro_table[mt->vib_table - 1].vibrato;
 
 		if (!mt->vib_paused && (mt->vib_table != 0) && (vt->speed != 0)) {
 			if (mt->vib_count == vt->speed) {
@@ -3280,6 +3279,7 @@ void a2t_stop()
 
 	for (int i = 0; i < 20; i++)
 		release_sustaining_sound(i);
+
 	opl2out(_instr[11], 0);
 	opl3exp(0x0004);
 	opl3exp(0x0005);
@@ -3536,7 +3536,7 @@ static int a2t_read_instruments(char *src)
 	}
 
 	for (int i = 0; i < (ffver < 9 ? 250 : 255); i++) {
-		memcpy(songdata->instr_data[i], dst + i * instsize, instsize);
+		memcpy(&songdata->instr_data[i], dst + i * instsize, instsize);
 	}
 
 #if 0
@@ -3841,7 +3841,7 @@ static int a2_read_patterns(char *src, int s)
 	case 1 ... 4:	// [4][16][64][9][4]
 		{
 		tPATTERN_DATA_V1234 *old =
-			(tPATTERN_DATA_V1234 *)malloc(sizeof(*old) * 16);
+            (tPATTERN_DATA_V1234 *)malloc(sizeof(*old) * 16);
 
 		memset(adsr_carrier, FALSE, sizeof(adsr_carrier));
 
@@ -3854,7 +3854,7 @@ static int a2_read_patterns(char *src, int s)
 			for (int r = 0; r < 64; r++) // row
 			for (int c = 0; c < 9; c++) { // channel
 				convert_v1234_event(&old[p].row[r].ch[c].ev, c);
-				memcpy(&pattdata[i * 16 + p].ch[c].row[r].ev,
+				memcpy(&pattdata[i * 16 + p].ch[c].row[r].ev, 
 					&old[p].row[r].ch[c].ev, 4);
 			}
 
@@ -4045,22 +4045,18 @@ typedef struct PACK {
 static int a2m_read_songdata(char *src)
 {
 	if (ffver < 9) {		// 1,2,3,4,5,6,7,8
-		A2M_SONGDATA_V1234 *data =
-			malloc(sizeof(*data));
+		A2M_SONGDATA_V1234 *data = malloc(sizeof(*data));
 		a2t_depack(src, len[0], data);
 
 		memcpy(songdata->songname, data->songname, 43);
 		memcpy(songdata->composer, data->composer, 43);
 
 		for (int i = 0; i < 250; i++) {
-			memcpy(songdata->instr_names[i],
-				data->instr_names[i], 33);
-			memcpy(songdata->instr_data[i],
-				data->instr_data[i], 13);
+			memcpy(songdata->instr_names[i], data->instr_names[i], 33);
+			memcpy(&songdata->instr_data[i], data->instr_data[i], 13);
 		}
 
-		memcpy(songdata->pattern_order,
-			data->pattern_order, 128);
+		memcpy(songdata->pattern_order, data->pattern_order, 128);
 
 		songdata->tempo = data->tempo;
 		songdata->speed = data->speed;
@@ -4071,28 +4067,20 @@ static int a2m_read_songdata(char *src)
 
 		free(data);
 	} else {			// 9 - 14
-		A2M_SONGDATA_V9_14 *data =
-			malloc(sizeof(*data));
+		A2M_SONGDATA_V9_14 *data = malloc(sizeof(*data));
 		a2t_depack(src, len[0], data);
 
 		memcpy(songdata->songname, data->songname, 43);
 		memcpy(songdata->composer, data->composer, 43);
 
 		for (int i = 0; i < 255; i++) {
-			memcpy(songdata->instr_names[i],
-				data->instr_names[i], 43);
-			memcpy(songdata->instr_data[i],
-				data->instr_data[i], 14);
+			memcpy(songdata->instr_names[i], data->instr_names[i], 43);
+			memcpy(&songdata->instr_data[i], data->instr_data[i], 14);
 		}
 
-		memcpy(songdata->instr_macros,
-			data->instr_macros, 255 * 3831);
-
-		memcpy(songdata->macro_table,
-			data->macro_table, 255 * 521);
-
-		memcpy(songdata->pattern_order,
-			data->pattern_order, 128);
+		memcpy(songdata->instr_macros, data->instr_macros, 255 * 3831);
+		memcpy(songdata->macro_table, data->macro_table, 255 * 521);
+		memcpy(songdata->pattern_order, data->pattern_order, 128);
 
 		songdata->tempo = data->tempo;
 		songdata->speed = data->speed;
