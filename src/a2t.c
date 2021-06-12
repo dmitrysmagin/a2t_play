@@ -3,6 +3,8 @@
 	- Implement ef_GlobalFSlideUp/ef_GlobalFSlideDown
 	- Implement generate_custom_vibrato()
 	- Implement fade_out_volume in set_ins_volume()
+	- Eliminate use of ins_parameter()
+	- Make tFM_PARAMETER_TABLE identical to tFM_INST_DATA
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,15 +44,34 @@ typedef signed char bool;
 typedef struct PACK {
 	uint8_t AM_VIB_EG_modulator;
 	uint8_t AM_VIB_EG_carrier;
-	uint8_t KSL_VOLUM_modulator;
-	uint8_t KSL_VOLUM_carrier;
+	union PACK { // 2
+		struct PACK {
+			uint8_t modulator_volume: 6;
+			uint8_t modulator_ksl: 2;
+		};
+		uint8_t KSL_VOLUM_modulator:8;
+	};
+	union PACK { // 3
+		struct PACK {
+			uint8_t carrier_volume: 6;
+			uint8_t carrier_ksl: 2;
+		};
+		uint8_t KSL_VOLUM_carrier:8;
+	};
 	uint8_t ATTCK_DEC_modulator;
 	uint8_t ATTCK_DEC_carrier;
 	uint8_t SUSTN_REL_modulator;
 	uint8_t SUSTN_REL_carrier;
 	uint8_t WAVEFORM_modulator;
 	uint8_t WAVEFORM_carrier;
-	uint8_t FEEDBACK_FM;
+	union PACK {
+		struct PACK {
+			uint8_t connection: 1;
+			uint8_t feedback: 3;
+			uint8_t unused: 4;
+		};
+		uint8_t FEEDBACK_FM;
+	};
 } tFM_INST_DATA;
 
 typedef struct PACK {
@@ -575,7 +596,7 @@ static void change_freq(int chan, uint16_t freq)
 static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
 {
 	// NOTE: adjust ins
-    return *(uint8_t *)((uint8_t *)&songdata->instr_data[ins - 1] + param);
+	return *(uint8_t *)((uint8_t *)&songdata->instr_data[ins - 1] + param);
 }
 
 static bool is_chan_adsr_data_empty(int chan)
@@ -703,10 +724,8 @@ static void release_sustaining_sound(int chan)
 	opl3out(_instr[2] + _chan_m[chan], 63);
 	opl3out(_instr[3] + _chan_c[chan], 63);
 
-	memset(&fmpar_table[chan].adsrw_car, 0,
-		sizeof(fmpar_table[chan].adsrw_car));
-	memset(&fmpar_table[chan].adsrw_mod, 0,
-		sizeof(fmpar_table[chan].adsrw_mod));
+	memset(&fmpar_table[chan].adsrw_car, 0, sizeof(fmpar_table[chan].adsrw_car));
+	memset(&fmpar_table[chan].adsrw_mod, 0,	sizeof(fmpar_table[chan].adsrw_mod));
 
 	key_on(chan);
 	opl3out(_instr[4] + _chan_m[chan], BYTE_NULL);
@@ -752,7 +771,7 @@ static uint32_t _4op_data_flag(uint8_t chan)
 		if (_4op_ins1 && _4op_ins2) {
 			_4op_mode = TRUE;
 			_4op_conn = ((ins_parameter(_4op_ins1, 10) & 1) << 1) |
-					     (ins_parameter(_4op_ins2, 10) & 1);
+						 (ins_parameter(_4op_ins2, 10) & 1);
 		}
 /*
   {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
@@ -785,7 +804,7 @@ static bool _4op_vol_valid_chan(int chan)
 // TODO here: fade_out_volume
 static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 {
-	uint8_t temp;
+	tFM_INST_DATA *fm_data = &songdata->instr_data[voice_table[chan] - 1].fm_data;
 
 	// ** OPL3 emulation workaround **
 	// force muted instrument volume with missing channel ADSR data
@@ -797,24 +816,23 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 	}
 
 	if (modulator != BYTE_NULL) {
-		bool is_perc_chan = ((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
+		bool is_perc_chan = fm_data->connection ||
 							(percussion_mode && (chan >= 16 && chan <= 19)); // in [17..20]
 
-		temp = modulator;
+		volume_table[chan] = concw(modulator, HI(volume_table[chan]));
 
 		if (is_perc_chan) { // in [17..20]
 			if (volume_scaling)
-				modulator = scale_volume(ins_parameter(voice_table[chan], 2) & 0x3f, modulator);
+				modulator = scale_volume(fm_data->modulator_volume, modulator);
 
 			opl3out(_instr[2] + _chan_m[chan],
 				scale_volume(scale_volume(modulator, 63 - global_volume),
 						63 - overall_volume) + LO(vscale_table[chan]));
 		} else {
-			opl3out(_instr[2] + _chan_m[chan], temp + LO(vscale_table[chan]));
+			opl3out(_instr[2] + _chan_m[chan], modulator + LO(vscale_table[chan]));
 		}
 
-		volume_table[chan] = concw(temp, HI(volume_table[chan]));
-
+		// could be removed?
 		if (is_perc_chan) // in [17..20]
 			modulator_vol[chan] = 63 - scale_volume(modulator, 63 - global_volume);
 		else
@@ -822,23 +840,22 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 	}
 
 	if (carrier != BYTE_NULL) {
-		temp = carrier;
+		volume_table[chan] = concw(LO(volume_table[chan]), carrier);
+
 		if (volume_scaling)
-			carrier = scale_volume(ins_parameter(voice_table[chan], 3) & 0x3f, carrier);
+			carrier = scale_volume(fm_data->carrier_volume, carrier);
 
 		opl3out(_instr[3] + _chan_c[chan],
 			scale_volume(scale_volume(carrier, 63 - global_volume),
 			63 - overall_volume) + HI(vscale_table[chan]));
 
-		volume_table[chan] = concw(LO(volume_table[chan]), temp);
+		// could be removed?
 		carrier_vol[chan] = 63 - scale_volume(carrier, 63 - global_volume);
 	}
 }
 
 static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
-	uint8_t temp;
-
 	// ** OPL3 emulation workaround **
 	// force muted instrument volume with missing channel ADSR data
 	// when there is additionally no FM-reg macro defined for this instrument
@@ -849,26 +866,26 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 	}
 
 	if (modulator != BYTE_NULL) {
-		temp = modulator;
+		volume_table[chan] = concw(modulator, HI(volume_table[chan]));
+
 		modulator = scale_volume(ins_parameter(voice_table[chan], 2) & 0x3f, modulator);
 
 		opl3out(_instr[02] + _chan_m[chan],
 			scale_volume(scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/),
 			63 - overall_volume) + LO(vscale_table[chan]));
 
-		volume_table[chan] = concw(temp, HI(volume_table[chan]));
 		modulator_vol[chan] = 63 - scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63-fade_out_volume)*/);
 	}
 
 	if (carrier != BYTE_NULL) {
-		temp = carrier;
+		volume_table[chan] = concw(LO(volume_table[chan]), carrier);
+
 		carrier = scale_volume(ins_parameter(voice_table[chan], 3) & 0x3f, carrier);
 
 		opl3out(_instr[03] + _chan_c[chan],
 				scale_volume(scale_volume(carrier, /*scale_volume(*/63 - global_volume/*,63 - fade_out_volume)*/),
 				63 - overall_volume) + HI(vscale_table[chan]));
 
-		volume_table[chan] = concw(LO(volume_table[chan]), temp);
 		carrier_vol[chan] = 63 - scale_volume(carrier, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
 	}
 }
@@ -925,12 +942,13 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
 
 static void reset_ins_volume(int chan)
 {
+	tFM_INST_DATA *fm_data = &songdata->instr_data[voice_table[chan] - 1].fm_data;
+
 	if (!volume_scaling) {
-		set_ins_volume(ins_parameter(voice_table[chan], 2) & 0x3f,
-				   ins_parameter(voice_table[chan], 3) & 0x3f, chan);
+		set_ins_volume(fm_data->modulator_volume, fm_data->carrier_volume, chan);
 	} else {
-		if ((ins_parameter(voice_table[chan], 10) & 1) == 0) {
-			set_ins_volume(ins_parameter(voice_table[chan], 2) & 0x3f, 0, chan);
+		if (!fm_data->connection) {
+			set_ins_volume(fm_data->modulator_volume, 0, chan);
 		} else {
 			set_ins_volume(0, 0, chan);
 		}
@@ -940,9 +958,12 @@ static void reset_ins_volume(int chan)
 static void set_global_volume()
 {
 	for (int chan = 0; chan < songdata->nm_tracks; chan++) {
-		if (!((carrier_vol[chan] == 0) &&
-			(modulator_vol[chan] == 0))) {
-			if ((ins_parameter(voice_table[chan], 10) & 1) == 0) {
+		tFM_INST_DATA *fm_data = &songdata->instr_data[voice_table[chan] - 1].fm_data;
+
+		if (_4op_vol_valid_chan(chan)) {
+			set_ins_volume_4op(BYTE_NULL, chan);
+		} else if (!((carrier_vol[chan] == 0) && (modulator_vol[chan] == 0))) {
+			if (!fm_data->connection) {
 				set_ins_volume(BYTE_NULL, HI(volume_table[chan]), chan);
 			} else {
 				set_ins_volume(LO(volume_table[chan]), HI(volume_table[chan]), chan);
@@ -979,6 +1000,7 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 
 static void set_ins_data(uint8_t ins, int chan)
 {
+	tFM_INST_DATA *fm_data = &songdata->instr_data[ins - 1].fm_data;
 	uint8_t old_ins;
 
 	if ((ins != event_table[chan].instr_def) || reset_chan[chan]) {
@@ -1002,16 +1024,16 @@ static void set_ins_data(uint8_t ins, int chan)
 		opl3out(_instr[10] + _chan_n[chan], ins_parameter(ins, 10) |
 			_panning[panning_table[chan]]);
 
-		fmpar_table[chan].connect = ins_parameter(ins, 10) & 1;
-		fmpar_table[chan].feedb   = (ins_parameter(ins, 10) >> 1) & 7;
+		fmpar_table[chan].connect = fm_data->connection; //ins_parameter(ins, 10) & 1;
+		fmpar_table[chan].feedb   = fm_data->feedback; //(ins_parameter(ins, 10) >> 1) & 7;
 		fmpar_table[chan].multipM = ins_parameter(ins, 0)  & 0x0f;
-		fmpar_table[chan].kslM    = ins_parameter(ins, 2)  >> 6;
+		fmpar_table[chan].kslM    = fm_data->modulator_ksl; //ins_parameter(ins, 2)  >> 6;
 		fmpar_table[chan].tremM   = ins_parameter(ins, 0)  >> 7;
 		fmpar_table[chan].vibrM   = (ins_parameter(ins, 0)  >> 6) & 1;
 		fmpar_table[chan].ksrM    = (ins_parameter(ins, 0)  >> 4) & 1;
 		fmpar_table[chan].sustM   = (ins_parameter(ins, 0)  >> 5) & 1;
 		fmpar_table[chan].multipC = ins_parameter(ins, 1)  & 0x0f;
-		fmpar_table[chan].kslC    = ins_parameter(ins, 3)  >> 6;
+		fmpar_table[chan].kslC    = fm_data->carrier_ksl; //ins_parameter(ins, 3)  >> 6;
 		fmpar_table[chan].tremC   = ins_parameter(ins, 1)  >> 7;
 		fmpar_table[chan].vibrC   = (ins_parameter(ins, 1)  >> 6) & 1;
 		fmpar_table[chan].ksrC    = (ins_parameter(ins, 1)  >> 4) & 1;
@@ -3841,7 +3863,7 @@ static int a2_read_patterns(char *src, int s)
 	case 1 ... 4:	// [4][16][64][9][4]
 		{
 		tPATTERN_DATA_V1234 *old =
-            (tPATTERN_DATA_V1234 *)malloc(sizeof(*old) * 16);
+			(tPATTERN_DATA_V1234 *)malloc(sizeof(*old) * 16);
 
 		memset(adsr_carrier, FALSE, sizeof(adsr_carrier));
 
