@@ -940,8 +940,9 @@ static void reset_ins_volume(int chan)
 static void set_global_volume()
 {
 	for (int chan = 0; chan < songdata->nm_tracks; chan++) {
-		if (!((carrier_vol[chan] == 0) &&
-			(modulator_vol[chan] == 0))) {
+        if (_4op_vol_valid_chan(chan)) {
+			set_ins_volume_4op(BYTE_NULL, chan);
+        } else if (!((carrier_vol[chan] == 0) && (modulator_vol[chan] == 0))) {
 			if ((ins_parameter(voice_table[chan], 10) & 1) == 0) {
 				set_ins_volume(BYTE_NULL, HI(volume_table[chan]), chan);
 			} else {
