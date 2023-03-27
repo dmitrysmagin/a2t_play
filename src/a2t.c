@@ -3,6 +3,7 @@
     - Implement ef_GlobalFSlideUp/ef_GlobalFSlideDown
     - Implement generate_custom_vibrato()
     - Implement fade_out_volume in set_ins_volume() and set_volume
+    - Replace ins_parameter() with smth more readable
 
     In order to get into Adplug:
     - Remove PACKED structures, this is not partable
@@ -1819,7 +1820,9 @@ static void before_process_note(tADTRACK2_EVENT *event, int chan)
 {
     if (event->note == BYTE_NULL) {
         event->note = event_table[chan].note | keyoff_flag;
-    }  else if ((event->note >= fixed_note_flag + 1) && (event->note <= fixed_note_flag + 12*8+1)) { // in [fixed_note_flag+1..fixed_note_flag+12*8+1]
+        // NOTE: just mask off fixed_note_flag ?
+        // event->note &= ~fixed_note_flag;
+    } else if ((event->note >= fixed_note_flag + 1) && (event->note <= fixed_note_flag + 12*8+1)) {
         event->note -= fixed_note_flag;
     }
 
@@ -1880,8 +1883,7 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
             !INCLUDES(effects, LO(effect_table[0][chan])) && !INCLUDES(effects, LO(effect_table[1][chan]));
 
         if (no_previous_porta_or_delay) {
-            output_note(event->note, voice_table[chan], chan,
-                TRUE, no_swap_and_restart(event));
+            output_note(event->note, voice_table[chan], chan, TRUE, no_swap_and_restart(event));
         } else {
             if (event->note && tporta_flag) {
                 // if previous note was off'ed or restart_adsr enabled for channel
@@ -1902,12 +1904,10 @@ static void play_line()
 {
     tADTRACK2_EVENT _event, *event = &_event;
 
-    if ((current_line == 0) &&
-        (current_order == calc_following_order(0)))
+    if ((current_line == 0) && current_order == calc_following_order(0))
         time_playing = 0;
 
-    if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
-         (current_order != last_order)) {
+    if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) && current_order != last_order) {
         memset(loopbck_table, BYTE_NULL, sizeof(loopbck_table));
         memset(loop_table, BYTE_NULL, sizeof(loop_table));
         last_order = current_order;
@@ -1933,7 +1933,7 @@ static void play_line()
 
         before_process_note(event, chan);
 
-        if (event->instr_def != 0) {
+        if (event->instr_def) {
             // NOTE: adjust ins
             if (is_data_empty(&songdata->instr_data[event->instr_def - 1], INSTRUMENT_SIZE)) {
                 release_sustaining_sound(chan);
