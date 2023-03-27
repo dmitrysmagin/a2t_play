@@ -1,0 +1,4 @@
+crisis.a2m - some wrong places
+fm63b_rv.a2m - boo effect on instrument
+tunes/encore/amegas.a2t - completely wrong 1st inst
+fank5.a2m

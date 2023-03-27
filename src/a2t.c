@@ -2,7 +2,12 @@
 	TODO:
 	- Implement ef_GlobalFSlideUp/ef_GlobalFSlideDown
 	- Implement generate_custom_vibrato()
-	- Implement fade_out_volume in set_ins_volume()
+	- Implement fade_out_volume in set_ins_volume() and set_volume
+
+    In order to get into Adplug:
+    - Remove PACKED structures, this is not partable
+    - Remove bitfields, not portable
+    - Reduce the memory used for a tune
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -626,8 +631,8 @@ static inline uint16_t concw(uint8_t lo, uint8_t hi)
 
 static void change_frequency(int chan, uint16_t freq)
 {
-	change_freq(chan, freq);
 	macro_table[chan].vib_paused = TRUE;
+	change_freq(chan, freq);
 
 	if (is_4op_chan(chan)) {
 		if (is_4op_chan_hi(chan)) {
@@ -951,8 +956,8 @@ static void set_global_volume()
 		}
 	}
 }
-
-void a2t_volume(unsigned char level)
+ 
+void set_overall_volume(unsigned char level)
 {
 	overall_volume = max(level, 63);
 	set_global_volume();
@@ -1109,18 +1114,11 @@ static void update_fmpar(int chan)
 			   HI(volume_table[chan]), chan);
 }
 
-static void reset_chan_data(int chan)
-{
-	// TODO
-}
-
 static inline bool is_4op_chan(int chan) // 0..19
 {
 	char mask[20] = {
-		(1<<0), (1<<0), (1<<1), (1<<1), (1<<2), (1<<2),
-		0, 0, 0,
-		(1<<3), (1<<3), (1<<4), (1<<4), (1<<5), (1<<5),
-		0, 0, 0, 0, 0
+		(1<<0), (1<<0), (1<<1), (1<<1), (1<<2), (1<<2), 0, 0, 0,
+		(1<<3), (1<<3), (1<<4), (1<<4), (1<<5), (1<<5), 0, 0, 0, 0, 0
 	};
 /*
 	4-op track extension flags byte, channels 1-18
@@ -4137,7 +4135,7 @@ static int a2m_read_patterns(char *src)
 {
 	a2_read_patterns(src, 1);
 
-#if 1
+#if 0
 	FILE *f = fopen("patterns.dmp", "wb");
 	fwrite(pattdata, 1, sizeof(_pattdata), f);
 	fclose(f);
