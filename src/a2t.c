@@ -379,7 +379,6 @@ const uint8_t max_patterns = 128;
 tPLAY_STATUS play_status = isStopped;
 uint8_t overall_volume = 63;
 uint8_t global_volume = 63;
-bool force_macro_keyon = FALSE;
 
 const uint8_t pattern_loop_flag  = 0xe0;
 const uint8_t pattern_break_flag = 0xf0;
@@ -2038,9 +2037,8 @@ static void portamento_down(int chan, uint16_t slide, uint16_t limit)
 
 static void macro_vibrato__porta_up(int chan, uint8_t depth)
 {
-    uint16_t freq;
+    uint16_t freq = calc_freq_shift_up(macro_table[chan].vib_freq & 0x1fff, depth);
 
-    freq = calc_freq_shift_up(macro_table[chan].vib_freq & 0x1fff, depth);
     if (freq <= nFreq(12*8+1)) {
         change_freq(chan, freq);
     } else {
@@ -2050,22 +2048,23 @@ static void macro_vibrato__porta_up(int chan, uint8_t depth)
 
 static void macro_vibrato__porta_down(int chan, uint8_t depth)
 {
-    uint16_t freq;
-    freq = calc_freq_shift_down(macro_table[chan].vib_freq & 0x1fff, depth);
+    uint16_t freq = calc_freq_shift_down(macro_table[chan].vib_freq & 0x1fff, depth);
+
     if (freq >= nFreq(0)) {
         change_freq(chan, freq);
     } else {
-        change_freq(chan,nFreq(0));
+        change_freq(chan, nFreq(0));
     }
 }
 
 static void tone_portamento(int slot, int chan)
 {
-    if ((freq_table[chan] & 0x1fff) > porta_table[slot][chan].freq) {
+    uint16_t freq = freq_table[chan] & 0x1fff;
+
+    if (freq > porta_table[slot][chan].freq) {
         portamento_down(chan, porta_table[slot][chan].speed, porta_table[slot][chan].freq);
-    } else {
-        if ((freq_table[chan] & 0x1fff) < porta_table[slot][chan].freq)
-            portamento_up(chan, porta_table[slot][chan].speed, porta_table[slot][chan].freq);
+    } else if (freq < porta_table[slot][chan].freq) {
+        portamento_up(chan, porta_table[slot][chan].speed, porta_table[slot][chan].freq);
     }
 }
 
@@ -2779,6 +2778,7 @@ static void macro_poll_proc()
         tCH_MACRO_TABLE *mt = &macro_table[chan];
         uint8_t fmreg_ins = mt->fmreg_ins - 1;
         tREGISTER_TABLE *rt = &songdata->instr_macros[fmreg_ins];
+        bool force_macro_keyon = FALSE;
 
         if (mt->fmreg_ins /*&& (speed != 0)*/) { // FIXME: what speed?
             if (mt->fmreg_duration > 1) {
@@ -2936,57 +2936,46 @@ static void macro_poll_proc()
                             fmpar_table[chan].feedb =
                                 (d->fm_data.FEEDBACK_FM >> 1) & 7;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][27] &&
-                            !pan_lock[chan])
+                        if (!songdata->dis_fmreg_col[fmreg_ins][27] && !pan_lock[chan])
                             panning_table[chan] = d->panning;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][5])
-                            set_ins_volume(63 - (d->fm_data.KSL_VOLUM_modulator & 0x3f),
-                                       BYTE_NULL, chan);
+                            set_ins_volume(63 - (d->fm_data.KSL_VOLUM_modulator & 0x3f), BYTE_NULL, chan);
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][17])
-                            set_ins_volume(BYTE_NULL,
-                                    63 - (d->fm_data.KSL_VOLUM_carrier & 0x3f), chan);
+                            set_ins_volume(BYTE_NULL, 63 - (d->fm_data.KSL_VOLUM_carrier & 0x3f), chan);
 
                         update_modulator_adsrw(chan);
                         update_carrier_adsrw(chan);
                         update_fmpar(chan);
 
-                        if (force_macro_keyon ||
-                            !((d->fm_data.FEEDBACK_FM | 0x80) != d->fm_data.FEEDBACK_FM)) { // MACRO_NOTE_RETRIG_FLAG
+                        if (force_macro_keyon || (d->fm_data.FEEDBACK_FM & 0x80)) { // MACRO_NOTE_RETRIG_FLAG
                             if (!((is_4op_chan(chan) && is_4op_chan_hi(chan)))) {
                                 output_note(event_table[chan].note,
                                             event_table[chan].instr_def, chan, FALSE, TRUE);
-                                if ((is_4op_chan(chan) && is_4op_chan_lo(chan)))
+                                if (is_4op_chan(chan) && is_4op_chan_lo(chan))
                                     init_macro_table(chan - 1, 0, voice_table[chan - 1], 0);
                             }
-                        } else {
-                            if (!((d->fm_data.FEEDBACK_FM | 0x40) != d->fm_data.FEEDBACK_FM)) { // MACRO_ENVELOPE_RESTART_FLAG
-                                key_on(chan);
+                        } else if (d->fm_data.FEEDBACK_FM & 0x40) { // MACRO_ENVELOPE_RESTART_FLAG
+                            key_on(chan);
+                            change_freq(chan, freq_table[chan]);
+                        } else if (d->fm_data.FEEDBACK_FM & 0x20) { // MACRO_ZERO_FREQ_FLAG
+                            if (freq_table[chan]) {
+                                zero_fq_table[chan] = freq_table[chan];
+                                freq_table[chan] = freq_table[chan] & ~0x1fff;
                                 change_freq(chan, freq_table[chan]);
-                            } else {
-                                if (!((d->fm_data.FEEDBACK_FM | 0x40) != d->fm_data.FEEDBACK_FM)) { // MACRO_ZERO_FREQ_FLAG
-                                    if (freq_table[chan]) {
-                                        zero_fq_table[chan] = freq_table[chan];
-                                        freq_table[chan] = freq_table[chan] & ~0x1fff;
-                                        change_freq(chan, freq_table[chan]);
-                                    } else {} // ??? original has 'else else'
-                                } else {
-                                    if (zero_fq_table[chan]) {
-                                        freq_table[chan] = zero_fq_table[chan];
-                                        zero_fq_table[chan] = 0;
-                                        change_freq(chan, freq_table[chan]);
-                                    }
-                                }
+                            } else if (zero_fq_table[chan]) {
+                                freq_table[chan] = zero_fq_table[chan];
+                                zero_fq_table[chan] = 0;
+                                change_freq(chan, freq_table[chan]);
                             }
                         }
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][26]) {
                             if (d->freq_slide > 0) {
                                 portamento_up(chan, d->freq_slide, nFreq(12*8+1));
-                            } else {
-                                if (d->freq_slide < 0)
-                                    portamento_down(chan, abs(d->freq_slide), nFreq(0));
+                            } else if (d->freq_slide < 0) {
+                                portamento_down(chan, abs(d->freq_slide), nFreq(0));
                             }
                         }
                     }
