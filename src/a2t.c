@@ -7,7 +7,9 @@
 
     In order to get into Adplug:
     - Remove PACKED structures, this is not partable
-    - Remove bitfields, not portable
+        HOWEVER: if all members of struct are uint8_t/char the padding is not applied,
+        this is true for multidimensional arrays: char arr[21][11] has no padding between dimensions
+    - Remove bitfields, not portable, undefined behavior
     - Reduce the memory used for a tune
 */
 #include <stdio.h>
@@ -109,13 +111,12 @@ typedef struct PACK {
 
 typedef struct PACK {
     struct {
-        uint8_t attck,dec,sustn,rel,
-        wform;
+        uint8_t attck, dec, sustn, rel, wform;
     } adsrw_car, adsrw_mod;
     uint8_t connect;
     uint8_t feedb;
-    uint8_t multipM,kslM,tremM,vibrM,ksrM,sustM;
-    uint8_t multipC,kslC,tremC,vibrC,ksrC,sustC;
+    uint8_t multipM, kslM, tremM, vibrM, ksrM, sustM;
+    uint8_t multipC, kslC, tremC, vibrC, ksrC, sustC;
 } tFM_PARAMETER_TABLE;
 
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
@@ -139,7 +140,7 @@ typedef struct PACK {
     uint8_t         lock_flags[20];
     char            pattern_names[128][43];  // array[0..$7f] of String[42];
     //tDIS_FMREG_COL  dis_fmreg_col[255];  // array[1..255] of tDIS_FMREG_COL;
-    int8_t          dis_fmreg_col[255][28];
+    int8_t          dis_fmreg_col[255][28]; // disabled fm macro columns in the editor
     struct PACK {
         uint8_t		num_4op;
         uint8_t		idx_4op[128];
@@ -599,6 +600,13 @@ static bool is_chan_adsr_data_empty(int chan)
 
 static bool is_ins_adsr_data_empty(int ins)
 {
+    return (
+        !ins_parameter(ins, 4) &&
+        !ins_parameter(ins, 5) &&
+        !ins_parameter(ins, 6) &&
+        !ins_parameter(ins, 7)
+    );
+/*
     return
         (((ins_parameter(ins, 5) >> 4) == 0) &&
          ((ins_parameter(ins, 4) >> 4) == 0) &&
@@ -608,6 +616,7 @@ static bool is_ins_adsr_data_empty(int ins)
          ((ins_parameter(ins, 6) >> 4) == 0) &&
          ((ins_parameter(ins, 7) & 0x0f) == 0) &&
          ((ins_parameter(ins, 6) & 0x0f) == 0));
+*/
 }
 
 static bool is_data_empty(void *data, unsigned int size)
@@ -2760,17 +2769,18 @@ static void macro_poll_proc()
     uint16_t finished_flag;
 
     for (chan = 0; chan < 20; chan++) {
-        if (!keyoff_loop[chan]) {
+        finished_flag = keyoff_loop[chan] ? IDLE : FINISHED;
+        /*if (!keyoff_loop[chan]) {
             finished_flag = FINISHED;
         } else {
             finished_flag = IDLE;
-        }
+        }*/
 
         tCH_MACRO_TABLE *mt = &macro_table[chan];
         tREGISTER_TABLE *rt = &songdata->instr_macros[mt->fmreg_table - 1];
         uint8_t fmregi = mt->fmreg_table - 1;
 
-        if ((mt->fmreg_table != 0) && (speed != 0)) { // FIXME: what speed?
+        if ((mt->fmreg_table != 0) /*&& (speed != 0)*/) { // FIXME: what speed?
             if (mt->fmreg_duration > 1) {
                 mt->fmreg_duration--;
             } else {
