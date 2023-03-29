@@ -21,7 +21,7 @@
 #include "depack.h"
 #include "sixpack.h"
 #include "lzh.h"
-#include "ymf262.h"
+#include "opl3.h"
 #include "a2t.h"
 
 #ifdef __GNUC__
@@ -4252,24 +4252,29 @@ static int a2_import(char *tune)
 static int freqhz = 44100;
 static int framesmpl = 44100 / 50;
 static int irq_freq = 50;
-static int ym;
+static opl3_chip opl;
 
 static void opl_out(uint8_t port, uint8_t val)
 {
-    YMF262Write(ym, port, val);
+    static uint8_t reg = 0;
+    if ((port & 1) == 0) {
+        reg = val;
+    } else {
+        OPL3_WriteRegBuffered(&opl, ((port / 2) << 8) | reg, val);
+    }
 }
 
 void a2t_init(int freq)
 {
     freqhz = freq;
     framesmpl = freq / 50;
-    ym = YMF262Init(1, OPL3_INTERNAL_FREQ, freq);
-    YMF262ResetChip(ym);
+
+    OPL3_Reset(&opl, freqhz);
 }
 
 void a2t_shut()
 {
-    YMF262Shutdown();
+    OPL3_Reset(&opl, freqhz);
 }
 
 // 'len' is the buffer length in bytes, not samples!
@@ -4307,7 +4312,7 @@ void a2t_update(unsigned char *stream, int len)
         }
 
         // this writes 4 bytes, i.e. one 16-bit stereo sample
-        YMF262UpdateOne(ym, (int16_t *)(stream + cntr), 1);
+        OPL3_GenerateStream(&opl, (int16_t *)(stream + cntr), 1);
         cnt++;
     }
 }
