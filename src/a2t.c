@@ -484,7 +484,7 @@ static void opl2out(uint16_t reg, uint16_t data)
     opl_out(1, data);
 }
 
-static void opl3out(uint16_t reg, uint16_t data)
+static void opl3out(uint16_t reg, uint8_t data)
 {
     if (reg < 0x100) {
         opl_out(0, reg);
@@ -781,7 +781,7 @@ static uint32_t _4op_data_flag(uint8_t chan)
             ((_4op_conn & 3) << 1) |	// {2-bit: B1-B0}
             ((_4op_ch1 & 15) << 3) |	// {4-bit: C3-C0}
             ((_4op_ch2 & 15) << 7) |	// {4-bit: D3-D0}
-            (_4op_ins1 << 11) |		// {8-bit: E7-E0}
+            (_4op_ins1 << 11) |		    // {8-bit: E7-E0}
             (_4op_ins2 << 19);			// {8-bit: F7-F0}
     }
 
@@ -1005,7 +1005,13 @@ static void set_ins_data(uint8_t ins, int chan)
         } else {
             panning_table[chan] = songdata->lock_flags[chan] & 3;
         }
-
+#if 0
+        printf("set_ins_data(%02x, %d)\n", ins, chan);
+        printf("data: ");
+        for (int i = 0; i < 14; i++)
+            printf("%02x ", ins_parameter(ins, i));
+        printf("\n");
+#endif
         opl3out(_instr[0] + _chan_m[chan], ins_parameter(ins, 0));
         opl3out(_instr[1] + _chan_c[chan], ins_parameter(ins, 1));
         opl3out(_instr[4] + _chan_m[chan], ins_parameter(ins, 4));
@@ -1014,20 +1020,19 @@ static void set_ins_data(uint8_t ins, int chan)
         opl3out(_instr[7] + _chan_c[chan], ins_parameter(ins, 7));
         opl3out(_instr[8] + _chan_m[chan], ins_parameter(ins, 8));
         opl3out(_instr[9] + _chan_c[chan], ins_parameter(ins, 9));
-        opl3out(_instr[10] + _chan_n[chan], ins_parameter(ins, 10) |
-            _panning[panning_table[chan]]);
+        opl3out(_instr[10] + _chan_n[chan], (ins_parameter(ins, 10) & 15 ) | _panning[panning_table[chan]]);
 
-        fmpar_table[chan].connect = ins_parameter(ins, 10) & 1;
+        fmpar_table[chan].connect =  ins_parameter(ins, 10) & 1;
         fmpar_table[chan].feedb   = (ins_parameter(ins, 10) >> 1) & 7;
-        fmpar_table[chan].multipM = ins_parameter(ins, 0)  & 0x0f;
-        fmpar_table[chan].kslM    = ins_parameter(ins, 2)  >> 6;
-        fmpar_table[chan].tremM   = ins_parameter(ins, 0)  >> 7;
+        fmpar_table[chan].multipM =  ins_parameter(ins, 0)  & 0x0f;
+        fmpar_table[chan].kslM    =  ins_parameter(ins, 2)  >> 6;
+        fmpar_table[chan].tremM   =  ins_parameter(ins, 0)  >> 7;
         fmpar_table[chan].vibrM   = (ins_parameter(ins, 0)  >> 6) & 1;
         fmpar_table[chan].ksrM    = (ins_parameter(ins, 0)  >> 4) & 1;
         fmpar_table[chan].sustM   = (ins_parameter(ins, 0)  >> 5) & 1;
-        fmpar_table[chan].multipC = ins_parameter(ins, 1)  & 0x0f;
-        fmpar_table[chan].kslC    = ins_parameter(ins, 3)  >> 6;
-        fmpar_table[chan].tremC   = ins_parameter(ins, 1)  >> 7;
+        fmpar_table[chan].multipC =  ins_parameter(ins, 1)  & 0x0f;
+        fmpar_table[chan].kslC    =  ins_parameter(ins, 3)  >> 6;
+        fmpar_table[chan].tremC   =  ins_parameter(ins, 1)  >> 7;
         fmpar_table[chan].vibrC   = (ins_parameter(ins, 1)  >> 6) & 1;
         fmpar_table[chan].ksrC    = (ins_parameter(ins, 1)  >> 4) & 1;
         fmpar_table[chan].sustC   = (ins_parameter(ins, 1)  >> 5) & 1;
@@ -1826,11 +1831,9 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
 static void before_process_note(tADTRACK2_EVENT *event, int chan)
 {
-    if (event->note == BYTE_NULL) {
+    if (event->note == BYTE_NULL) { // Key off
         event->note = event_table[chan].note | keyoff_flag;
-        // NOTE: just mask off fixed_note_flag ?
-        // event->note &= ~fixed_note_flag;
-    } else if ((event->note >= fixed_note_flag + 1) && (event->note <= fixed_note_flag + 12*8+1)) {
+    } else if ((event->note >= fixed_note_flag + 1) /*&& (event->note <= fixed_note_flag + 12*8+1)*/) {
         event->note -= fixed_note_flag;
     }
 
@@ -1842,7 +1845,6 @@ static void before_process_note(tADTRACK2_EVENT *event, int chan)
         event_table[chan].eff[0].val = event->eff[0].val;
         event_table[chan].eff[1].def = event->eff[1].def;
         event_table[chan].eff[1].val = event->eff[1].val;
-
     }
 }
 
@@ -1891,16 +1893,15 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
             !INCLUDES(effects, LO(effect_table[0][chan])) && !INCLUDES(effects, LO(effect_table[1][chan]));
 
         if (no_previous_porta_or_delay) {
+            // Usually we end up here
             output_note(event->note, voice_table[chan], chan, TRUE, no_swap_and_restart(event));
-        } else {
-            if (event->note && tporta_flag) {
-                // if previous note was off'ed or restart_adsr enabled for channel
-                // and we are doing portamento to a new note
-                if (event_table[chan].note & keyoff_flag || portaFK_table[chan]) {
-                    output_note(event_table[chan].note & ~keyoff_flag, voice_table[chan], chan, FALSE, TRUE);
-                } else {
-                    event_table[chan].note = event->note;
-                }
+        } else if (event->note && tporta_flag) {
+            // if previous note was off'ed or restart_adsr enabled for channel
+            // and we are doing portamento to a new note
+            if (event_table[chan].note & keyoff_flag || portaFK_table[chan]) {
+                output_note(event_table[chan].note & ~keyoff_flag, voice_table[chan], chan, FALSE, TRUE);
+            } else {
+                event_table[chan].note = event->note;
             }
         }
     }
@@ -1926,6 +1927,9 @@ static void play_line()
         // Do a full copy of the event, because we may modify event->note in before_process_note()
         memcpy(event, &pattdata[current_pattern].ch[chan].row[current_line].ev, sizeof(tADTRACK2_EVENT));
 
+#if 0
+        if (chan != 2 && chan != 3) continue;
+#endif
         // put inside process_effects ?
         for (int slot = 0; slot < 2; slot++) {
             if (effect_table[slot][chan] != 0) {
@@ -4176,6 +4180,7 @@ static int a2m_read_songdata(char *src)
     printf("Speed: %d\n", songdata->speed);
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
+    printf("Track volume lock: %d\n", lockvol);
 
 #if 0
     FILE *f = fopen("songdata.dmp", "wb");
