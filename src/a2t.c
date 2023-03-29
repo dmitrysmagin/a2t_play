@@ -2068,86 +2068,120 @@ static void tone_portamento(int slot, int chan)
     }
 }
 
+static void slide_carrier_volume_up(uint8_t chan, uint8_t slide, uint8_t limit)
+{
+    uint16_t vol;
+    uint8_t vLo, vHi;
+
+    vLo = LO(volume_table[chan]);
+    vHi = HI(volume_table[chan]);
+
+    if (vHi - slide >= limit) {
+        vol = concw(vLo, vHi-slide);
+    } else {
+        vol = concw(vLo, limit);
+    }
+
+    set_ins_volume(BYTE_NULL, HI(vol), chan);
+    volume_table[chan] = vol;
+}
+
+static void slide_modulator_volume_up(uint8_t chan, uint8_t slide, uint8_t limit)
+{
+    uint16_t vol;
+    uint8_t vLo, vHi;
+
+    vLo = LO(volume_table[chan]);
+    vHi = HI(volume_table[chan]);
+
+    if (vLo - slide >= limit) {
+        vol = concw(vLo - slide, vHi);
+    } else {
+        vol = concw(limit, vHi);
+    }
+
+    set_ins_volume(LO(vol), BYTE_NULL, chan);
+    volume_table[chan] = vol;
+}
+
 static void slide_volume_up(int chan, uint8_t slide)
 {
-    uint16_t temp;
-    uint8_t limit1, limit2, vLo, vHi;
+    uint8_t limit1, limit2;
+    uint16_t limit1_4op, limit2_4op;
+    uint32_t _4op_flag;
+    uint8_t _4op_conn;
+    uint8_t _4op_ch1, _4op_ch2;
+    uint8_t _4op_ins1, _4op_ins2;
 
-    if (!peak_lock[chan])
-        limit1 = 0;
-    else
-        limit1 = ins_parameter(event_table[chan].instr_def, 3) & 0x3f;
+    _4op_flag = _4op_data_flag(chan);
+    _4op_conn = (_4op_flag >> 1) & 3;
+    _4op_ch1 = (_4op_flag >> 3) & 15;
+    _4op_ch2 = (_4op_flag > 7) & 15;
+    _4op_ins1 = (uint8_t)(_4op_flag >> 11) & 0xff;
+    _4op_ins2 = (uint8_t)(_4op_flag >> 19) & 0xff;
 
-    if (!peak_lock[chan])
-        limit2 = 0;
-    else
-        limit2 = ins_parameter(event_table[chan].instr_def, 2) & 0x3f;
+    if (_4op_vol_valid_chan(chan)) {
+        limit1_4op = peak_lock[_4op_ch1]
+            ? ((ins_parameter(_4op_ins1, 3) & 0x3f) << 16) + (ins_parameter(_4op_ins1, 2) & 0x3f)
+            : 0;
 
-    temp = volume_table[chan];
+        limit2_4op = peak_lock[_4op_ch2]
+            ? ((ins_parameter(_4op_ins2, 3) & 0x3f) << 16) + (ins_parameter(_4op_ins2, 2) & 0x3f)
+            : 0;
+    } else {
+        limit1 = peak_lock[chan]
+            ? ins_parameter(event_table[chan].instr_def, 3) & 0x3f
+            : 0;
+
+        limit2 = peak_lock[chan]
+            ? ins_parameter(event_table[chan].instr_def, 2) & 0x3f
+            : 0;
+    }
 
     switch (volslide_type[chan]) {
     case 0:
-        vLo = LO(temp);
-        vHi = HI(temp);
-        if (vHi - slide >= limit1)
-            temp = concw(vLo, vHi - slide);
-        else
-            temp = concw(vLo, limit1);
+        if (!_4op_vol_valid_chan(chan)) {
+            slide_carrier_volume_up(chan, slide, limit1);
 
-        set_ins_volume(BYTE_NULL, HI(temp), chan);
-        volume_table[chan] = temp;
-        if (((ins_parameter(voice_table[chan], 10) & 1) == 1) ||
-             (percussion_mode && (chan >= 16 && chan <= 19))) { // in [17..20]
-            vLo = LO(temp);
-            vHi = HI(temp);
-            if (vLo - slide >= limit2)
-                temp = concw(vLo - slide, vHi);
-            else
-                temp = concw(limit2, vHi);
-            set_ins_volume(LO(temp), BYTE_NULL, chan);
-            volume_table[chan] = temp;
+            if ((ins_parameter(voice_table[chan], 10) & 1) || (percussion_mode && (chan >= 16)))  // in [17..20]
+               slide_modulator_volume_up(chan, slide, limit2);
+        } else {
+            switch (_4op_conn) {
+            // FM/FM
+            case 0:
+                slide_carrier_volume_up(_4op_ch1, slide, HI(limit1_4op));
+                break;
+            // FM/AM
+            case 1:
+                slide_carrier_volume_up(_4op_ch1,slide, HI(limit1_4op));
+                slide_modulator_volume_up(_4op_ch2,slide, LO(limit2_4op));
+                break;
+            // AM/FM
+            case 2:
+                slide_carrier_volume_up(_4op_ch1,slide, HI(limit1_4op));
+                slide_carrier_volume_up(_4op_ch2,slide, HI(limit2_4op));
+                break;
+            // AM/AM
+            case 3:
+                slide_carrier_volume_up(_4op_ch1,slide, HI(limit1_4op));
+                slide_modulator_volume_up(_4op_ch1,slide, LO(limit1_4op));
+                slide_modulator_volume_up(_4op_ch2,slide, LO(limit2_4op));
+                break;
+           }
         }
     break;
 
     case 1:
-        vLo = LO(temp);
-        vHi = HI(temp);
-        if (vHi - slide >= limit1)
-            temp = concw(vLo, vHi - slide);
-        else
-            temp = concw(vLo, limit1);
-        set_ins_volume(BYTE_NULL, HI(temp), chan);
-        volume_table[chan] = temp;
+        slide_carrier_volume_up(chan, slide, limit1);
     break;
 
     case 2:
-        vLo = LO(temp);
-        vHi = HI(temp);
-        if (vLo - slide >= limit2)
-            temp = concw(vLo - slide, vHi);
-        else
-            temp = concw(limit2, vHi);
-        set_ins_volume(LO(temp), BYTE_NULL, chan);
-        volume_table[chan] = temp;
+        slide_modulator_volume_up(chan, slide, limit2);
     break;
 
     case 3:
-        vLo = LO(temp);
-        vHi = HI(temp);
-        if (vHi - slide >= limit1)
-            temp = concw(vLo, vHi - slide);
-        else
-            temp = concw(vLo, limit1);
-        set_ins_volume(BYTE_NULL, HI(temp), chan);
-        volume_table[chan] = temp;
-        vLo = LO(temp);
-        vHi = HI(temp);
-        if (vLo - slide >= limit2)
-            temp = concw(vLo - slide, vHi);
-        else
-            temp = concw(limit2, vHi);
-        set_ins_volume(LO(temp), BYTE_NULL, chan);
-        volume_table[chan] = temp;
+        slide_carrier_volume_up(chan,slide, limit1);
+        slide_modulator_volume_up(chan,slide, limit2);
     break;
     }
 }
