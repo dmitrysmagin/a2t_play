@@ -69,7 +69,7 @@ typedef struct PACK {
     uint8_t panning;
     int8_t  fine_tune;
     uint8_t perc_voice;
-} tADTRACK2_INS;
+} tINSTR_DATA;
 
 typedef struct PACK {
     uint8_t length;
@@ -105,7 +105,7 @@ typedef struct PACK {
     uint8_t arpeggio_table;
     uint8_t vibrato_table;
     tREGISTER_TABLE_DEF data[255]; // array[1..255] of tREGISTER_TABLE_DEF;
-} tREGISTER_TABLE;
+} tINSTR_MACRO;
 
 typedef struct PACK {
     tARPEGGIO_TABLE arpeggio;
@@ -129,8 +129,8 @@ typedef struct PACK {
     char            songname[43];        // pascal String[42];
     char            composer[43];        // pascal String[42];
     char            instr_names[255][43];// array[1..255] of String[42];
-    tADTRACK2_INS   instr_data[255];     // array[1..255] of tADTRACK2_INS;
-    tREGISTER_TABLE instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
+    tINSTR_DATA     instr_data[255];     // array[1..255] of tADTRACK2_INS;
+    tINSTR_MACRO    instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
     tMACRO_TABLE    macro_table[255];    // array[1..255] of tMACRO_TABLE;
     uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
     uint8_t         tempo;
@@ -195,7 +195,7 @@ const uint8_t _instr[12] = {
     0x20, 0x20, 0x40, 0x40, 0x60, 0x60, 0x80, 0x80, 0xe0, 0xe0, 0xc0, 0xbd
 };
 
-#define INSTRUMENT_SIZE sizeof(tADTRACK2_INS)
+#define INSTRUMENT_SIZE sizeof(tINSTR_DATA)
 #define CHUNK_SIZE sizeof(tADTRACK2_EVENT)
 #define PATTERN_SIZE (20*256*CHUNK_SIZE)
 #define BYTE_NULL (uint8_t)(0xFFFFFFFF)
@@ -2842,7 +2842,7 @@ static void macro_poll_proc()
 
         tCH_MACRO_TABLE *mt = &macro_table[chan];
         uint8_t fmreg_ins = mt->fmreg_ins - 1;
-        tREGISTER_TABLE *rt = &songdata->instr_macros[fmreg_ins];
+        tINSTR_MACRO *rt = &songdata->instr_macros[fmreg_ins];
         bool force_macro_keyon = FALSE;
 
         if (mt->fmreg_ins /*&& (speed != 0)*/) { // FIXME: what speed?
