@@ -4,6 +4,7 @@
     - Implement generate_custom_vibrato()
     - Implement fade_out_volume in set_ins_volume() and set_volume
     - Replace ins_parameter() with smth more readable
+    - Rework tFM_PARAMETER_TABLE, make it identical to tFM_INST_DATA
 
     In order to get into Adplug:
     - Remove PACKED structures, this is not partable
@@ -124,7 +125,7 @@ typedef struct PACK {
 
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
 
-// ATTENTION: may not be packed in future!
+// This structure has byte-to-byte equivalence to the file
 typedef struct PACK {
     char            songname[43];        // pascal String[42];
     char            composer[43];        // pascal String[42];
@@ -162,10 +163,6 @@ typedef enum {
 typedef struct PACK {
     uint8_t note;
     uint8_t instr_def;
-    //uint8_t effect_def;
-    //uint8_t effect;
-    //uint8_t effect_def2;
-    //uint8_t effect2;
     struct PACK {
         uint8_t def;
         uint8_t val;
@@ -386,6 +383,7 @@ uint8_t global_volume = 63;
 const uint8_t pattern_loop_flag  = 0xe0;
 const uint8_t pattern_break_flag = 0xf0;
 
+// TODO: make it
 tFM_PARAMETER_TABLE fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
 bool volume_lock[20];			// array[1..20] of Boolean;
 bool vol4op_lock[20] ;			// array[1..20] of Boolean;
@@ -745,7 +743,7 @@ static uint8_t scale_volume(uint8_t volume, uint8_t scale_factor)
 
 static uint32_t _4op_data_flag(uint8_t chan)
 {
-    uint8_t _4op_conn;
+    uint8_t _4op_conn = 0;
     bool _4op_mode;
     uint8_t _4op_ch1, _4op_ch2;
     uint8_t _4op_ins1, _4op_ins2;
@@ -2114,8 +2112,8 @@ static void slide_modulator_volume_up(uint8_t chan, uint8_t slide, uint8_t limit
 
 static void slide_volume_up(int chan, uint8_t slide)
 {
-    uint8_t limit1, limit2;
-    uint16_t limit1_4op, limit2_4op;
+    uint8_t limit1 = 0, limit2 = 0;
+    uint16_t limit1_4op = 0, limit2_4op = 0;
     uint32_t _4op_flag;
     uint8_t _4op_conn;
     uint8_t _4op_ch1, _4op_ch2;
@@ -2325,6 +2323,7 @@ static void arpeggio(int slot, int chan)
     case 0: freq = nFreq(arpgg_table[slot][chan].note - 1); break;
     case 1: freq = nFreq(arpgg_table[slot][chan].note - 1 + arpgg_table[slot][chan].add1); break;
     case 2: freq = nFreq(arpgg_table[slot][chan].note - 1 + arpgg_table[slot][chan].add2); break;
+    default: freq = 0;
     }
 
     arpgg_table[slot][chan].state = arpgg_state[arpgg_table[slot][chan].state];
