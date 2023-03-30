@@ -62,7 +62,10 @@ typedef struct PACK {
 } tFM_INST_DATA;
 
 typedef struct PACK {
-    tFM_INST_DATA fm_data;
+    union {
+        tFM_INST_DATA fm_data;
+        uint8_t fm[sizeof(tFM_INST_DATA)];
+    };
     uint8_t panning;
     int8_t  fine_tune;
     uint8_t perc_voice;
@@ -581,7 +584,8 @@ static void change_freq(int chan, uint16_t freq)
 static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
 {
     // NOTE: adjust ins
-    return *(uint8_t *)((uint8_t *)&songdata->instr_data[ins - 1] + param);
+    return songdata->instr_data[ins - 1].fm[param];
+    //return *(uint8_t *)((uint8_t *)&songdata->instr_data[ins - 1] + param);
 }
 
 static bool is_chan_adsr_data_empty(int chan)
@@ -1000,11 +1004,9 @@ static void set_ins_data(uint8_t ins, int chan)
         opl3out(_instr[2] + _chan_m[chan], 63);
         opl3out(_instr[3] + _chan_c[chan], 63);
 
-        if (!pan_lock[chan]) {
-            panning_table[chan] = ins_parameter(ins, 11);
-        } else {
-            panning_table[chan] = songdata->lock_flags[chan] & 3;
-        }
+        panning_table[chan] = !pan_lock[chan]
+                                  ? songdata->instr_data[ins - 1].panning
+                                  : songdata->lock_flags[chan] & 3;
 #if 0
         printf("set_ins_data(%02x, %d)\n", ins, chan);
         printf("data: ");
@@ -1177,7 +1179,7 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
     if ((note == 0) || (note > 12*8+1)) { // If NOT (note in [1..12*8+1])
         freq = freq_table[chan];
     } else {
-        freq = nFreq(note - 1) + (int8_t)ins_parameter(ins, 12);
+        freq = nFreq(note - 1) + songdata->instr_data[ins - 1].fine_tune;
 
         if (restart_adsr) {
             key_on(chan);
@@ -1293,7 +1295,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         (arpgg_table[slot][chan].note != 0) && (arpgg_table[slot][chan].state != 1)) {
         arpgg_table[slot][chan].state = 1;
         change_frequency(chan, nFreq(arpgg_table[slot][chan].note - 1) +
-            (int8_t)ins_parameter(event_table[chan].instr_def, 12));
+            songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
+            //(int8_t)ins_parameter(event_table[chan].instr_def, 12));
     }
 
     if ((def == ef_GlobalFSlideUp) || (def == ef_GlobalFSlideDown)) {
@@ -1390,7 +1393,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
             porta_table[slot][chan].speed = val;
             porta_table[slot][chan].freq = nFreq(event->note - 1) +
-                (int8_t)ins_parameter(event_table[chan].instr_def, 12);
+                songdata->instr_data[event_table[chan].instr_def - 1].fine_tune;
+                //(int8_t)ins_parameter(event_table[chan].instr_def, 12);
         } else {
             if (eLo == ef_TonePortamento) {
                 UPDATE_effect_table_def((ef_TonePortamento));
@@ -2242,7 +2246,7 @@ static void slide_volume_down(int chan, uint8_t slide)
         if (!_4op_vol_valid_chan(chan)) {
             slide_carrier_volume_down(chan, slide);
 
-            if ((ins_parameter(voice_table[chan],10) & 1) || (percussion_mode && (chan >= 16))) { //in [17..20]
+            if ((ins_parameter(voice_table[chan], 10) & 1) || (percussion_mode && (chan >= 16))) { //in [17..20]
                slide_modulator_volume_down(chan, slide);
             }
         } else {
@@ -2325,7 +2329,8 @@ static void arpeggio(int slot, int chan)
 
     arpgg_table[slot][chan].state = arpgg_state[arpgg_table[slot][chan].state];
     change_frequency(chan, freq +
-            (int8_t)(ins_parameter(event_table[chan].instr_def, 12)));
+            songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
+            //(int8_t)(ins_parameter(event_table[chan].instr_def, 12)));
 }
 
 static void vibrato(int slot, int chan)
@@ -3085,17 +3090,20 @@ static void macro_poll_proc()
                     switch (at->data[mt->arpg_pos - 1]) {
                     case 0:
                         change_frequency(chan, nFreq(mt->arpg_note - 1) +
-                            (int8_t)ins_parameter(event_table[chan].instr_def, 12));
+                            songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
+                            //(int8_t)ins_parameter(event_table[chan].instr_def, 12));
                         break;
 
                     case 1 ... 96:
                         change_frequency(chan, nFreq(max(mt->arpg_note + at->data[mt->arpg_pos], 97) - 1) +
-                            (int8_t)ins_parameter(event_table[chan].instr_def, 12));
+                            songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
+                            //(int8_t)ins_parameter(event_table[chan].instr_def, 12));
                         break;
 
                     case 0x80 ... 0x80+12*8+1:
                         change_frequency(chan, nFreq(at->data[mt->arpg_pos - 1] - 0x80 - 1) +
-                            (int8_t)ins_parameter(event_table[chan].instr_def, 12));
+                            songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
+                            //(int8_t)ins_parameter(event_table[chan].instr_def, 12));
                         break;
                     }
                 }
