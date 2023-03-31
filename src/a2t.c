@@ -1043,16 +1043,16 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
 
 static void reset_ins_volume(int chan)
 {
-    if (!volume_scaling) {
-        set_ins_volume(ins_parameter(voice_table[chan], 2) & 0x3f,
-                   ins_parameter(voice_table[chan], 3) & 0x3f, chan);
-    } else {
-        if ((ins_parameter(voice_table[chan], 10) & 1) == 0) {
-            set_ins_volume(ins_parameter(voice_table[chan], 2) & 0x3f, 0, chan);
-        } else {
-            set_ins_volume(0, 0, chan);
-        }
+    uint8_t vol_mod = ins_parameter(voice_table[chan], 2) & 0x3f;
+    uint8_t vol_car = ins_parameter(voice_table[chan], 3) & 0x3f;
+    uint8_t conn = ins_parameter(voice_table[chan], 10) & 1;
+
+    if (volume_scaling) {
+        vol_mod = (!conn ? vol_mod : 0);
+        vol_car = 0;
     }
+
+    set_ins_volume(vol_mod, vol_car, chan);
 }
 
 static void set_global_volume()
@@ -1061,11 +1061,9 @@ static void set_global_volume()
         if (_4op_vol_valid_chan(chan)) {
             set_ins_volume_4op(BYTE_NULL, chan);
         } else if (!((carrier_vol[chan] == 0) && (modulator_vol[chan] == 0))) {
-            if ((ins_parameter(voice_table[chan], 10) & 1) == 0) {
-                set_ins_volume(BYTE_NULL, HI(volume_table[chan]), chan);
-            } else {
-                set_ins_volume(LO(volume_table[chan]), HI(volume_table[chan]), chan);
-            }
+            uint8_t conn = ins_parameter(voice_table[chan], 10) & 1;
+
+            set_ins_volume(conn ? LO(volume_table[chan]) : BYTE_NULL, HI(volume_table[chan]), chan);
         }
     }
 }
@@ -1127,6 +1125,7 @@ static void set_ins_data(uint8_t ins, int chan)
             to_fmpar(chan, i, ins_parameter(ins, i));
         }
 
+        // Stop instr macro if resetting voice
         if (!reset_chan[chan])
             keyoff_loop[chan] = FALSE;
 
@@ -1136,13 +1135,10 @@ static void set_ins_data(uint8_t ins, int chan)
             reset_chan[chan] = FALSE;
         }
 
-        if ((event_table[chan].note & 0x7f) > 0 &&
-            (event_table[chan].note & 0x7f) < 12 * 8 + 1) {
-            init_macro_table(chan, event_table[chan].note & 0x7f, ins, freq_table[chan]);
-        } else {
-            init_macro_table(chan, 0, ins, freq_table[chan]);
-        }
+        uint8_t note = event_table[chan].note & 0x7f;
+        note = (note > 0 && note <= 12 * 8 + 1) ? note : 0;
 
+        init_macro_table(chan, note, ins, freq_table[chan]);
     }
 
     vscale_table[chan] = concw(fmpar_table[chan].kslM << 6, fmpar_table[chan].kslC << 6);
