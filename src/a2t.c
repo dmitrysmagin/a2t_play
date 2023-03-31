@@ -586,17 +586,81 @@ static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
     //return *(uint8_t *)((uint8_t *)&songdata->instr_data[ins - 1] + param);
 }
 
+static uint8_t from_fmpar(int chan, uint8_t offset)
+{
+    switch (offset) {
+    case 0:
+        return (
+             fmpar_table[chan].multipM +
+            (fmpar_table[chan].ksrM  << 4) +
+            (fmpar_table[chan].sustM << 5) +
+            (fmpar_table[chan].vibrM << 6) +
+            (fmpar_table[chan].tremM << 7)
+        );
+    case 1:
+        return (
+             fmpar_table[chan].multipC +
+            (fmpar_table[chan].ksrC  << 4) +
+            (fmpar_table[chan].sustC << 5) +
+            (fmpar_table[chan].vibrC << 6) +
+            (fmpar_table[chan].tremC << 7)
+        );
+    case 2:
+        return (
+            fmpar_table[chan].kslM << 6 // no volume here
+        );
+    case 3:
+        return (
+            fmpar_table[chan].kslC << 6 // no volume here
+        );
+    case 4:
+        return (
+            (fmpar_table[chan].adsrw_mod.attck << 4) +
+             fmpar_table[chan].adsrw_mod.dec
+        );
+    case 5:
+        return (
+            (fmpar_table[chan].adsrw_car.attck << 4) +
+             fmpar_table[chan].adsrw_car.dec
+        );
+    case 6:
+        return (
+            (fmpar_table[chan].adsrw_mod.sustn << 4) +
+             fmpar_table[chan].adsrw_mod.rel
+        );
+    case 7:
+        return (
+            (fmpar_table[chan].adsrw_car.sustn << 4) +
+             fmpar_table[chan].adsrw_car.rel
+        );
+    case 8:
+        return (
+            fmpar_table[chan].adsrw_mod.wform & 7
+        );
+    case 9:
+        return (
+            fmpar_table[chan].adsrw_car.wform & 7
+        );
+    case 10:
+        return (
+            (fmpar_table[chan].connect & 1) +
+            ((fmpar_table[chan].feedb & 7) << 1)
+        );
+    }
+
+    printf("ERROR: from_fmpar() has offset: %d", offset);
+    return 0;
+}
+
+
 static bool is_chan_adsr_data_empty(int chan)
 {
-    return
-        ((fmpar_table[chan].adsrw_car.attck == 0) &&
-        (fmpar_table[chan].adsrw_mod.attck == 0) &&
-        (fmpar_table[chan].adsrw_car.dec == 0) &&
-        (fmpar_table[chan].adsrw_mod.dec == 0) &&
-        (fmpar_table[chan].adsrw_car.sustn == 0) &&
-        (fmpar_table[chan].adsrw_mod.sustn == 0) &&
-        (fmpar_table[chan].adsrw_car.rel == 0) &&
-        (fmpar_table[chan].adsrw_mod.rel == 0));
+    return (
+        !from_fmpar(chan, 4) &&
+        !from_fmpar(chan, 5) &&
+        !from_fmpar(chan, 6) &&
+        !from_fmpar(chan, 7)
+    );
 }
 
 static bool is_ins_adsr_data_empty(int ins)
@@ -607,17 +671,6 @@ static bool is_ins_adsr_data_empty(int ins)
         !ins_parameter(ins, 6) &&
         !ins_parameter(ins, 7)
     );
-/*
-    return
-        (((ins_parameter(ins, 5) >> 4) == 0) &&
-         ((ins_parameter(ins, 4) >> 4) == 0) &&
-         ((ins_parameter(ins, 5) & 0x0f) == 0) &&
-         ((ins_parameter(ins, 4) & 0x0f) == 0) &&
-         ((ins_parameter(ins, 7) >> 4) == 0) &&
-         ((ins_parameter(ins, 6) >> 4) == 0) &&
-         ((ins_parameter(ins, 7) & 0x0f) == 0) &&
-         ((ins_parameter(ins, 6) & 0x0f) == 0));
-*/
 }
 
 static bool is_data_empty(void *data, unsigned int size)
@@ -719,10 +772,8 @@ static void release_sustaining_sound(int chan)
     opl3out(_instr[2] + _chan_m[chan], 63);
     opl3out(_instr[3] + _chan_c[chan], 63);
 
-    memset(&fmpar_table[chan].adsrw_car, 0,
-        sizeof(fmpar_table[chan].adsrw_car));
-    memset(&fmpar_table[chan].adsrw_mod, 0,
-        sizeof(fmpar_table[chan].adsrw_mod));
+    memset(&fmpar_table[chan].adsrw_car, 0, sizeof(fmpar_table[chan].adsrw_car));
+    memset(&fmpar_table[chan].adsrw_mod, 0, sizeof(fmpar_table[chan].adsrw_mod));
 
     key_on(chan);
     opl3out(_instr[4] + _chan_m[chan], BYTE_NULL);
@@ -1066,8 +1117,7 @@ static void set_ins_data(uint8_t ins, int chan)
 
     }
 
-    vscale_table[chan] = concw(fmpar_table[chan].kslM << 6,
-                              fmpar_table[chan].kslC << 6);
+    vscale_table[chan] = concw(fmpar_table[chan].kslM << 6, fmpar_table[chan].kslC << 6);
     voice_table[chan] = ins;
     old_ins = event_table[chan].instr_def;
     event_table[chan].instr_def = ins;
@@ -1078,54 +1128,27 @@ static void set_ins_data(uint8_t ins, int chan)
 
 static void update_modulator_adsrw(int chan)
 {
-    opl3out(_instr[4] + _chan_m[chan],
-        (fmpar_table[chan].adsrw_mod.attck << 4) +
-        fmpar_table[chan].adsrw_mod.dec);
-    opl3out(_instr[6] + _chan_m[chan],
-        (fmpar_table[chan].adsrw_mod.sustn << 4) +
-        fmpar_table[chan].adsrw_mod.rel);
-    opl3out(_instr[8] + _chan_m[chan],
-        fmpar_table[chan].adsrw_mod.wform);
+    opl3out(_instr[4] + _chan_m[chan], from_fmpar(chan, 4));
+    opl3out(_instr[6] + _chan_m[chan], from_fmpar(chan, 6));
+    opl3out(_instr[8] + _chan_m[chan], from_fmpar(chan, 8));
 }
 
 static void update_carrier_adsrw(int chan)
 {
-    opl3out(_instr[5] + _chan_c[chan],
-        (fmpar_table[chan].adsrw_car.attck << 4) +
-        fmpar_table[chan].adsrw_car.dec);
-    opl3out(_instr[7] + _chan_c[chan],
-        (fmpar_table[chan].adsrw_car.sustn << 4) +
-        fmpar_table[chan].adsrw_car.rel);
-    opl3out(_instr[9] + _chan_c[chan],
-        fmpar_table[chan].adsrw_car.wform);
+    opl3out(_instr[5] + _chan_c[chan], from_fmpar(chan, 5));
+    opl3out(_instr[7] + _chan_c[chan], from_fmpar(chan, 7));
+    opl3out(_instr[9] + _chan_c[chan], from_fmpar(chan, 9));
 }
 
 static void update_fmpar(int chan)
 {
-    opl3out(_instr[0] + _chan_m[chan],
-        fmpar_table[chan].multipM +
-        (fmpar_table[chan].ksrM << 4) +
-        (fmpar_table[chan].sustM << 5) +
-        (fmpar_table[chan].vibrM << 6) +
-        (fmpar_table[chan].tremM << 7));
+    opl3out(_instr[0] + _chan_m[chan], from_fmpar(chan, 0));
+    opl3out(_instr[1] + _chan_c[chan], from_fmpar(chan, 1));
+    opl3out(_instr[10] + _chan_n[chan], from_fmpar(chan, 10) | _panning[panning_table[chan]]);
 
-    opl3out(_instr[1] + _chan_c[chan],
-        fmpar_table[chan].multipC +
-        (fmpar_table[chan].ksrC << 4) +
-        (fmpar_table[chan].sustC << 5) +
-        (fmpar_table[chan].vibrC << 6) +
-        (fmpar_table[chan].tremC << 7));
+    vscale_table[chan] = concw(fmpar_table[chan].kslM << 6, fmpar_table[chan].kslC << 6);
 
-    opl3out(_instr[10] + _chan_n[chan],
-        (fmpar_table[chan].connect +
-        (fmpar_table[chan].feedb << 1)) |
-        _panning[panning_table[chan]]);
-
-    vscale_table[chan] = concw(fmpar_table[chan].kslM << 6,
-                   fmpar_table[chan].kslC << 6);
-
-    set_ins_volume(LO(volume_table[chan]),
-               HI(volume_table[chan]), chan);
+    set_ins_volume(LO(volume_table[chan]), HI(volume_table[chan]), chan);
 }
 
 static inline bool is_4op_chan(int chan) // 0..19
@@ -2904,6 +2927,7 @@ static void macro_poll_proc()
                             }
                         }
 
+                        // use translation_table[column] = { offset, mask, shift}
                         if (!songdata->dis_fmreg_col[fmreg_ins][0])
                             fmpar_table[chan].adsrw_mod.attck =
                                 d->fm_data.ATTCK_DEC_modulator >> 4;
