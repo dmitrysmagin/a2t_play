@@ -586,7 +586,7 @@ static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
     //return *(uint8_t *)((uint8_t *)&songdata->instr_data[ins - 1] + param);
 }
 
-static uint8_t from_fmpar(int chan, uint8_t offset)
+static uint8_t from_fmpar(int chan, int offset)
 {
     switch (offset) {
     case 0:
@@ -652,6 +652,57 @@ static uint8_t from_fmpar(int chan, uint8_t offset)
     return 0;
 }
 
+static void to_fmpar(int chan, int offset, uint8_t value)
+{
+    switch (offset) {
+    case 0:
+        fmpar_table[chan].multipM =  value & 0x0f;
+        fmpar_table[chan].ksrM    = (value >> 4) & 1;
+        fmpar_table[chan].sustM   = (value >> 5) & 1;
+        fmpar_table[chan].vibrM   = (value >> 6) & 1;
+        fmpar_table[chan].tremM   = (value >> 7) & 1;
+        return;
+    case 1:
+        fmpar_table[chan].multipC =  value & 0x0f;
+        fmpar_table[chan].ksrC    = (value >> 4) & 1;
+        fmpar_table[chan].sustC   = (value >> 5) & 1;
+        fmpar_table[chan].vibrC   = (value >> 6) & 1;
+        fmpar_table[chan].tremC   = (value >> 7) & 1;
+        return;
+    case 2:
+        fmpar_table[chan].kslM    = (value >> 6) & 3;
+        return;
+    case 3:
+        fmpar_table[chan].kslC    = (value >> 6) & 3;
+        return;
+    case 4:
+        fmpar_table[chan].adsrw_mod.attck = (value >> 4) & 0x0f;
+        fmpar_table[chan].adsrw_mod.dec   =  value & 0x0f;
+        return;
+    case 5:
+        fmpar_table[chan].adsrw_car.attck = (value >> 4) & 0x0f;
+        fmpar_table[chan].adsrw_car.dec   =  value & 0x0f;
+        return;
+    case 6:
+        fmpar_table[chan].adsrw_mod.sustn = (value >> 4) & 0x0f;
+        fmpar_table[chan].adsrw_mod.rel   =  value & 0x0f;
+        return;
+    case 7:
+        fmpar_table[chan].adsrw_car.sustn = (value >> 4) & 0x0f;
+        fmpar_table[chan].adsrw_car.rel   =  value & 0x0f;
+        return;
+    case 8:
+        fmpar_table[chan].adsrw_mod.wform =  value & 0x07;
+        return;
+    case 9:
+        fmpar_table[chan].adsrw_car.wform =  value & 0x07;
+        return;
+    case 10:
+        fmpar_table[chan].connect =  value & 1;
+        fmpar_table[chan].feedb   = (value >> 1) & 7;
+        return;
+    }
+}
 
 static bool is_chan_adsr_data_empty(int chan)
 {
@@ -1050,9 +1101,6 @@ static void set_ins_data(uint8_t ins, int chan)
     uint8_t old_ins;
 
     if ((ins != event_table[chan].instr_def) || reset_chan[chan]) {
-        opl3out(_instr[2] + _chan_m[chan], 63);
-        opl3out(_instr[3] + _chan_c[chan], 63);
-
         panning_table[chan] = !pan_lock[chan]
                                   ? songdata->instr_data[ins - 1].panning
                                   : songdata->lock_flags[chan] & 3;
@@ -1065,39 +1113,19 @@ static void set_ins_data(uint8_t ins, int chan)
 #endif
         opl3out(_instr[0] + _chan_m[chan], ins_parameter(ins, 0));
         opl3out(_instr[1] + _chan_c[chan], ins_parameter(ins, 1));
+        opl3out(_instr[2] + _chan_m[chan], (ins_parameter(ins, 2) & 0xc0) + 63);
+        opl3out(_instr[3] + _chan_c[chan], (ins_parameter(ins, 3) & 0xc0) + 63);
         opl3out(_instr[4] + _chan_m[chan], ins_parameter(ins, 4));
         opl3out(_instr[5] + _chan_c[chan], ins_parameter(ins, 5));
         opl3out(_instr[6] + _chan_m[chan], ins_parameter(ins, 6));
         opl3out(_instr[7] + _chan_c[chan], ins_parameter(ins, 7));
         opl3out(_instr[8] + _chan_m[chan], ins_parameter(ins, 8));
         opl3out(_instr[9] + _chan_c[chan], ins_parameter(ins, 9));
-        opl3out(_instr[10] + _chan_n[chan], (ins_parameter(ins, 10) & 15 ) | _panning[panning_table[chan]]);
+        opl3out(_instr[10] + _chan_n[chan], ins_parameter(ins, 10) | _panning[panning_table[chan]]);
 
-        fmpar_table[chan].connect =  ins_parameter(ins, 10) & 1;
-        fmpar_table[chan].feedb   = (ins_parameter(ins, 10) >> 1) & 7;
-        fmpar_table[chan].multipM =  ins_parameter(ins, 0)  & 0x0f;
-        fmpar_table[chan].kslM    =  ins_parameter(ins, 2)  >> 6;
-        fmpar_table[chan].tremM   =  ins_parameter(ins, 0)  >> 7;
-        fmpar_table[chan].vibrM   = (ins_parameter(ins, 0)  >> 6) & 1;
-        fmpar_table[chan].ksrM    = (ins_parameter(ins, 0)  >> 4) & 1;
-        fmpar_table[chan].sustM   = (ins_parameter(ins, 0)  >> 5) & 1;
-        fmpar_table[chan].multipC =  ins_parameter(ins, 1)  & 0x0f;
-        fmpar_table[chan].kslC    =  ins_parameter(ins, 3)  >> 6;
-        fmpar_table[chan].tremC   =  ins_parameter(ins, 1)  >> 7;
-        fmpar_table[chan].vibrC   = (ins_parameter(ins, 1)  >> 6) & 1;
-        fmpar_table[chan].ksrC    = (ins_parameter(ins, 1)  >> 4) & 1;
-        fmpar_table[chan].sustC   = (ins_parameter(ins, 1)  >> 5) & 1;
-
-        fmpar_table[chan].adsrw_car.attck = ins_parameter(ins, 5) >> 4;
-        fmpar_table[chan].adsrw_mod.attck = ins_parameter(ins, 4) >> 4;
-        fmpar_table[chan].adsrw_car.dec   = ins_parameter(ins, 5) & 0x0f;
-        fmpar_table[chan].adsrw_mod.dec   = ins_parameter(ins, 4) & 0x0f;
-        fmpar_table[chan].adsrw_car.sustn = ins_parameter(ins, 7) >> 4;
-        fmpar_table[chan].adsrw_mod.sustn = ins_parameter(ins, 6) >> 4;
-        fmpar_table[chan].adsrw_car.rel   = ins_parameter(ins, 7) & 0x0f;
-        fmpar_table[chan].adsrw_mod.rel   = ins_parameter(ins, 6) & 0x0f;
-        fmpar_table[chan].adsrw_car.wform = ins_parameter(ins, 9) & 0x07;
-        fmpar_table[chan].adsrw_mod.wform = ins_parameter(ins, 8) & 0x07;
+        for (int i = 0; i < 11; i++) {
+            to_fmpar(chan, i, ins_parameter(ins, i));
+        }
 
         if (!reset_chan[chan])
             keyoff_loop[chan] = FALSE;
