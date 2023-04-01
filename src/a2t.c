@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <string.h>
+#include <assert.h>
 
 #include "depack.h"
 #include "sixpack.h"
@@ -47,9 +48,6 @@ typedef signed char bool;
 #define fixed_note_flag		0x90
 //#define pattern_loop_flag	0xe0
 //#define pattern_break_flag	0xf0
-
-#define SET_BITS(OFFSET, WIDTH, ADDR, VALUE)
-#define GET_BITS(OFFSET, WIDTH)
 
 typedef struct PACK {
     uint8_t AM_VIB_EG_modulator;
@@ -116,14 +114,23 @@ typedef struct PACK {
     tVIBRATO_TABLE vibrato;
 } tMACRO_TABLE;
 
-typedef struct PACK {
-    struct {
-        uint8_t attck, dec, sustn, rel, wform;
-    } adsrw_car, adsrw_mod;
-    uint8_t connect;
-    uint8_t feedb;
-    uint8_t multipM, kslM, tremM, vibrM, ksrM, sustM;
-    uint8_t multipC, kslC, tremC, vibrC, ksrC, sustC;
+typedef struct {
+    union {
+        struct {
+            uint8_t multipM: 4, ksrM: 1, sustM: 1, vibrM: 1, tremM : 1;
+            uint8_t multipC: 4, ksrC: 1, sustC: 1, vibrC: 1, tremC : 1;
+            uint8_t volM: 6, kslM: 2;
+            uint8_t volC: 6, kslC: 2;
+            uint8_t decM: 4, attckM: 4;
+            uint8_t decC: 4, attckC: 4;
+            uint8_t relM: 4, sustnM: 4;
+            uint8_t relC: 4, sustnC: 4;
+            uint8_t wformM: 3, : 5;
+            uint8_t wformC: 3, : 5;
+            uint8_t connect: 1, feedb: 3, panning: 2, : 2;
+        };
+        uint8_t data[11];
+    };
 } tFM_PARAMETER_TABLE;
 
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
@@ -591,6 +598,8 @@ static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
 
 static uint8_t from_fmpar(int chan, int offset)
 {
+    return fmpar_table[chan].data[offset];
+#if 0
     switch (offset) {
     case 0:
         return (
@@ -618,31 +627,31 @@ static uint8_t from_fmpar(int chan, int offset)
         );
     case 4:
         return (
-            (fmpar_table[chan].adsrw_mod.attck << 4) +
-             fmpar_table[chan].adsrw_mod.dec
+            (fmpar_table[chan].attckM << 4) +
+             fmpar_table[chan].decM
         );
     case 5:
         return (
-            (fmpar_table[chan].adsrw_car.attck << 4) +
-             fmpar_table[chan].adsrw_car.dec
+            (fmpar_table[chan].attckC << 4) +
+             fmpar_table[chan].decC
         );
     case 6:
         return (
-            (fmpar_table[chan].adsrw_mod.sustn << 4) +
-             fmpar_table[chan].adsrw_mod.rel
+            (fmpar_table[chan].sustnM << 4) +
+             fmpar_table[chan].relM
         );
     case 7:
         return (
-            (fmpar_table[chan].adsrw_car.sustn << 4) +
-             fmpar_table[chan].adsrw_car.rel
+            (fmpar_table[chan].sustnC << 4) +
+             fmpar_table[chan].relC
         );
     case 8:
         return (
-            fmpar_table[chan].adsrw_mod.wform & 7
+            fmpar_table[chan].wformM & 7
         );
     case 9:
         return (
-            fmpar_table[chan].adsrw_car.wform & 7
+            fmpar_table[chan].wformC & 7
         );
     case 10:
         return (
@@ -653,10 +662,14 @@ static uint8_t from_fmpar(int chan, int offset)
 
     printf("ERROR: from_fmpar() has offset: %d", offset);
     return 0;
+#endif
 }
 
 static void to_fmpar(int chan, int offset, uint8_t value)
 {
+    fmpar_table[chan].data[offset] = value;
+    return;
+#if 0
     switch (offset) {
     case 0:
         fmpar_table[chan].multipM =  value & 0x0f;
@@ -679,32 +692,33 @@ static void to_fmpar(int chan, int offset, uint8_t value)
         fmpar_table[chan].kslC    = (value >> 6) & 3;
         return;
     case 4:
-        fmpar_table[chan].adsrw_mod.attck = (value >> 4) & 0x0f;
-        fmpar_table[chan].adsrw_mod.dec   =  value & 0x0f;
+        fmpar_table[chan].attckM = (value >> 4) & 0x0f;
+        fmpar_table[chan].decM   =  value & 0x0f;
         return;
     case 5:
-        fmpar_table[chan].adsrw_car.attck = (value >> 4) & 0x0f;
-        fmpar_table[chan].adsrw_car.dec   =  value & 0x0f;
+        fmpar_table[chan].attckC = (value >> 4) & 0x0f;
+        fmpar_table[chan].decC   =  value & 0x0f;
         return;
     case 6:
-        fmpar_table[chan].adsrw_mod.sustn = (value >> 4) & 0x0f;
-        fmpar_table[chan].adsrw_mod.rel   =  value & 0x0f;
+        fmpar_table[chan].sustnM = (value >> 4) & 0x0f;
+        fmpar_table[chan].relM   =  value & 0x0f;
         return;
     case 7:
-        fmpar_table[chan].adsrw_car.sustn = (value >> 4) & 0x0f;
-        fmpar_table[chan].adsrw_car.rel   =  value & 0x0f;
+        fmpar_table[chan].sustnC = (value >> 4) & 0x0f;
+        fmpar_table[chan].relC   =  value & 0x0f;
         return;
     case 8:
-        fmpar_table[chan].adsrw_mod.wform =  value & 0x07;
+        fmpar_table[chan].wformM =  value & 0x07;
         return;
     case 9:
-        fmpar_table[chan].adsrw_car.wform =  value & 0x07;
+        fmpar_table[chan].wformC =  value & 0x07;
         return;
     case 10:
         fmpar_table[chan].connect =  value & 1;
         fmpar_table[chan].feedb   = (value >> 1) & 7;
         return;
     }
+#endif
 }
 
 static bool is_chan_adsr_data_empty(int chan)
@@ -1548,12 +1562,12 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
     case ef_SetWaveform:
         if (val / 16 <= 7) { // in [0..7]
-            fmpar_table[chan].adsrw_car.wform = val / 16;
+            fmpar_table[chan].wformC = val / 16;
             update_carrier_adsrw(chan);
         }
 
         if (val % 16 <= 7) { // in [0..7]
-            fmpar_table[chan].adsrw_mod.wform = val % 16;
+            fmpar_table[chan].wformM = val % 16;
             update_modulator_adsrw(chan);
         }
         break;
@@ -1622,42 +1636,42 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             }
 
         case ef_ex_SetAttckRateM:
-            fmpar_table[chan].adsrw_mod.attck = val % 16;
+            fmpar_table[chan].attckM = val % 16;
             update_modulator_adsrw(chan);
             break;
 
         case ef_ex_SetDecayRateM:
-            fmpar_table[chan].adsrw_mod.dec = val % 16;
+            fmpar_table[chan].decM = val % 16;
             update_modulator_adsrw(chan);
             break;
 
         case ef_ex_SetSustnLevelM:
-            fmpar_table[chan].adsrw_mod.sustn = val % 16;
+            fmpar_table[chan].sustnM = val % 16;
             update_modulator_adsrw(chan);
             break;
 
         case ef_ex_SetRelRateM:
-            fmpar_table[chan].adsrw_mod.rel = val % 16;
+            fmpar_table[chan].relM = val % 16;
             update_modulator_adsrw(chan);
             break;
 
         case ef_ex_SetAttckRateC:
-            fmpar_table[chan].adsrw_car.attck = val % 16;
+            fmpar_table[chan].attckC = val % 16;
             update_carrier_adsrw(chan);
             break;
 
         case ef_ex_SetDecayRateC:
-            fmpar_table[chan].adsrw_car.dec = val % 16;
+            fmpar_table[chan].decC = val % 16;
             update_carrier_adsrw(chan);
             break;
 
         case ef_ex_SetSustnLevelC:
-            fmpar_table[chan].adsrw_car.sustn = val % 16;
+            fmpar_table[chan].sustnC = val % 16;
             update_carrier_adsrw(chan);
             break;
 
         case ef_ex_SetRelRateC:
-            fmpar_table[chan].adsrw_car.rel = val % 16;
+            fmpar_table[chan].relC = val % 16;
             update_carrier_adsrw(chan);
             break;
 
@@ -2341,11 +2355,10 @@ static void slide_volume_down(int chan, uint8_t slide)
 
 static void volume_slide(int chan, uint8_t up_speed, uint8_t down_speed)
 {
-    if (up_speed != 0)
+    if (up_speed)
         slide_volume_up(chan, up_speed);
-    else {
-        if (down_speed != 0)
-            slide_volume_down(chan, down_speed);
+    else if (down_speed) {
+        slide_volume_down(chan, down_speed);
     }
 }
 
@@ -2957,100 +2970,76 @@ static void macro_poll_proc()
 
                         // use translation_table[column] = { offset, mask, shift}
                         if (!songdata->dis_fmreg_col[fmreg_ins][0])
-                            fmpar_table[chan].adsrw_mod.attck =
-                                d->fm_data.ATTCK_DEC_modulator >> 4;
+                            fmpar_table[chan].attckM = d->fm_data.ATTCK_DEC_modulator >> 4;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][1])
-                            fmpar_table[chan].adsrw_mod.dec =
-                                d->fm_data.ATTCK_DEC_modulator & 0x0f;
+                            fmpar_table[chan].decM = d->fm_data.ATTCK_DEC_modulator & 0x0f;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][2])
-                            fmpar_table[chan].adsrw_mod.sustn =
-                                d->fm_data.SUSTN_REL_modulator >> 4;
+                            fmpar_table[chan].sustnM = d->fm_data.SUSTN_REL_modulator >> 4;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][3])
-                            fmpar_table[chan].adsrw_mod.rel =
-                                d->fm_data.SUSTN_REL_modulator & 0x0f;
+                            fmpar_table[chan].relM = d->fm_data.SUSTN_REL_modulator & 0x0f;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][4])
-                            fmpar_table[chan].adsrw_mod.wform =
-                                d->fm_data.WAVEFORM_modulator & 0x07;
+                            fmpar_table[chan].wformM = d->fm_data.WAVEFORM_modulator & 0x07;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][6])
-                            fmpar_table[chan].kslM =
-                                d->fm_data.KSL_VOLUM_modulator >> 6;
+                            fmpar_table[chan].kslM = d->fm_data.KSL_VOLUM_modulator >> 6;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][7])
-                            fmpar_table[chan].multipM =
-                                d->fm_data.AM_VIB_EG_modulator & 0x0f;
+                            fmpar_table[chan].multipM = d->fm_data.AM_VIB_EG_modulator & 0x0f;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][8])
-                            fmpar_table[chan].tremM =
-                                d->fm_data.AM_VIB_EG_modulator >> 7;
+                            fmpar_table[chan].tremM = d->fm_data.AM_VIB_EG_modulator >> 7;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][9])
-                            fmpar_table[chan].vibrM =
-                                (d->fm_data.AM_VIB_EG_modulator >> 6) & 1;
+                            fmpar_table[chan].vibrM = (d->fm_data.AM_VIB_EG_modulator >> 6) & 1;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][10])
-                            fmpar_table[chan].ksrM =
-                                (d->fm_data.AM_VIB_EG_modulator >> 4) & 1;
+                            fmpar_table[chan].ksrM = (d->fm_data.AM_VIB_EG_modulator >> 4) & 1;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][11])
-                            fmpar_table[chan].sustM =
-                                (d->fm_data.AM_VIB_EG_modulator >> 5) & 1;
+                            fmpar_table[chan].sustM = (d->fm_data.AM_VIB_EG_modulator >> 5) & 1;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][12])
-                            fmpar_table[chan].adsrw_car.attck =
-                                d->fm_data.ATTCK_DEC_carrier >> 4;
+                            fmpar_table[chan].attckC = d->fm_data.ATTCK_DEC_carrier >> 4;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][13])
-                            fmpar_table[chan].adsrw_car.dec =
-                                d->fm_data.ATTCK_DEC_carrier & 0x0f;
+                            fmpar_table[chan].decC = d->fm_data.ATTCK_DEC_carrier & 0x0f;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][14])
-                            fmpar_table[chan].adsrw_car.sustn =
-                                d->fm_data.SUSTN_REL_carrier >> 4;
+                            fmpar_table[chan].sustnC = d->fm_data.SUSTN_REL_carrier >> 4;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][15])
-                            fmpar_table[chan].adsrw_car.rel =
-                                d->fm_data.SUSTN_REL_carrier & 0xf;
+                            fmpar_table[chan].relC = d->fm_data.SUSTN_REL_carrier & 0xf;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][16])
-                            fmpar_table[chan].adsrw_car.wform =
-                                d->fm_data.WAVEFORM_carrier & 0x07;
+                            fmpar_table[chan].wformC = d->fm_data.WAVEFORM_carrier & 0x07;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][18])
-                            fmpar_table[chan].kslC =
-                                d->fm_data.KSL_VOLUM_carrier >> 6;
+                            fmpar_table[chan].kslC = d->fm_data.KSL_VOLUM_carrier >> 6;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][19])
-                            fmpar_table[chan].multipC =
-                                d->fm_data.AM_VIB_EG_carrier & 0x0f;
+                            fmpar_table[chan].multipC = d->fm_data.AM_VIB_EG_carrier & 0x0f;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][20])
-                            fmpar_table[chan].tremC =
-                                d->fm_data.AM_VIB_EG_carrier >> 7;
+                            fmpar_table[chan].tremC = d->fm_data.AM_VIB_EG_carrier >> 7;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][21])
-                            fmpar_table[chan].vibrC =
-                                (d->fm_data.AM_VIB_EG_carrier >> 6) & 1;
+                            fmpar_table[chan].vibrC = (d->fm_data.AM_VIB_EG_carrier >> 6) & 1;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][22])
-                            fmpar_table[chan].ksrC =
-                                (d->fm_data.AM_VIB_EG_carrier >> 4) & 1;
+                            fmpar_table[chan].ksrC = (d->fm_data.AM_VIB_EG_carrier >> 4) & 1;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][23])
-                            fmpar_table[chan].sustC =
-                                (d->fm_data.AM_VIB_EG_carrier >> 5) & 1;
+                            fmpar_table[chan].sustC = (d->fm_data.AM_VIB_EG_carrier >> 5) & 1;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][24])
-                            fmpar_table[chan].connect =
-                                d->fm_data.FEEDBACK_FM & 1;
+                            fmpar_table[chan].connect = d->fm_data.FEEDBACK_FM & 1;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][25])
-                            fmpar_table[chan].feedb =
-                                (d->fm_data.FEEDBACK_FM >> 1) & 7;
+                            fmpar_table[chan].feedb = (d->fm_data.FEEDBACK_FM >> 1) & 7;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][27] && !pan_lock[chan])
                             panning_table[chan] = d->panning;
@@ -3438,6 +3427,11 @@ static int a2_import(char *tune); // forward def
 
 void a2t_play(char *tune) // start_playing()
 {
+    printf("sizeof(tFM_INST_DATA) == %d\n", sizeof(tFM_INST_DATA));
+    printf("sizeof(tFM_PARAMETER_TABLE) == %d\n", sizeof(tFM_PARAMETER_TABLE));
+    assert(sizeof(tFM_INST_DATA) == 11);
+    assert(sizeof(tFM_PARAMETER_TABLE) == 11);
+
     a2t_stop();
     int err = a2_import(tune);
 
