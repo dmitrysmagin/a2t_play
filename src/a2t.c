@@ -48,6 +48,9 @@ typedef signed char bool;
 //#define pattern_loop_flag	0xe0
 //#define pattern_break_flag	0xf0
 
+#define SET_BITS(OFFSET, WIDTH, ADDR, VALUE)
+#define GET_BITS(OFFSET, WIDTH)
+
 typedef struct PACK {
     uint8_t AM_VIB_EG_modulator;
     uint8_t AM_VIB_EG_carrier;
@@ -823,8 +826,10 @@ static void release_sustaining_sound(int chan)
     opl3out(_instr[2] + _chan_m[chan], 63);
     opl3out(_instr[3] + _chan_c[chan], 63);
 
-    memset(&fmpar_table[chan].adsrw_car, 0, sizeof(fmpar_table[chan].adsrw_car));
-    memset(&fmpar_table[chan].adsrw_mod, 0, sizeof(fmpar_table[chan].adsrw_mod));
+    // clear adsrw_mod and adsrw_car
+    for (int i = 4; i <= 9; i++) {
+        to_fmpar(chan, i, 0);
+    }
 
     key_on(chan);
     opl3out(_instr[4] + _chan_m[chan], BYTE_NULL);
@@ -839,8 +844,7 @@ static void release_sustaining_sound(int chan)
 
 static uint8_t scale_volume(uint8_t volume, uint8_t scale_factor)
 {
-    return 63 - ((63 - volume) *
-        (63 - scale_factor) / 63);
+    return 63 - ((63 - volume) * (63 - scale_factor) / 63);
 }
 
 static uint32_t _4op_data_flag(uint8_t chan)
