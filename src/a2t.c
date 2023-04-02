@@ -4,13 +4,11 @@
     - Implement generate_custom_vibrato()
     - Implement fade_out_volume in set_ins_volume() and set_volume
     - Replace ins_parameter() with smth more readable
-    - Rework tFM_PARAMETER_TABLE, make it identical to tFM_INST_DATA
 
     In order to get into Adplug:
     - Remove PACKED structures, this is not partable
         HOWEVER: if all members of struct are uint8_t/char the padding is not applied,
         this is true for multidimensional arrays: char arr[21][11] has no padding between dimensions
-    - Remove bitfields, not portable, undefined behavior
     - Reduce the memory used for a tune
 */
 #include <stdio.h>
@@ -49,25 +47,27 @@ typedef signed char bool;
 //#define pattern_loop_flag	0xe0
 //#define pattern_break_flag	0xf0
 
-typedef struct PACK {
-    uint8_t AM_VIB_EG_modulator;
-    uint8_t AM_VIB_EG_carrier;
-    uint8_t KSL_VOLUM_modulator;
-    uint8_t KSL_VOLUM_carrier;
-    uint8_t ATTCK_DEC_modulator;
-    uint8_t ATTCK_DEC_carrier;
-    uint8_t SUSTN_REL_modulator;
-    uint8_t SUSTN_REL_carrier;
-    uint8_t WAVEFORM_modulator;
-    uint8_t WAVEFORM_carrier;
-    uint8_t FEEDBACK_FM;
+typedef struct {
+    union {
+        struct {
+            uint8_t multipM: 4, ksrM: 1, sustM: 1, vibrM: 1, tremM : 1;
+            uint8_t multipC: 4, ksrC: 1, sustC: 1, vibrC: 1, tremC : 1;
+            uint8_t volM: 6, kslM: 2;
+            uint8_t volC: 6, kslC: 2;
+            uint8_t decM: 4, attckM: 4;
+            uint8_t decC: 4, attckC: 4;
+            uint8_t relM: 4, sustnM: 4;
+            uint8_t relC: 4, sustnC: 4;
+            uint8_t wformM: 3, : 5;
+            uint8_t wformC: 3, : 5;
+            uint8_t connect: 1, feedb: 3, : 4; // panning is not used here
+        };
+        uint8_t data[11];
+    };
 } tFM_INST_DATA;
 
 typedef struct PACK {
-    union {
-        tFM_INST_DATA fm_data;
-        uint8_t fm[sizeof(tFM_INST_DATA)];
-    };
+    tFM_INST_DATA fm_data;
     uint8_t panning;
     int8_t  fine_tune;
     uint8_t perc_voice;
@@ -113,25 +113,6 @@ typedef struct PACK {
     tARPEGGIO_TABLE arpeggio;
     tVIBRATO_TABLE vibrato;
 } tMACRO_TABLE;
-
-typedef struct {
-    union {
-        struct {
-            uint8_t multipM: 4, ksrM: 1, sustM: 1, vibrM: 1, tremM : 1;
-            uint8_t multipC: 4, ksrC: 1, sustC: 1, vibrC: 1, tremC : 1;
-            uint8_t volM: 6, kslM: 2;
-            uint8_t volC: 6, kslC: 2;
-            uint8_t decM: 4, attckM: 4;
-            uint8_t decC: 4, attckC: 4;
-            uint8_t relM: 4, sustnM: 4;
-            uint8_t relC: 4, sustnC: 4;
-            uint8_t wformM: 3, : 5;
-            uint8_t wformC: 3, : 5;
-            uint8_t connect: 1, feedb: 3, panning: 2, : 2;
-        };
-        uint8_t data[11];
-    };
-} tFM_PARAMETER_TABLE;
 
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
 
@@ -393,8 +374,7 @@ uint8_t global_volume = 63;
 const uint8_t pattern_loop_flag  = 0xe0;
 const uint8_t pattern_break_flag = 0xf0;
 
-// TODO: make it
-tFM_PARAMETER_TABLE fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
+tFM_INST_DATA fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
 bool volume_lock[20];			// array[1..20] of Boolean;
 bool vol4op_lock[20] ;			// array[1..20] of Boolean;
 uint16_t volume_table[20];		// array[1..20] of Word;
@@ -592,8 +572,7 @@ static void change_freq(int chan, uint16_t freq)
 static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
 {
     // NOTE: adjust ins
-    return songdata->instr_data[ins - 1].fm[param];
-    //return *(uint8_t *)((uint8_t *)&songdata->instr_data[ins - 1] + param);
+    return songdata->instr_data[ins - 1].fm_data.data[param];
 }
 
 static uint8_t from_fmpar(int chan, int offset)
@@ -1359,7 +1338,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         arpgg_table[slot][chan].state = 1;
         change_frequency(chan, nFreq(arpgg_table[slot][chan].note - 1) +
             songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
-            //(int8_t)ins_parameter(event_table[chan].instr_def, 12));
     }
 
     if ((def == ef_GlobalFSlideUp) || (def == ef_GlobalFSlideDown)) {
@@ -1457,7 +1435,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             porta_table[slot][chan].speed = val;
             porta_table[slot][chan].freq = nFreq(event->note - 1) +
                 songdata->instr_data[event_table[chan].instr_def - 1].fine_tune;
-                //(int8_t)ins_parameter(event_table[chan].instr_def, 12);
         } else {
             if (eLo == ef_TonePortamento) {
                 UPDATE_effect_table_def((ef_TonePortamento));
@@ -2393,7 +2370,6 @@ static void arpeggio(int slot, int chan)
     arpgg_table[slot][chan].state = arpgg_state[arpgg_table[slot][chan].state];
     change_frequency(chan, freq +
             songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
-            //(int8_t)(ins_parameter(event_table[chan].instr_def, 12)));
 }
 
 static void vibrato(int slot, int chan)
@@ -2970,101 +2946,104 @@ static void macro_poll_proc()
 
                         // use translation_table[column] = { offset, mask, shift}
                         if (!songdata->dis_fmreg_col[fmreg_ins][0])
-                            fmpar_table[chan].attckM = d->fm_data.ATTCK_DEC_modulator >> 4;
+                            fmpar_table[chan].attckM = d->fm_data.attckM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][1])
-                            fmpar_table[chan].decM = d->fm_data.ATTCK_DEC_modulator & 0x0f;
+                            fmpar_table[chan].decM = d->fm_data.decM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][2])
-                            fmpar_table[chan].sustnM = d->fm_data.SUSTN_REL_modulator >> 4;
+                            fmpar_table[chan].sustnM = d->fm_data.sustnM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][3])
-                            fmpar_table[chan].relM = d->fm_data.SUSTN_REL_modulator & 0x0f;
+                            fmpar_table[chan].relM = d->fm_data.relM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][4])
-                            fmpar_table[chan].wformM = d->fm_data.WAVEFORM_modulator & 0x07;
+                            fmpar_table[chan].wformM = d->fm_data.wformM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][6])
-                            fmpar_table[chan].kslM = d->fm_data.KSL_VOLUM_modulator >> 6;
+                            fmpar_table[chan].kslM = d->fm_data.kslM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][7])
-                            fmpar_table[chan].multipM = d->fm_data.AM_VIB_EG_modulator & 0x0f;
+                            fmpar_table[chan].multipM = d->fm_data.multipM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][8])
-                            fmpar_table[chan].tremM = d->fm_data.AM_VIB_EG_modulator >> 7;
+                            fmpar_table[chan].tremM = d->fm_data.tremM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][9])
-                            fmpar_table[chan].vibrM = (d->fm_data.AM_VIB_EG_modulator >> 6) & 1;
+                            fmpar_table[chan].vibrM = d->fm_data.vibrM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][10])
-                            fmpar_table[chan].ksrM = (d->fm_data.AM_VIB_EG_modulator >> 4) & 1;
+                            fmpar_table[chan].ksrM = d->fm_data.ksrM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][11])
-                            fmpar_table[chan].sustM = (d->fm_data.AM_VIB_EG_modulator >> 5) & 1;
+                            fmpar_table[chan].sustM = d->fm_data.sustM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][12])
-                            fmpar_table[chan].attckC = d->fm_data.ATTCK_DEC_carrier >> 4;
+                            fmpar_table[chan].attckC = d->fm_data.attckC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][13])
-                            fmpar_table[chan].decC = d->fm_data.ATTCK_DEC_carrier & 0x0f;
+                            fmpar_table[chan].decC = d->fm_data.decC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][14])
-                            fmpar_table[chan].sustnC = d->fm_data.SUSTN_REL_carrier >> 4;
+                            fmpar_table[chan].sustnC = d->fm_data.sustnC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][15])
-                            fmpar_table[chan].relC = d->fm_data.SUSTN_REL_carrier & 0xf;
+                            fmpar_table[chan].relC = d->fm_data.relC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][16])
-                            fmpar_table[chan].wformC = d->fm_data.WAVEFORM_carrier & 0x07;
+                            fmpar_table[chan].wformC = d->fm_data.wformC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][18])
-                            fmpar_table[chan].kslC = d->fm_data.KSL_VOLUM_carrier >> 6;
+                            fmpar_table[chan].kslC = d->fm_data.kslC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][19])
-                            fmpar_table[chan].multipC = d->fm_data.AM_VIB_EG_carrier & 0x0f;
+                            fmpar_table[chan].multipC = d->fm_data.multipC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][20])
-                            fmpar_table[chan].tremC = d->fm_data.AM_VIB_EG_carrier >> 7;
+                            fmpar_table[chan].tremC = d->fm_data.tremC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][21])
-                            fmpar_table[chan].vibrC = (d->fm_data.AM_VIB_EG_carrier >> 6) & 1;
+                            fmpar_table[chan].vibrC = d->fm_data.vibrC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][22])
-                            fmpar_table[chan].ksrC = (d->fm_data.AM_VIB_EG_carrier >> 4) & 1;
+                            fmpar_table[chan].ksrC = d->fm_data.ksrC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][23])
-                            fmpar_table[chan].sustC = (d->fm_data.AM_VIB_EG_carrier >> 5) & 1;
+                            fmpar_table[chan].sustC = d->fm_data.sustC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][24])
-                            fmpar_table[chan].connect = d->fm_data.FEEDBACK_FM & 1;
+                            fmpar_table[chan].connect = d->fm_data.connect;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][25])
-                            fmpar_table[chan].feedb = (d->fm_data.FEEDBACK_FM >> 1) & 7;
+                            fmpar_table[chan].feedb = d->fm_data.feedb;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][27] && !pan_lock[chan])
                             panning_table[chan] = d->panning;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][5])
-                            set_ins_volume(63 - (d->fm_data.KSL_VOLUM_modulator & 0x3f), BYTE_NULL, chan);
+                            set_ins_volume(63 - d->fm_data.volM, BYTE_NULL, chan);
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][17])
-                            set_ins_volume(BYTE_NULL, 63 - (d->fm_data.KSL_VOLUM_carrier & 0x3f), chan);
+                            set_ins_volume(BYTE_NULL, 63 - d->fm_data.volC, chan);
 
                         update_modulator_adsrw(chan);
                         update_carrier_adsrw(chan);
                         update_fmpar(chan);
 
-                        if (force_macro_keyon || (d->fm_data.FEEDBACK_FM & 0x80)) { // MACRO_NOTE_RETRIG_FLAG
+                        // TODO: check is those flags are really set by the editor
+                        uint8_t macro_flags = d->fm_data.data[10];
+
+                        if (force_macro_keyon || (macro_flags & 0x80)) { // MACRO_NOTE_RETRIG_FLAG
                             if (!((is_4op_chan(chan) && is_4op_chan_hi(chan)))) {
                                 output_note(event_table[chan].note,
                                             event_table[chan].instr_def, chan, FALSE, TRUE);
                                 if (is_4op_chan(chan) && is_4op_chan_lo(chan))
                                     init_macro_table(chan - 1, 0, voice_table[chan - 1], 0);
                             }
-                        } else if (d->fm_data.FEEDBACK_FM & 0x40) { // MACRO_ENVELOPE_RESTART_FLAG
+                        } else if (macro_flags & 0x40) { // MACRO_ENVELOPE_RESTART_FLAG
                             key_on(chan);
                             change_freq(chan, freq_table[chan]);
-                        } else if (d->fm_data.FEEDBACK_FM & 0x20) { // MACRO_ZERO_FREQ_FLAG
+                        } else if (macro_flags & 0x20) { // MACRO_ZERO_FREQ_FLAG
                             if (freq_table[chan]) {
                                 zero_fq_table[chan] = freq_table[chan];
                                 freq_table[chan] = freq_table[chan] & ~0x1fff;
@@ -3131,19 +3110,16 @@ static void macro_poll_proc()
                     case 0:
                         change_frequency(chan, nFreq(mt->arpg_note - 1) +
                             songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
-                            //(int8_t)ins_parameter(event_table[chan].instr_def, 12));
                         break;
 
                     case 1 ... 96:
                         change_frequency(chan, nFreq(max(mt->arpg_note + at->data[mt->arpg_pos], 97) - 1) +
                             songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
-                            //(int8_t)ins_parameter(event_table[chan].instr_def, 12));
                         break;
 
                     case 0x80 ... 0x80+12*8+1:
                         change_frequency(chan, nFreq(at->data[mt->arpg_pos - 1] - 0x80 - 1) +
                             songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
-                            //(int8_t)ins_parameter(event_table[chan].instr_def, 12));
                         break;
                     }
                 }
@@ -3428,9 +3404,7 @@ static int a2_import(char *tune); // forward def
 void a2t_play(char *tune) // start_playing()
 {
     printf("sizeof(tFM_INST_DATA) == %d\n", sizeof(tFM_INST_DATA));
-    printf("sizeof(tFM_PARAMETER_TABLE) == %d\n", sizeof(tFM_PARAMETER_TABLE));
     assert(sizeof(tFM_INST_DATA) == 11);
-    assert(sizeof(tFM_PARAMETER_TABLE) == 11);
 
     a2t_stop();
     int err = a2_import(tune);
