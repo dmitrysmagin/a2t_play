@@ -3,7 +3,6 @@
     - Implement ef_GlobalFSlideUp/ef_GlobalFSlideDown
     - Implement generate_custom_vibrato()
     - Implement fade_out_volume in set_ins_volume() and set_volume
-    - Replace ins_parameter() with smth more readable
 
     In order to get into Adplug:
     - Remove PACKED structures, this is not partable
@@ -576,14 +575,7 @@ static inline tINSTR_DATA *instrch(int chan)
 
 static inline tINSTR_DATA *instr(uint8_t ins)
 {
-    assert(ins > 0);
     return &songdata->instr_data[ins - 1];
-}
-
-static inline uint8_t ins_parameter(uint8_t ins, uint8_t param)
-{
-    // NOTE: adjust ins
-    return songdata->instr_data[ins - 1].fm_data.data[param];
 }
 
 static uint8_t from_fmpar(int chan, int offset)
@@ -723,11 +715,13 @@ static bool is_chan_adsr_data_empty(int chan)
 
 static bool is_ins_adsr_data_empty(int ins)
 {
+    tINSTR_DATA *i = instr(ins);
+
     return (
-        !ins_parameter(ins, 4) &&
-        !ins_parameter(ins, 5) &&
-        !ins_parameter(ins, 6) &&
-        !ins_parameter(ins, 7)
+        !i->fm_data.data[4] &&
+        !i->fm_data.data[5] &&
+        !i->fm_data.data[6] &&
+        !i->fm_data.data[7]
     );
 }
 
@@ -878,7 +872,6 @@ static uint32_t _4op_data_flag(uint8_t chan)
         if (_4op_ins1 && _4op_ins2) {
             _4op_mode = TRUE;
             _4op_conn = (instr(_4op_ins1)->fm_data.connect << 1) | instr(_4op_ins2)->fm_data.connect;
-            //_4op_conn = ((ins_parameter(_4op_ins1, 10) & 1) << 1) | (ins_parameter(_4op_ins2, 10) & 1);
         }
 /*
   {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
@@ -1107,33 +1100,28 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 
 static void set_ins_data(uint8_t ins, int chan)
 {
+    tINSTR_DATA *i = instr(ins);
     uint8_t old_ins;
 
     if ((ins != event_table[chan].instr_def) || reset_chan[chan]) {
         panning_table[chan] = !pan_lock[chan]
-                                  ? songdata->instr_data[ins - 1].panning
+                                  ? i->panning
                                   : songdata->lock_flags[chan] & 3;
-#if 0
-        printf("set_ins_data(%02x, %d)\n", ins, chan);
-        printf("data: ");
-        for (int i = 0; i < 14; i++)
-            printf("%02x ", ins_parameter(ins, i));
-        printf("\n");
-#endif
-        opl3out(_instr[0] + _chan_m[chan], ins_parameter(ins, 0));
-        opl3out(_instr[1] + _chan_c[chan], ins_parameter(ins, 1));
-        opl3out(_instr[2] + _chan_m[chan], (ins_parameter(ins, 2) & 0xc0) + 63);
-        opl3out(_instr[3] + _chan_c[chan], (ins_parameter(ins, 3) & 0xc0) + 63);
-        opl3out(_instr[4] + _chan_m[chan], ins_parameter(ins, 4));
-        opl3out(_instr[5] + _chan_c[chan], ins_parameter(ins, 5));
-        opl3out(_instr[6] + _chan_m[chan], ins_parameter(ins, 6));
-        opl3out(_instr[7] + _chan_c[chan], ins_parameter(ins, 7));
-        opl3out(_instr[8] + _chan_m[chan], ins_parameter(ins, 8));
-        opl3out(_instr[9] + _chan_c[chan], ins_parameter(ins, 9));
-        opl3out(_instr[10] + _chan_n[chan], ins_parameter(ins, 10) | _panning[panning_table[chan]]);
 
-        for (int i = 0; i < 11; i++) {
-            to_fmpar(chan, i, ins_parameter(ins, i));
+        opl3out(_instr[0] + _chan_m[chan], i->fm_data.data[0]);
+        opl3out(_instr[1] + _chan_c[chan], i->fm_data.data[1]);
+        opl3out(_instr[2] + _chan_m[chan], (i->fm_data.data[2] & 0xc0) + 63);
+        opl3out(_instr[3] + _chan_c[chan], (i->fm_data.data[3] & 0xc0) + 63);
+        opl3out(_instr[4] + _chan_m[chan], i->fm_data.data[4]);
+        opl3out(_instr[5] + _chan_c[chan], i->fm_data.data[5]);
+        opl3out(_instr[6] + _chan_m[chan], i->fm_data.data[6]);
+        opl3out(_instr[7] + _chan_c[chan], i->fm_data.data[7]);
+        opl3out(_instr[8] + _chan_m[chan], i->fm_data.data[8]);
+        opl3out(_instr[9] + _chan_c[chan], i->fm_data.data[9]);
+        opl3out(_instr[10] + _chan_n[chan], i->fm_data.data[10] | _panning[panning_table[chan]]);
+
+        for (int r = 0; r < 11; r++) {
+            to_fmpar(chan, r, i->fm_data.data[r]);
         }
 
         // Stop instr macro if resetting voice
@@ -2169,7 +2157,7 @@ static void slide_modulator_volume_up(uint8_t chan, uint8_t slide, uint8_t limit
 
 static void slide_volume_up(int chan, uint8_t slide)
 {
-    tINSTR_DATA *instr = instrch(chan);
+    tINSTR_DATA *i = instrch(chan);
     uint8_t limit1 = 0, limit2 = 0;
     uint16_t limit1_4op = 0, limit2_4op = 0;
     uint32_t _4op_flag;
@@ -2185,21 +2173,21 @@ static void slide_volume_up(int chan, uint8_t slide)
     _4op_ins2 = (uint8_t)(_4op_flag >> 19) & 0xff;
 
     if (_4op_vol_valid_chan(chan)) {
+        tINSTR_DATA *ins1 = instr(_4op_ins1);
+        tINSTR_DATA *ins2 = instr(_4op_ins2);
+
         limit1_4op = peak_lock[_4op_ch1]
-            ? ((ins_parameter(_4op_ins1, 3) & 0x3f) << 16) + (ins_parameter(_4op_ins1, 2) & 0x3f)
+            ? (ins1->fm_data.volC << 16) + ins1->fm_data.volM
             : 0;
 
         limit2_4op = peak_lock[_4op_ch2]
-            ? ((ins_parameter(_4op_ins2, 3) & 0x3f) << 16) + (ins_parameter(_4op_ins2, 2) & 0x3f)
+            ? (ins2->fm_data.volC << 16) + ins1->fm_data.volM
             : 0;
     } else {
-        limit1 = peak_lock[chan]
-            ? ins_parameter(event_table[chan].instr_def, 3) & 0x3f
-            : 0;
+        tINSTR_DATA *ins = &songdata->instr_data[event_table[chan].instr_def - 1];
 
-        limit2 = peak_lock[chan]
-            ? ins_parameter(event_table[chan].instr_def, 2) & 0x3f
-            : 0;
+        limit1 = peak_lock[chan] ? ins->fm_data.volC : 0;
+        limit2 = peak_lock[chan] ? ins->fm_data.volM : 0;
     }
 
     switch (volslide_type[chan]) {
@@ -2207,7 +2195,7 @@ static void slide_volume_up(int chan, uint8_t slide)
         if (!_4op_vol_valid_chan(chan)) {
             slide_carrier_volume_up(chan, slide, limit1);
 
-            if (instr->fm_data.connect || (percussion_mode && (chan >= 16)))  // in [17..20]
+            if (i->fm_data.connect || (percussion_mode && (chan >= 16)))  // in [17..20]
                slide_modulator_volume_up(chan, slide, limit2);
         } else {
             switch (_4op_conn) {
