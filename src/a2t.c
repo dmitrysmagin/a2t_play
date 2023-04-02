@@ -1,7 +1,6 @@
 /*
     TODO:
     - Implement ef_GlobalFSlideUp/ef_GlobalFSlideDown
-    - Implement generate_custom_vibrato()
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
     In order to get into Adplug:
@@ -16,6 +15,7 @@
 #include <sys/types.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 #include "depack.h"
 #include "sixpack.h"
@@ -372,6 +372,31 @@ uint8_t global_volume = 63;
 
 const uint8_t pattern_loop_flag  = 0xe0;
 const uint8_t pattern_break_flag = 0xf0;
+
+const uint8_t def_vibtrem_speed_factor = 1;
+const uint8_t def_vibtrem_table_size = 32;
+const uint8_t def_vibtrem_table[256] = {
+    0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,255,
+    253,250,244,235,224,212,197,180,161,141,120,97,74,49,24,
+    0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,255,
+    253,250,244,235,224,212,197,180,161,141,120,97,74,49,24,
+    0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,255,
+    253,250,244,235,224,212,197,180,161,141,120,97,74,49,24,
+    0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,255,
+    253,250,244,235,224,212,197,180,161,141,120,97,74,49,24,
+    0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,255,
+    253,250,244,235,224,212,197,180,161,141,120,97,74,49,24,
+    0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,255,
+    253,250,244,235,224,212,197,180,161,141,120,97,74,49,24,
+    0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,255,
+    253,250,244,235,224,212,197,180,161,141,120,97,74,49,24,
+    0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,255,
+    253,250,244,235,224,212,197,180,161,141,120,97,74,49,24
+};
+
+uint8_t vibtrem_speed_factor;
+uint8_t vibtrem_table_size;
+uint8_t vibtrem_table[256];
 
 tFM_INST_DATA fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
 bool volume_lock[20];			// array[1..20] of Boolean;
@@ -2013,6 +2038,58 @@ static void play_line()
     }
 }
 
+static void generate_custom_vibrato(uint8_t value)
+{
+    const uint8_t vibtab_size[16] = { 16,16,16,16,32,32,32,32,64,64,64,64,128,128,128,128 };
+    int idx, idx2;
+
+    #define min0(VALUE) ((int)VALUE >= 0 ? (int)VALUE : 0)
+
+    switch (value) {
+    case 0: // set default speed table
+        vibtrem_table_size = def_vibtrem_table_size;
+        memcpy(&vibtrem_table, &def_vibtrem_table, sizeof(vibtrem_table));
+        break;
+
+    case 1 ... 239: // set custom speed table (fixed size = 32)
+         vibtrem_table_size = def_vibtrem_table_size;
+         double mul_r = (double)value / 16.0;
+
+         for (idx2 = 0; idx2 <= 7; idx2++) {
+            vibtrem_table[idx2 * 32] = 0;
+
+            for (idx = 1; idx <= 16; idx++) {
+                vibtrem_table[idx2 * 32 + idx] = (uint8_t)round(idx * mul_r);
+            }
+
+            for (idx = 17; idx <= 31; idx++) {
+                vibtrem_table[idx2 * 32 + idx] = (uint8_t)round((32 - idx) * mul_r);
+            }
+        }
+        break;
+
+    case 240 ... 255: // set custom speed table (speed factor = 1-4)
+        vibtrem_speed_factor = (value - 240) % 4 + 1;
+        vibtrem_table_size = 2 * vibtab_size[value - 240];
+        int mul_b = 256 / (vibtab_size[value - 240]);
+
+        for (idx2 = 0; idx <= 128 / vibtab_size[value - 240] - 1; idx++) {
+            vibtrem_table[2 * vibtab_size[value - 240] * idx2] = 0;
+
+            for (idx = 1; idx <= vibtab_size[value - 240]; idx++) {
+                vibtrem_table[2 * vibtab_size[value - 240] * idx2 + idx] =
+                    min0(idx * mul_b - 1);
+            }
+
+            for (idx = vibtab_size[value - 240] + 1; idx <= 2 * vibtab_size[value - 240] - 1; idx++) {
+                vibtrem_table[2 * vibtab_size[value - 240] * idx2 + idx] =
+                    min0((2 * vibtab_size[value - 240] - idx) * mul_b - 1);
+            }
+        }
+        break;
+    }
+}
+
 static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
 {
     // Check if second effect is ZFF - force no restart
@@ -2053,7 +2130,7 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
         }
         break;
     case ef_SetCustomSpeedTab:
-        // generate_custom_vibrato(val); // TODO
+        generate_custom_vibrato(event->eff[slot].val);
         break;
     }
 }
@@ -3343,6 +3420,10 @@ static void init_player()
     current_tremolo_depth = tremolo_depth;
     current_vibrato_depth = vibrato_depth;
     global_volume = 63;
+
+    vibtrem_speed_factor = def_vibtrem_speed_factor;
+    vibtrem_table_size = def_vibtrem_table_size;
+    memcpy(&vibtrem_table, &def_vibtrem_table, sizeof(vibtrem_table));
 
     for (int i = 0; i < 20; i++) {
         arpgg_table[0][i].state = 1;
