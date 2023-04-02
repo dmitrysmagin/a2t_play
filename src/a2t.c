@@ -598,7 +598,7 @@ static inline tINSTR_DATA *instrch(int chan)
     return &songdata->instr_data[voice_table[chan] - 1];
 }
 
-static inline tINSTR_DATA *instr(uint8_t ins)
+static inline tINSTR_DATA *instrn(uint8_t ins)
 {
     return &songdata->instr_data[ins - 1];
 }
@@ -740,7 +740,7 @@ static bool is_chan_adsr_data_empty(int chan)
 
 static bool is_ins_adsr_data_empty(int ins)
 {
-    tINSTR_DATA *i = instr(ins);
+    tINSTR_DATA *i = instrn(ins);
 
     return (
         !i->fm.data[4] &&
@@ -896,7 +896,7 @@ static uint32_t _4op_data_flag(uint8_t chan)
 
         if (_4op_ins1 && _4op_ins2) {
             _4op_mode = TRUE;
-            _4op_conn = (instr(_4op_ins1)->fm.connect << 1) | instr(_4op_ins2)->fm.connect;
+            _4op_conn = (instrn(_4op_ins1)->fm.connect << 1) | instrn(_4op_ins2)->fm.connect;
         }
 /*
   {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
@@ -1125,7 +1125,7 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 
 static void set_ins_data(uint8_t ins, int chan)
 {
-    tINSTR_DATA *i = instr(ins);
+    tINSTR_DATA *i = instrn(ins);
     uint8_t old_ins;
 
     if ((ins != event_table[chan].instr_def) || reset_chan[chan]) {
@@ -2250,8 +2250,8 @@ static void slide_volume_up(int chan, uint8_t slide)
     _4op_ins2 = (uint8_t)(_4op_flag >> 19) & 0xff;
 
     if (_4op_vol_valid_chan(chan)) {
-        tINSTR_DATA *ins1 = instr(_4op_ins1);
-        tINSTR_DATA *ins2 = instr(_4op_ins2);
+        tINSTR_DATA *ins1 = instrn(_4op_ins1);
+        tINSTR_DATA *ins2 = instrn(_4op_ins2);
 
         limit1_4op = peak_lock[_4op_ch1]
             ? (ins1->fm.volC << 16) + ins1->fm.volM
