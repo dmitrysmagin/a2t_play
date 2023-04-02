@@ -603,75 +603,6 @@ static inline tINSTR_DATA *instrn(uint8_t ins)
     return &songdata->instr_data[ins - 1];
 }
 
-static uint8_t from_fmpar(int chan, int offset)
-{
-    return fmpar_table[chan].data[offset];
-#if 0
-    switch (offset) {
-    case 0:
-        return (
-             fmpar_table[chan].multipM +
-            (fmpar_table[chan].ksrM  << 4) +
-            (fmpar_table[chan].sustM << 5) +
-            (fmpar_table[chan].vibrM << 6) +
-            (fmpar_table[chan].tremM << 7)
-        );
-    case 1:
-        return (
-             fmpar_table[chan].multipC +
-            (fmpar_table[chan].ksrC  << 4) +
-            (fmpar_table[chan].sustC << 5) +
-            (fmpar_table[chan].vibrC << 6) +
-            (fmpar_table[chan].tremC << 7)
-        );
-    case 2:
-        return (
-            fmpar_table[chan].kslM << 6 // no volume here
-        );
-    case 3:
-        return (
-            fmpar_table[chan].kslC << 6 // no volume here
-        );
-    case 4:
-        return (
-            (fmpar_table[chan].attckM << 4) +
-             fmpar_table[chan].decM
-        );
-    case 5:
-        return (
-            (fmpar_table[chan].attckC << 4) +
-             fmpar_table[chan].decC
-        );
-    case 6:
-        return (
-            (fmpar_table[chan].sustnM << 4) +
-             fmpar_table[chan].relM
-        );
-    case 7:
-        return (
-            (fmpar_table[chan].sustnC << 4) +
-             fmpar_table[chan].relC
-        );
-    case 8:
-        return (
-            fmpar_table[chan].wformM & 7
-        );
-    case 9:
-        return (
-            fmpar_table[chan].wformC & 7
-        );
-    case 10:
-        return (
-            (fmpar_table[chan].connect & 1) +
-            ((fmpar_table[chan].feedb & 7) << 1)
-        );
-    }
-
-    printf("ERROR: from_fmpar() has offset: %d", offset);
-    return 0;
-#endif
-}
-
 static void to_fmpar(int chan, int offset, uint8_t value)
 {
     fmpar_table[chan].data[offset] = value;
@@ -730,11 +661,13 @@ static void to_fmpar(int chan, int offset, uint8_t value)
 
 static bool is_chan_adsr_data_empty(int chan)
 {
+    tFM_INST_DATA *fmpar = &fmpar_table[chan];
+
     return (
-        !from_fmpar(chan, 4) &&
-        !from_fmpar(chan, 5) &&
-        !from_fmpar(chan, 6) &&
-        !from_fmpar(chan, 7)
+        !fmpar->data[4] &&
+        !fmpar->data[5] &&
+        !fmpar->data[6] &&
+        !fmpar->data[7]
     );
 }
 
@@ -1176,25 +1109,31 @@ static void set_ins_data(uint8_t ins, int chan)
 
 static void update_modulator_adsrw(int chan)
 {
-    opl3out(_instr[4] + _chan_m[chan], from_fmpar(chan, 4));
-    opl3out(_instr[6] + _chan_m[chan], from_fmpar(chan, 6));
-    opl3out(_instr[8] + _chan_m[chan], from_fmpar(chan, 8));
+    tFM_INST_DATA *fmpar = &fmpar_table[chan];
+
+    opl3out(_instr[4] + _chan_m[chan], fmpar->data[4]);
+    opl3out(_instr[6] + _chan_m[chan], fmpar->data[6]);
+    opl3out(_instr[8] + _chan_m[chan], fmpar->data[8]);
 }
 
 static void update_carrier_adsrw(int chan)
 {
-    opl3out(_instr[5] + _chan_c[chan], from_fmpar(chan, 5));
-    opl3out(_instr[7] + _chan_c[chan], from_fmpar(chan, 7));
-    opl3out(_instr[9] + _chan_c[chan], from_fmpar(chan, 9));
+    tFM_INST_DATA *fmpar = &fmpar_table[chan];
+
+    opl3out(_instr[5] + _chan_c[chan], fmpar->data[5]);
+    opl3out(_instr[7] + _chan_c[chan], fmpar->data[7]);
+    opl3out(_instr[9] + _chan_c[chan], fmpar->data[9]);
 }
 
 static void update_fmpar(int chan)
 {
-    opl3out(_instr[0] + _chan_m[chan], from_fmpar(chan, 0));
-    opl3out(_instr[1] + _chan_c[chan], from_fmpar(chan, 1));
-    opl3out(_instr[10] + _chan_n[chan], from_fmpar(chan, 10) | _panning[panning_table[chan]]);
+    tFM_INST_DATA *fmpar = &fmpar_table[chan];
 
-    vscale_table[chan] = concw(fmpar_table[chan].kslM << 6, fmpar_table[chan].kslC << 6);
+    opl3out(_instr[0] + _chan_m[chan], fmpar->data[0]);
+    opl3out(_instr[1] + _chan_c[chan], fmpar->data[1]);
+    opl3out(_instr[10] + _chan_n[chan], fmpar->data[10] | _panning[panning_table[chan]]);
+
+    vscale_table[chan] = concw(fmpar->kslM << 6, fmpar->kslC << 6);
 
     set_ins_volume(LO(volume_table[chan]), HI(volume_table[chan]), chan);
 }
