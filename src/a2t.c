@@ -66,7 +66,7 @@ typedef struct {
 } tFM_INST_DATA;
 
 typedef struct PACK {
-    tFM_INST_DATA fm_data;
+    tFM_INST_DATA fm;
     uint8_t panning;
     int8_t  fine_tune;
     uint8_t perc_voice;
@@ -92,7 +92,7 @@ typedef struct PACK {
 } tVIBRATO_TABLE;
 
 typedef struct PACK {
-    tFM_INST_DATA fm_data;
+    tFM_INST_DATA fm;
     int16_t freq_slide;
     uint8_t panning;
     uint8_t duration;
@@ -718,10 +718,10 @@ static bool is_ins_adsr_data_empty(int ins)
     tINSTR_DATA *i = instr(ins);
 
     return (
-        !i->fm_data.data[4] &&
-        !i->fm_data.data[5] &&
-        !i->fm_data.data[6] &&
-        !i->fm_data.data[7]
+        !i->fm.data[4] &&
+        !i->fm.data[5] &&
+        !i->fm.data[6] &&
+        !i->fm.data[7]
     );
 }
 
@@ -871,7 +871,7 @@ static uint32_t _4op_data_flag(uint8_t chan)
 
         if (_4op_ins1 && _4op_ins2) {
             _4op_mode = TRUE;
-            _4op_conn = (instr(_4op_ins1)->fm_data.connect << 1) | instr(_4op_ins2)->fm_data.connect;
+            _4op_conn = (instr(_4op_ins1)->fm.connect << 1) | instr(_4op_ins2)->fm.connect;
         }
 /*
   {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
@@ -917,14 +917,14 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
     }
 
     if (modulator != BYTE_NULL) {
-        bool is_perc_chan = instr->fm_data.connect ||
+        bool is_perc_chan = instr->fm.connect ||
                             (percussion_mode && (chan >= 16 && chan <= 19)); // in [17..20]
 
         temp = modulator;
 
         if (is_perc_chan) { // in [17..20]
             if (volume_scaling)
-                modulator = scale_volume(instr->fm_data.volM, modulator);
+                modulator = scale_volume(instr->fm.volM, modulator);
 
             opl3out(_instr[2] + _chan_m[chan],
                 scale_volume(scale_volume(modulator, 63 - global_volume),
@@ -944,7 +944,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
     if (carrier != BYTE_NULL) {
         temp = carrier;
         if (volume_scaling)
-            carrier = scale_volume(instr->fm_data.volC, carrier);
+            carrier = scale_volume(instr->fm.volC, carrier);
 
         opl3out(_instr[3] + _chan_c[chan],
             scale_volume(scale_volume(carrier, 63 - global_volume),
@@ -971,7 +971,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 
     if (modulator != BYTE_NULL) {
         temp = modulator;
-        modulator = scale_volume(instr->fm_data.volM, modulator);
+        modulator = scale_volume(instr->fm.volM, modulator);
 
         opl3out(_instr[02] + _chan_m[chan],
             scale_volume(scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/),
@@ -983,7 +983,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 
     if (carrier != BYTE_NULL) {
         temp = carrier;
-        carrier = scale_volume(instr->fm_data.volC, carrier);
+        carrier = scale_volume(instr->fm.volC, carrier);
 
         opl3out(_instr[03] + _chan_c[chan],
                 scale_volume(scale_volume(carrier, /*scale_volume(*/63 - global_volume/*,63 - fade_out_volume)*/),
@@ -1047,9 +1047,9 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
 static void reset_ins_volume(int chan)
 {
     tINSTR_DATA *instr = instrch(chan);
-    uint8_t vol_mod = instr->fm_data.volM;
-    uint8_t vol_car = instr->fm_data.volC;
-    uint8_t conn = instr->fm_data.connect;
+    uint8_t vol_mod = instr->fm.volM;
+    uint8_t vol_car = instr->fm.volC;
+    uint8_t conn = instr->fm.connect;
 
     if (volume_scaling) {
         vol_mod = (!conn ? vol_mod : 0);
@@ -1067,7 +1067,7 @@ static void set_global_volume()
         } else if (!((carrier_vol[chan] == 0) && (modulator_vol[chan] == 0))) {
             tINSTR_DATA *instr = instrch(chan);
 
-            set_ins_volume(instr->fm_data.connect ? LO(volume_table[chan]) : BYTE_NULL, HI(volume_table[chan]), chan);
+            set_ins_volume(instr->fm.connect ? LO(volume_table[chan]) : BYTE_NULL, HI(volume_table[chan]), chan);
         }
     }
 }
@@ -1108,20 +1108,20 @@ static void set_ins_data(uint8_t ins, int chan)
                                   ? i->panning
                                   : songdata->lock_flags[chan] & 3;
 
-        opl3out(_instr[0] + _chan_m[chan], i->fm_data.data[0]);
-        opl3out(_instr[1] + _chan_c[chan], i->fm_data.data[1]);
-        opl3out(_instr[2] + _chan_m[chan], (i->fm_data.data[2] & 0xc0) + 63);
-        opl3out(_instr[3] + _chan_c[chan], (i->fm_data.data[3] & 0xc0) + 63);
-        opl3out(_instr[4] + _chan_m[chan], i->fm_data.data[4]);
-        opl3out(_instr[5] + _chan_c[chan], i->fm_data.data[5]);
-        opl3out(_instr[6] + _chan_m[chan], i->fm_data.data[6]);
-        opl3out(_instr[7] + _chan_c[chan], i->fm_data.data[7]);
-        opl3out(_instr[8] + _chan_m[chan], i->fm_data.data[8]);
-        opl3out(_instr[9] + _chan_c[chan], i->fm_data.data[9]);
-        opl3out(_instr[10] + _chan_n[chan], i->fm_data.data[10] | _panning[panning_table[chan]]);
+        opl3out(_instr[0] + _chan_m[chan], i->fm.data[0]);
+        opl3out(_instr[1] + _chan_c[chan], i->fm.data[1]);
+        opl3out(_instr[2] + _chan_m[chan], (i->fm.data[2] & 0xc0) + 63);
+        opl3out(_instr[3] + _chan_c[chan], (i->fm.data[3] & 0xc0) + 63);
+        opl3out(_instr[4] + _chan_m[chan], i->fm.data[4]);
+        opl3out(_instr[5] + _chan_c[chan], i->fm.data[5]);
+        opl3out(_instr[6] + _chan_m[chan], i->fm.data[6]);
+        opl3out(_instr[7] + _chan_c[chan], i->fm.data[7]);
+        opl3out(_instr[8] + _chan_m[chan], i->fm.data[8]);
+        opl3out(_instr[9] + _chan_c[chan], i->fm.data[9]);
+        opl3out(_instr[10] + _chan_n[chan], i->fm.data[10] | _panning[panning_table[chan]]);
 
         for (int r = 0; r < 11; r++) {
-            to_fmpar(chan, r, i->fm_data.data[r]);
+            to_fmpar(chan, r, i->fm.data[r]);
         }
 
         // Stop instr macro if resetting voice
@@ -1500,7 +1500,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             set_ins_volume_4op(63 - val, chan);
         } else if (percussion_mode && ((chan >= 16) && (chan <= 19))) { //  in [17..20]
             set_ins_volume(63 - val, BYTE_NULL, chan);
-        } else if (instr->fm_data.connect == 0) {
+        } else if (instr->fm.connect == 0) {
             set_ins_volume(BYTE_NULL, 63 - val, chan);
         } else {
             set_ins_volume(63 - val, 63 - val, chan);
@@ -1510,8 +1510,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_ForceInsVolume:
         if (percussion_mode && ((chan >= 16) && (chan <= 19))) { //  in [17..20]
             set_ins_volume(63 - val, BYTE_NULL, chan);
-        } else if (instr->fm_data.connect == 0) {
-            set_ins_volume(scale_volume(instr->fm_data.volM, 63 - val), 63 - val, chan);
+        } else if (instr->fm.connect == 0) {
+            set_ins_volume(scale_volume(instr->fm.volM, 63 - val), 63 - val, chan);
         } else {
             set_ins_volume(63 - val, 63 - val, chan);
         }
@@ -2177,17 +2177,17 @@ static void slide_volume_up(int chan, uint8_t slide)
         tINSTR_DATA *ins2 = instr(_4op_ins2);
 
         limit1_4op = peak_lock[_4op_ch1]
-            ? (ins1->fm_data.volC << 16) + ins1->fm_data.volM
+            ? (ins1->fm.volC << 16) + ins1->fm.volM
             : 0;
 
         limit2_4op = peak_lock[_4op_ch2]
-            ? (ins2->fm_data.volC << 16) + ins1->fm_data.volM
+            ? (ins2->fm.volC << 16) + ins1->fm.volM
             : 0;
     } else {
         tINSTR_DATA *ins = &songdata->instr_data[event_table[chan].instr_def - 1];
 
-        limit1 = peak_lock[chan] ? ins->fm_data.volC : 0;
-        limit2 = peak_lock[chan] ? ins->fm_data.volM : 0;
+        limit1 = peak_lock[chan] ? ins->fm.volC : 0;
+        limit2 = peak_lock[chan] ? ins->fm.volM : 0;
     }
 
     switch (volslide_type[chan]) {
@@ -2195,7 +2195,7 @@ static void slide_volume_up(int chan, uint8_t slide)
         if (!_4op_vol_valid_chan(chan)) {
             slide_carrier_volume_up(chan, slide, limit1);
 
-            if (i->fm_data.connect || (percussion_mode && (chan >= 16)))  // in [17..20]
+            if (i->fm.connect || (percussion_mode && (chan >= 16)))  // in [17..20]
                slide_modulator_volume_up(chan, slide, limit2);
         } else {
             switch (_4op_conn) {
@@ -2291,7 +2291,7 @@ static void slide_volume_down(int chan, uint8_t slide)
         if (!_4op_vol_valid_chan(chan)) {
             slide_carrier_volume_down(chan, slide);
 
-            if (instr->fm_data.connect || (percussion_mode && (chan >= 16))) { //in [17..20]
+            if (instr->fm.connect || (percussion_mode && (chan >= 16))) { //in [17..20]
                slide_modulator_volume_down(chan, slide);
             }
         } else {
@@ -2413,7 +2413,7 @@ static inline int chanvol(int chan)
 {
     tINSTR_DATA *instr = instrch(chan);
 
-    if (instr->fm_data.connect == 0)
+    if (instr->fm.connect == 0)
         return 63 - HI(volume_table[chan]);
     else
         return 63 - (LO(volume_table[chan]) + HI(volume_table[chan])) / 2;
@@ -2953,92 +2953,92 @@ static void macro_poll_proc()
 
                         // use translation_table[column] = { offset, mask, shift}
                         if (!songdata->dis_fmreg_col[fmreg_ins][0])
-                            fmpar_table[chan].attckM = d->fm_data.attckM;
+                            fmpar_table[chan].attckM = d->fm.attckM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][1])
-                            fmpar_table[chan].decM = d->fm_data.decM;
+                            fmpar_table[chan].decM = d->fm.decM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][2])
-                            fmpar_table[chan].sustnM = d->fm_data.sustnM;
+                            fmpar_table[chan].sustnM = d->fm.sustnM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][3])
-                            fmpar_table[chan].relM = d->fm_data.relM;
+                            fmpar_table[chan].relM = d->fm.relM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][4])
-                            fmpar_table[chan].wformM = d->fm_data.wformM;
+                            fmpar_table[chan].wformM = d->fm.wformM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][6])
-                            fmpar_table[chan].kslM = d->fm_data.kslM;
+                            fmpar_table[chan].kslM = d->fm.kslM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][7])
-                            fmpar_table[chan].multipM = d->fm_data.multipM;
+                            fmpar_table[chan].multipM = d->fm.multipM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][8])
-                            fmpar_table[chan].tremM = d->fm_data.tremM;
+                            fmpar_table[chan].tremM = d->fm.tremM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][9])
-                            fmpar_table[chan].vibrM = d->fm_data.vibrM;
+                            fmpar_table[chan].vibrM = d->fm.vibrM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][10])
-                            fmpar_table[chan].ksrM = d->fm_data.ksrM;
+                            fmpar_table[chan].ksrM = d->fm.ksrM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][11])
-                            fmpar_table[chan].sustM = d->fm_data.sustM;
+                            fmpar_table[chan].sustM = d->fm.sustM;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][12])
-                            fmpar_table[chan].attckC = d->fm_data.attckC;
+                            fmpar_table[chan].attckC = d->fm.attckC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][13])
-                            fmpar_table[chan].decC = d->fm_data.decC;
+                            fmpar_table[chan].decC = d->fm.decC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][14])
-                            fmpar_table[chan].sustnC = d->fm_data.sustnC;
+                            fmpar_table[chan].sustnC = d->fm.sustnC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][15])
-                            fmpar_table[chan].relC = d->fm_data.relC;
+                            fmpar_table[chan].relC = d->fm.relC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][16])
-                            fmpar_table[chan].wformC = d->fm_data.wformC;
+                            fmpar_table[chan].wformC = d->fm.wformC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][18])
-                            fmpar_table[chan].kslC = d->fm_data.kslC;
+                            fmpar_table[chan].kslC = d->fm.kslC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][19])
-                            fmpar_table[chan].multipC = d->fm_data.multipC;
+                            fmpar_table[chan].multipC = d->fm.multipC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][20])
-                            fmpar_table[chan].tremC = d->fm_data.tremC;
+                            fmpar_table[chan].tremC = d->fm.tremC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][21])
-                            fmpar_table[chan].vibrC = d->fm_data.vibrC;
+                            fmpar_table[chan].vibrC = d->fm.vibrC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][22])
-                            fmpar_table[chan].ksrC = d->fm_data.ksrC;
+                            fmpar_table[chan].ksrC = d->fm.ksrC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][23])
-                            fmpar_table[chan].sustC = d->fm_data.sustC;
+                            fmpar_table[chan].sustC = d->fm.sustC;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][24])
-                            fmpar_table[chan].connect = d->fm_data.connect;
+                            fmpar_table[chan].connect = d->fm.connect;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][25])
-                            fmpar_table[chan].feedb = d->fm_data.feedb;
+                            fmpar_table[chan].feedb = d->fm.feedb;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][27] && !pan_lock[chan])
                             panning_table[chan] = d->panning;
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][5])
-                            set_ins_volume(63 - d->fm_data.volM, BYTE_NULL, chan);
+                            set_ins_volume(63 - d->fm.volM, BYTE_NULL, chan);
 
                         if (!songdata->dis_fmreg_col[fmreg_ins][17])
-                            set_ins_volume(BYTE_NULL, 63 - d->fm_data.volC, chan);
+                            set_ins_volume(BYTE_NULL, 63 - d->fm.volC, chan);
 
                         update_modulator_adsrw(chan);
                         update_carrier_adsrw(chan);
                         update_fmpar(chan);
 
                         // TODO: check is those flags are really set by the editor
-                        uint8_t macro_flags = d->fm_data.data[10];
+                        uint8_t macro_flags = d->fm.data[10];
 
                         if (force_macro_keyon || (macro_flags & 0x80)) { // MACRO_NOTE_RETRIG_FLAG
                             if (!((is_4op_chan(chan) && is_4op_chan_hi(chan)))) {
