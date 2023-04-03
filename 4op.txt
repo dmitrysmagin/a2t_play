@@ -1,3 +1,4 @@
+mmori.a2m - ef_GlobalFSlideUp/ef_GlobalFSlideDown
 badapple.a2m - macro-vib
 crisis.a2m - 4op, macro-fm, macro-arp
 fank5.a2m - 4op, macro-fm, macro-vib

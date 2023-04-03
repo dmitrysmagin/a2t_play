@@ -1,5 +1,7 @@
 /*
     TODO:
+    - Eliminate the usage of concw() and HI()/LO(),
+      split volume_table/vscale_table into mod/car
     - Implement ef_GlobalFSlideUp/ef_GlobalFSlideDown
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
@@ -402,7 +404,6 @@ tFM_INST_DATA fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
 bool volume_lock[20];			// array[1..20] of Boolean;
 bool vol4op_lock[20] ;			// array[1..20] of Boolean;
 uint16_t volume_table[20];		// array[1..20] of Word;
-uint16_t vscale_table[20];		// array[1..20] of Word;
 bool peak_lock[20];			// array[1..20] of Boolean;
 bool pan_lock[20];			// array[1..20] of Boolean;
 uint8_t modulator_vol[20];		// array[1..20] of Byte;
@@ -830,9 +831,9 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 
             opl3out(_instr[2] + _chan_m[chan],
                 scale_volume(scale_volume(modulator, 63 - global_volume),
-                        63 - overall_volume) + LO(vscale_table[chan]));
+                        63 - overall_volume) + (fmpar_table[chan].kslM << 6));
         } else {
-            opl3out(_instr[2] + _chan_m[chan], temp + LO(vscale_table[chan]));
+            opl3out(_instr[2] + _chan_m[chan], temp + (fmpar_table[chan].kslM << 6));
         }
 
         volume_table[chan] = concw(temp, HI(volume_table[chan]));
@@ -850,7 +851,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 
         opl3out(_instr[3] + _chan_c[chan],
             scale_volume(scale_volume(carrier, 63 - global_volume),
-            63 - overall_volume) + HI(vscale_table[chan]));
+                63 - overall_volume) + (fmpar_table[chan].kslC << 6));
 
         volume_table[chan] = concw(LO(volume_table[chan]), temp);
         carrier_vol[chan] = 63 - scale_volume(carrier, 63 - global_volume);
@@ -877,7 +878,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 
         opl3out(_instr[02] + _chan_m[chan],
             scale_volume(scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/),
-            63 - overall_volume) + LO(vscale_table[chan]));
+                63 - overall_volume) + (fmpar_table[chan].kslM << 6));
 
         volume_table[chan] = concw(temp, HI(volume_table[chan]));
         modulator_vol[chan] = 63 - scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63-fade_out_volume)*/);
@@ -889,7 +890,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 
         opl3out(_instr[03] + _chan_c[chan],
                 scale_volume(scale_volume(carrier, /*scale_volume(*/63 - global_volume/*,63 - fade_out_volume)*/),
-                63 - overall_volume) + HI(vscale_table[chan]));
+                63 - overall_volume) + (fmpar_table[chan].kslC << 6));
 
         volume_table[chan] = concw(LO(volume_table[chan]), temp);
         carrier_vol[chan] = 63 - scale_volume(carrier, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
@@ -1042,7 +1043,6 @@ static void set_ins_data(uint8_t ins, int chan)
         init_macro_table(chan, note, ins, freq_table[chan]);
     }
 
-    vscale_table[chan] = concw(fmpar_table[chan].kslM << 6, fmpar_table[chan].kslC << 6);
     voice_table[chan] = ins;
     old_ins = event_table[chan].instr_def;
     event_table[chan].instr_def = ins;
@@ -1076,8 +1076,6 @@ static void update_fmpar(int chan)
     opl3out(_instr[0] + _chan_m[chan], fmpar->data[0]);
     opl3out(_instr[1] + _chan_c[chan], fmpar->data[1]);
     opl3out(_instr[10] + _chan_n[chan], fmpar->data[10] | _panning[panning_table[chan]]);
-
-    vscale_table[chan] = concw(fmpar->kslM << 6, fmpar->kslC << 6);
 
     set_ins_volume(LO(volume_table[chan]), HI(volume_table[chan]), chan);
 }
@@ -1486,7 +1484,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         break;
 
     case ef_Tremor:
-        if ((val & 0xf0) && (val & 0x0f)) { // if hi and lo part != 0
+        if (val) { // if hi and lo part != 0
             if (eLo != ef_Tremor) {
                 tremor_table[slot][chan].pos = 0;
                 tremor_table[slot][chan].volume = volume_table[chan];
@@ -3199,7 +3197,6 @@ static void init_buffers()
     memset(fmpar_table, 0, sizeof(fmpar_table));
     memset(pan_lock, panlock, sizeof(pan_lock));
     memset(volume_table, 0, sizeof(volume_table));
-    memset(vscale_table, 0, sizeof(vscale_table));
     memset(modulator_vol, 0, sizeof(modulator_vol));
     memset(carrier_vol, 0, sizeof(carrier_vol));
     memset(event_table, 0, sizeof(event_table));
