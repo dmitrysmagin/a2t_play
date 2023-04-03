@@ -743,6 +743,7 @@ static void release_sustaining_sound(int chan)
     reset_chan[chan] = TRUE;
 }
 
+// inverted volume here
 static uint8_t scale_volume(uint8_t volume, uint8_t scale_factor)
 {
     return 63 - ((63 - volume) * (63 - scale_factor) / 63);
@@ -805,9 +806,9 @@ static bool _4op_vol_valid_chan(int chan)
 }
 
 // TODO here: fade_out_volume
+// inverted volume here
 static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 {
-    uint8_t temp;
     tINSTR_DATA *instr = instrch(chan);
 
     // ** OPL3 emulation workaround **
@@ -819,48 +820,46 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
             carrier = 63;
     }
 
+    // Note: volume_table has pure unscaled volume,
+    // modulator_vol/carrier_vol have scaled but without overall_volume
     if (modulator != BYTE_NULL) {
         bool is_perc_chan = instr->fm.connect ||
                             (percussion_mode && (chan >= 16 && chan <= 19)); // in [17..20]
 
-        temp = modulator;
+        volume_table[chan] = concw(modulator, HI(volume_table[chan]));
 
         if (is_perc_chan) { // in [17..20]
             if (volume_scaling)
                 modulator = scale_volume(instr->fm.volM, modulator);
 
+            modulator = scale_volume(modulator, 63 - global_volume);
+
             opl3out(_instr[2] + _chan_m[chan],
-                scale_volume(scale_volume(modulator, 63 - global_volume),
-                        63 - overall_volume) + (fmpar_table[chan].kslM << 6));
+                scale_volume(modulator, 63 - overall_volume) + (fmpar_table[chan].kslM << 6));
         } else {
-            opl3out(_instr[2] + _chan_m[chan], temp + (fmpar_table[chan].kslM << 6));
+            opl3out(_instr[2] + _chan_m[chan], modulator + (fmpar_table[chan].kslM << 6));
         }
 
-        volume_table[chan] = concw(temp, HI(volume_table[chan]));
-
-        if (is_perc_chan) // in [17..20]
-            modulator_vol[chan] = 63 - scale_volume(modulator, 63 - global_volume);
-        else
-            modulator_vol[chan] = 63 - modulator;
+        modulator_vol[chan] = 63 - modulator;
     }
 
     if (carrier != BYTE_NULL) {
-        temp = carrier;
+        volume_table[chan] = concw(LO(volume_table[chan]), carrier);
+
         if (volume_scaling)
             carrier = scale_volume(instr->fm.volC, carrier);
 
-        opl3out(_instr[3] + _chan_c[chan],
-            scale_volume(scale_volume(carrier, 63 - global_volume),
-                63 - overall_volume) + (fmpar_table[chan].kslC << 6));
+        carrier = scale_volume(carrier, 63 - global_volume);
 
-        volume_table[chan] = concw(LO(volume_table[chan]), temp);
-        carrier_vol[chan] = 63 - scale_volume(carrier, 63 - global_volume);
+        opl3out(_instr[3] + _chan_c[chan],
+            scale_volume(carrier, 63 - overall_volume) + (fmpar_table[chan].kslC << 6));
+
+        carrier_vol[chan] = 63 - carrier;
     }
 }
 
 static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
-    uint8_t temp;
     tINSTR_DATA *instr = instrch(chan);
 
     // ** OPL3 emulation workaround **
@@ -873,27 +872,27 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     }
 
     if (modulator != BYTE_NULL) {
-        temp = modulator;
+        volume_table[chan] = concw(modulator, HI(volume_table[chan]));
+
         modulator = scale_volume(instr->fm.volM, modulator);
+        modulator = scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
 
         opl3out(_instr[02] + _chan_m[chan],
-            scale_volume(scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/),
-                63 - overall_volume) + (fmpar_table[chan].kslM << 6));
+            scale_volume(modulator, 63 - overall_volume) + (fmpar_table[chan].kslM << 6));
 
-        volume_table[chan] = concw(temp, HI(volume_table[chan]));
-        modulator_vol[chan] = 63 - scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63-fade_out_volume)*/);
+        modulator_vol[chan] = 63 - modulator;
     }
 
     if (carrier != BYTE_NULL) {
-        temp = carrier;
+        volume_table[chan] = concw(LO(volume_table[chan]), carrier);
+
         carrier = scale_volume(instr->fm.volC, carrier);
+        carrier = scale_volume(carrier, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
 
         opl3out(_instr[03] + _chan_c[chan],
-                scale_volume(scale_volume(carrier, /*scale_volume(*/63 - global_volume/*,63 - fade_out_volume)*/),
-                63 - overall_volume) + (fmpar_table[chan].kslC << 6));
+                scale_volume(carrier, 63 - overall_volume) + (fmpar_table[chan].kslC << 6));
 
-        volume_table[chan] = concw(LO(volume_table[chan]), temp);
-        carrier_vol[chan] = 63 - scale_volume(carrier, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
+        carrier_vol[chan] = 63 - carrier;
     }
 }
 
