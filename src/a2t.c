@@ -603,62 +603,6 @@ static inline tINSTR_DATA *instrn(uint8_t ins)
     return &songdata->instr_data[ins - 1];
 }
 
-static void to_fmpar(int chan, int offset, uint8_t value)
-{
-    fmpar_table[chan].data[offset] = value;
-    return;
-#if 0
-    switch (offset) {
-    case 0:
-        fmpar_table[chan].multipM =  value & 0x0f;
-        fmpar_table[chan].ksrM    = (value >> 4) & 1;
-        fmpar_table[chan].sustM   = (value >> 5) & 1;
-        fmpar_table[chan].vibrM   = (value >> 6) & 1;
-        fmpar_table[chan].tremM   = (value >> 7) & 1;
-        return;
-    case 1:
-        fmpar_table[chan].multipC =  value & 0x0f;
-        fmpar_table[chan].ksrC    = (value >> 4) & 1;
-        fmpar_table[chan].sustC   = (value >> 5) & 1;
-        fmpar_table[chan].vibrC   = (value >> 6) & 1;
-        fmpar_table[chan].tremC   = (value >> 7) & 1;
-        return;
-    case 2:
-        fmpar_table[chan].kslM    = (value >> 6) & 3;
-        return;
-    case 3:
-        fmpar_table[chan].kslC    = (value >> 6) & 3;
-        return;
-    case 4:
-        fmpar_table[chan].attckM = (value >> 4) & 0x0f;
-        fmpar_table[chan].decM   =  value & 0x0f;
-        return;
-    case 5:
-        fmpar_table[chan].attckC = (value >> 4) & 0x0f;
-        fmpar_table[chan].decC   =  value & 0x0f;
-        return;
-    case 6:
-        fmpar_table[chan].sustnM = (value >> 4) & 0x0f;
-        fmpar_table[chan].relM   =  value & 0x0f;
-        return;
-    case 7:
-        fmpar_table[chan].sustnC = (value >> 4) & 0x0f;
-        fmpar_table[chan].relC   =  value & 0x0f;
-        return;
-    case 8:
-        fmpar_table[chan].wformM =  value & 0x07;
-        return;
-    case 9:
-        fmpar_table[chan].wformC =  value & 0x07;
-        return;
-    case 10:
-        fmpar_table[chan].connect =  value & 1;
-        fmpar_table[chan].feedb   = (value >> 1) & 7;
-        return;
-    }
-#endif
-}
-
 static bool is_chan_adsr_data_empty(int chan)
 {
     tFM_INST_DATA *fmpar = &fmpar_table[chan];
@@ -784,7 +728,7 @@ static void release_sustaining_sound(int chan)
 
     // clear adsrw_mod and adsrw_car
     for (int i = 4; i <= 9; i++) {
-        to_fmpar(chan, i, 0);
+        fmpar_table[chan].data[i] = 0;
     }
 
     key_on(chan);
@@ -1079,7 +1023,7 @@ static void set_ins_data(uint8_t ins, int chan)
         opl3out(_instr[10] + _chan_n[chan], i->fm.data[10] | _panning[panning_table[chan]]);
 
         for (int r = 0; r < 11; r++) {
-            to_fmpar(chan, r, i->fm.data[r]);
+            fmpar_table[chan].data[r] = i->fm.data[r];
         }
 
         // Stop instr macro if resetting voice
