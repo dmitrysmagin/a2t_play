@@ -827,6 +827,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
                             (percussion_mode && (chan >= 16 && chan <= 19)); // in [17..20]
 
         volume_table[chan] = concw(modulator, HI(volume_table[chan]));
+        fmpar_table[chan].volM = modulator;
 
         if (is_perc_chan) { // in [17..20]
             if (volume_scaling)
@@ -845,6 +846,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 
     if (carrier != BYTE_NULL) {
         volume_table[chan] = concw(LO(volume_table[chan]), carrier);
+        fmpar_table[chan].volC = carrier;
 
         if (volume_scaling)
             carrier = scale_volume(instr->fm.volC, carrier);
@@ -873,6 +875,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 
     if (modulator != BYTE_NULL) {
         volume_table[chan] = concw(modulator, HI(volume_table[chan]));
+        fmpar_table[chan].volM = modulator;
 
         modulator = scale_volume(instr->fm.volM, modulator);
         modulator = scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
@@ -885,6 +888,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 
     if (carrier != BYTE_NULL) {
         volume_table[chan] = concw(LO(volume_table[chan]), carrier);
+        fmpar_table[chan].volC = carrier;
 
         carrier = scale_volume(instr->fm.volC, carrier);
         carrier = scale_volume(carrier, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
@@ -2078,38 +2082,19 @@ static void tone_portamento(int slot, int chan)
 
 static void slide_carrier_volume_up(uint8_t chan, uint8_t slide, uint8_t limit)
 {
-    uint16_t vol;
-    uint8_t vLo, vHi;
+    uint8_t volC = fmpar_table[chan].volC;
+    uint8_t newvolC = (volC - slide >= limit) ? volC - slide : limit;
 
-    vLo = LO(volume_table[chan]);
-    vHi = HI(volume_table[chan]);
+    set_ins_volume(BYTE_NULL, newvolC, chan);
 
-    if (vHi - slide >= limit) {
-        vol = concw(vLo, vHi - slide);
-    } else {
-        vol = concw(vLo, limit);
-    }
-
-    set_ins_volume(BYTE_NULL, HI(vol), chan);
-    volume_table[chan] = vol;
 }
 
 static void slide_modulator_volume_up(uint8_t chan, uint8_t slide, uint8_t limit)
 {
-    uint16_t vol;
-    uint8_t vLo, vHi;
+    uint8_t volM = fmpar_table[chan].volM;
+    uint8_t newvolM = (volM - slide >= limit) ? volM - slide : limit;
 
-    vLo = LO(volume_table[chan]);
-    vHi = HI(volume_table[chan]);
-
-    if (vLo - slide >= limit) {
-        vol = concw(vLo - slide, vHi);
-    } else {
-        vol = concw(limit, vHi);
-    }
-
-    set_ins_volume(LO(vol), BYTE_NULL, chan);
-    volume_table[chan] = vol;
+    set_ins_volume(newvolM, BYTE_NULL, chan);
 }
 
 static void slide_volume_up(int chan, uint8_t slide)
@@ -2197,38 +2182,18 @@ static void slide_volume_up(int chan, uint8_t slide)
 
 static void slide_carrier_volume_down(uint8_t chan, uint8_t slide)
 {
-    uint16_t vol;
-    uint8_t vLo, vHi;
+    uint8_t volC = fmpar_table[chan].volC;
+    uint8_t newvolC = volC + slide <= 63 ? volC + slide : 63;
 
-    vLo = LO(volume_table[chan]);
-    vHi = HI(volume_table[chan]);
-
-    if (vHi + slide <= 63) {
-        vol = concw(vLo, vHi + slide);
-    } else {
-        vol = concw(vLo, 63);
-    }
-
-    set_ins_volume(BYTE_NULL, HI(vol), chan);
-    volume_table[chan] = vol;
+    set_ins_volume(BYTE_NULL, newvolC, chan);
 }
 
 static void slide_modulator_volume_down(uint8_t chan, uint8_t slide)
 {
-    uint16_t vol;
-    uint8_t vLo, vHi;
+    uint8_t volM = fmpar_table[chan].volM;
+    uint8_t newvolM = volM + slide <= 63 ? volM + slide : 63;
 
-    vLo = LO(volume_table[chan]);
-    vHi = HI(volume_table[chan]);
-
-    if (vLo + slide <= 63) {
-        vol = concw(vLo + slide, vHi);
-    } else {
-        vol = concw(63, vHi);
-    }
-
-    set_ins_volume(LO(vol), BYTE_NULL, chan);
-    volume_table[chan] = vol;
+    set_ins_volume(newvolM, BYTE_NULL, chan);
 }
 
 static void slide_volume_down(int chan, uint8_t slide)
@@ -2359,11 +2324,16 @@ static void tremolo(int slot, int chan)
     vol = calc_vibrato_shift(trem_table[slot][chan].depth, trem_table[slot][chan].pos);
     direction = trem_table[slot][chan].pos & 0x20;
     old_vol = volume_table[chan];
+
     if (direction == 0)
         slide_volume_down(chan, vol);
     else
         slide_volume_up(chan, vol);
+
+    // is this needed?
     volume_table[chan] = old_vol;
+    fmpar_table[chan].volM = old_vol & 0x3f;
+    fmpar_table[chan].volC = (old_vol >> 8) & 0x3f;
 }
 
 static inline int chanvol(int chan)
