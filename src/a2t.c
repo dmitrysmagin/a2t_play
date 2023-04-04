@@ -1,7 +1,6 @@
 /*
     TODO:
     - Eliminate the usage of concw() and HI()/LO(),
-    - Implement ef_GlobalFSlideUp/ef_GlobalFSlideDown
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
     In order to get into Adplug:
@@ -346,10 +345,9 @@ uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 #define ef_fix1 0x80
 #define ef_fix2 0x90
 
-/*
-  opl3port: Word = $388;
-  error_code: Integer = 0;
-*/
+const int MIN_IRQ_FREQ = 50;
+const int MAX_IRQ_FREQ = 1000;
+
 uint8_t current_order = 0;
 uint8_t current_pattern = 0;
 uint8_t current_line = 0;
@@ -361,12 +359,15 @@ uint16_t macro_speedup = 1;
 bool irq_mode = FALSE;
 
 int16_t IRQ_freq = 50;
+int IRQ_freq_shift = 0;
 bool irq_initialized = FALSE;
 const bool timer_fix = TRUE;
+
 bool pattern_break = FALSE;
 bool pattern_delay = FALSE;
 uint8_t next_line = 0;
 const uint8_t max_patterns = 128;
+int playback_speed_shift = 0;
 tPLAY_STATUS play_status = isStopped;
 uint8_t overall_volume = 63;
 uint8_t global_volume = 63;
@@ -701,7 +702,33 @@ static void update_timer(int Hz)
         IRQ_freq++;
     }
 
-    set_clock_rate(1193180 / IRQ_freq);
+    if (IRQ_freq > MAX_IRQ_FREQ)
+        IRQ_freq = MAX_IRQ_FREQ;
+
+    while ((IRQ_freq + IRQ_freq_shift + playback_speed_shift > MAX_IRQ_FREQ) && (playback_speed_shift > 0))
+        playback_speed_shift--;
+
+    while ((IRQ_freq + IRQ_freq_shift + playback_speed_shift > MAX_IRQ_FREQ) && (IRQ_freq_shift > 0))
+        IRQ_freq_shift--;
+
+    set_clock_rate(1193180 / max(IRQ_freq + IRQ_freq_shift + playback_speed_shift, MAX_IRQ_FREQ));
+}
+
+void update_playback_speed(int speed_shift)
+{
+    if (!speed_shift)
+        return;
+
+    if ((speed_shift > 0) && (IRQ_freq + playback_speed_shift + speed_shift > MAX_IRQ_FREQ)) {
+        while (IRQ_freq + IRQ_freq_shift + playback_speed_shift + speed_shift > MAX_IRQ_FREQ)
+            speed_shift--;
+    } else if ((speed_shift < 0) && (IRQ_freq + IRQ_freq_shift + playback_speed_shift + speed_shift < MIN_IRQ_FREQ)) {
+        while (IRQ_freq + IRQ_freq_shift + playback_speed_shift + speed_shift < MIN_IRQ_FREQ)
+            speed_shift++;
+    }
+
+    playback_speed_shift += speed_shift;
+    update_timer(tempo);
 }
 
 static void key_on(int chan)
@@ -1247,8 +1274,57 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     }
 
     if ((def == ef_GlobalFSlideUp) || (def == ef_GlobalFSlideDown)) {
-        // TODO
-        printf("\n ef_GlobalFSlideUp or ef_GlobalFSlideDown \n");
+        if ((event->eff[slot ^ 1].def == ef_Extended) &&
+            (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_ForceBpmSld)) {
+
+            printf("\n ef_GlobalFSlideUp or ef_GlobalFSlideDown with ef_ex_cmd_ForceBpmSld\n");
+
+            if (def == ef_GlobalFSlideUp) {
+                update_playback_speed(val);
+            } else {
+                update_playback_speed(-val);
+            }
+        } else {
+            uint8_t eff;
+
+            switch (def) {
+            case ef_GlobalFSlideUp:
+                eff = ef_FSlideUp;
+
+                if ((event->eff[slot ^ 1].def == ef_Extended) &&
+                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
+                    eff = ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF;
+                }
+
+                if ((event->eff[slot ^ 1].def == ef_Extended) &&
+                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
+                    eff = ef_FSlideUpFine;
+                }
+
+                effect_table[slot][chan] = concw(eff, val);
+                break;
+            case ef_GlobalFSlideDown:
+                eff = ef_FSlideDown;
+
+                if ((event->eff[slot ^ 1].def == ef_Extended) &&
+                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
+                    eff = ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF;
+                }
+
+                if ((event->eff[slot ^ 1].def == ef_Extended) &&
+                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
+                    eff = ef_FSlideDownFine;
+                }
+
+                effect_table[slot][chan] = concw(eff, val);
+                break;
+            }
+
+            for (int c = chan; c < songdata->nm_tracks; c++) {
+                fslide_table[slot][c] = val;
+                glfsld_table[slot][c] = effect_table[slot][chan];
+            }
+        }
     }
 
     if ((tremor_table[slot][chan].pos != 0) && (def != ef_Tremor)) {
@@ -3121,12 +3197,10 @@ static int ticklooper, macro_ticklooper;
 
 static void newtimer()
 {
-    if ((ticklooper == 0) &&
-        (irq_mode))
+    if ((ticklooper == 0) && (irq_mode))
         poll_proc();
 
-    if ((macro_ticklooper == 0) &&
-        (irq_mode))
+    if ((macro_ticklooper == 0) && (irq_mode))
         macro_poll_proc();
 
     ticklooper++;
@@ -3291,6 +3365,7 @@ void a2t_stop()
     current_order = 0;
     current_pattern = 0;
     current_line = 0;
+    playback_speed_shift = 0;
 
     for (int i = 0; i < 20; i++)
         release_sustaining_sound(i);
@@ -3317,6 +3392,8 @@ static void init_songdata()
     memset(songdata->pattern_order, 0x80, sizeof(songdata->pattern_order));
     memset(pattdata, 0, sizeof(_pattdata));
 
+    IRQ_freq_shift = 0;
+    playback_speed_shift = 0;
     songdata->patt_len = 64;
     songdata->nm_tracks = 18;
     songdata->tempo = tempo;
