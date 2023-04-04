@@ -1,7 +1,6 @@
 /*
     TODO:
     - Eliminate the usage of concw() and HI()/LO(),
-      split volume_table/vscale_table into mod/car
     - Implement ef_GlobalFSlideUp/ef_GlobalFSlideDown
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
@@ -403,7 +402,6 @@ uint8_t vibtrem_table[256];
 tFM_INST_DATA fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
 bool volume_lock[20];			// array[1..20] of Boolean;
 bool vol4op_lock[20] ;			// array[1..20] of Boolean;
-uint16_t volume_table[20];		// array[1..20] of Word;
 bool peak_lock[20];			// array[1..20] of Boolean;
 bool pan_lock[20];			// array[1..20] of Boolean;
 uint8_t modulator_vol[20];		// array[1..20] of Byte;
@@ -820,13 +818,12 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
             carrier = 63;
     }
 
-    // Note: volume_table has pure unscaled volume,
+    // Note: fmpar[].volM/volC has pure unscaled volume,
     // modulator_vol/carrier_vol have scaled but without overall_volume
     if (modulator != BYTE_NULL) {
         bool is_perc_chan = instr->fm.connect ||
                             (percussion_mode && (chan >= 16 && chan <= 19)); // in [17..20]
 
-        volume_table[chan] = concw(modulator, HI(volume_table[chan]));
         fmpar_table[chan].volM = modulator;
 
         if (is_perc_chan) { // in [17..20]
@@ -845,7 +842,6 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
     }
 
     if (carrier != BYTE_NULL) {
-        volume_table[chan] = concw(LO(volume_table[chan]), carrier);
         fmpar_table[chan].volC = carrier;
 
         if (volume_scaling)
@@ -874,7 +870,6 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     }
 
     if (modulator != BYTE_NULL) {
-        volume_table[chan] = concw(modulator, HI(volume_table[chan]));
         fmpar_table[chan].volM = modulator;
 
         modulator = scale_volume(instr->fm.volM, modulator);
@@ -887,7 +882,6 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     }
 
     if (carrier != BYTE_NULL) {
-        volume_table[chan] = concw(LO(volume_table[chan]), carrier);
         fmpar_table[chan].volC = carrier;
 
         carrier = scale_volume(instr->fm.volC, carrier);
@@ -914,15 +908,15 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
         switch (_4op_conn) {
             case 0: // FM/FM
                 if (volume == BYTE_NULL) {
-                    set_volume(BYTE_NULL, HI(volume_table[_4op_ch1]), _4op_ch1);
+                    set_volume(BYTE_NULL, fmpar_table[_4op_ch1].volC, _4op_ch1);
                 } else {
                     set_volume(BYTE_NULL, volume, _4op_ch1);
                 }
                 break;
             case 1: // FM/AM
                 if (volume == BYTE_NULL) {
-                    set_volume(BYTE_NULL, HI(volume_table[_4op_ch1]), _4op_ch1);
-                    set_volume(LO(volume_table[_4op_ch2]), BYTE_NULL, _4op_ch2);
+                    set_volume(BYTE_NULL, fmpar_table[_4op_ch1].volC, _4op_ch1);
+                    set_volume(fmpar_table[_4op_ch2].volM, BYTE_NULL, _4op_ch2);
                 } else {
                     set_volume(BYTE_NULL, volume, _4op_ch1);
                     set_volume(volume, BYTE_NULL, _4op_ch2);
@@ -930,8 +924,8 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
                 break;
             case 2: // AM/FM
                 if (volume == BYTE_NULL) {
-                    set_volume(BYTE_NULL, HI(volume_table[_4op_ch1]), _4op_ch1);
-                    set_volume(BYTE_NULL, HI(volume_table[_4op_ch2]), _4op_ch2);
+                    set_volume(BYTE_NULL, fmpar_table[_4op_ch1].volC, _4op_ch1);
+                    set_volume(BYTE_NULL, fmpar_table[_4op_ch2].volC, _4op_ch2);
                 } else {
                     set_volume(BYTE_NULL, volume, _4op_ch1);
                     set_volume(BYTE_NULL, volume, _4op_ch2);
@@ -939,8 +933,8 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
                 break;
             case 3:// AM/AM
                 if (volume == BYTE_NULL) {
-                    set_volume(LO(volume_table[_4op_ch1]), HI(volume_table[_4op_ch1]), _4op_ch1);
-                    set_volume(LO(volume_table[_4op_ch2]), BYTE_NULL, _4op_ch2);
+                    set_volume(fmpar_table[_4op_ch1].volM, fmpar_table[_4op_ch1].volC, _4op_ch1);
+                    set_volume(fmpar_table[_4op_ch2].volM, BYTE_NULL, _4op_ch2);
                 } else {
                     set_volume(volume, volume, _4op_ch1);
                     set_volume(volume, BYTE_NULL, _4op_ch2);
@@ -973,7 +967,7 @@ static void set_global_volume()
         } else if (!((carrier_vol[chan] == 0) && (modulator_vol[chan] == 0))) {
             tINSTR_DATA *instr = instrch(chan);
 
-            set_ins_volume(instr->fm.connect ? LO(volume_table[chan]) : BYTE_NULL, HI(volume_table[chan]), chan);
+            set_ins_volume(instr->fm.connect ? fmpar_table[chan].volM : BYTE_NULL, fmpar_table[chan].volC, chan);
         }
     }
 }
@@ -1080,7 +1074,7 @@ static void update_fmpar(int chan)
     opl3out(_instr[1] + _chan_c[chan], fmpar->data[1]);
     opl3out(_instr[10] + _chan_n[chan], fmpar->data[10] | _panning[panning_table[chan]]);
 
-    set_ins_volume(LO(volume_table[chan]), HI(volume_table[chan]), chan);
+    set_ins_volume(fmpar->volM, fmpar->volC, chan);
 }
 
 static inline bool is_4op_chan(int chan) // 0..19
@@ -1490,7 +1484,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         if (val) { // if hi and lo part != 0
             if (eLo != ef_Tremor) {
                 tremor_table[slot][chan].pos = 0;
-                tremor_table[slot][chan].volume = volume_table[chan];
+                tremor_table[slot][chan].volume = concw(fmpar_table[chan].volM, fmpar_table[chan].volC);
             }
             effect_table[slot][chan] = concw(def, val);
         }
@@ -1641,8 +1635,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 if (is_4op_chan(chan)) {
                     set_ins_volume_4op(BYTE_NULL, chan);
                 } else {
-                    set_ins_volume(LO(volume_table[chan]),
-                                   HI(volume_table[chan]), chan);
+                    set_ins_volume(fmpar_table[chan].volM, fmpar_table[chan].volC, chan);
                 }
                 break;
             case ef_ex_cmd2_VSlide_car:
@@ -2301,39 +2294,43 @@ static void arpeggio(int slot, int chan)
 
 static void vibrato(int slot, int chan)
 {
-    uint16_t freq, old_freq;
+    uint16_t freq, slide;
     uint8_t direction;
 
+    freq = freq_table[chan];
+
     vibr_table[slot][chan].pos += vibr_table[slot][chan].speed;
-    freq = calc_vibrato_shift(vibr_table[slot][chan].depth, vibr_table[slot][chan].pos);
+    slide = calc_vibrato_shift(vibr_table[slot][chan].depth, vibr_table[slot][chan].pos);
     direction = vibr_table[slot][chan].pos & 0x20;
-    old_freq = freq_table[chan];
+
     if (direction == 0)
-        portamento_down(chan, freq, nFreq(0));
+        portamento_down(chan, slide, nFreq(0));
     else
-        portamento_up(chan, freq, nFreq(12*8+1));
-    freq_table[chan] = old_freq;
+        portamento_up(chan, slide, nFreq(12*8+1));
+
+    freq_table[chan] = freq;
 }
 
 static void tremolo(int slot, int chan)
 {
-    uint16_t vol, old_vol;
+    uint16_t slide;
     uint8_t direction;
 
+    uint8_t volM = fmpar_table[chan].volM;
+    uint8_t volC = fmpar_table[chan].volC;
+
     trem_table[slot][chan].pos += trem_table[slot][chan].speed;
-    vol = calc_vibrato_shift(trem_table[slot][chan].depth, trem_table[slot][chan].pos);
+    slide = calc_vibrato_shift(trem_table[slot][chan].depth, trem_table[slot][chan].pos);
     direction = trem_table[slot][chan].pos & 0x20;
-    old_vol = volume_table[chan];
 
     if (direction == 0)
-        slide_volume_down(chan, vol);
+        slide_volume_down(chan, slide);
     else
-        slide_volume_up(chan, vol);
+        slide_volume_up(chan, slide);
 
     // is this needed?
-    volume_table[chan] = old_vol;
-    fmpar_table[chan].volM = old_vol & 0x3f;
-    fmpar_table[chan].volC = (old_vol >> 8) & 0x3f;
+    fmpar_table[chan].volM = volM;
+    fmpar_table[chan].volC = volC;
 }
 
 static inline int chanvol(int chan)
@@ -2341,9 +2338,9 @@ static inline int chanvol(int chan)
     tINSTR_DATA *instr = instrch(chan);
 
     if (instr->fm.connect == 0)
-        return 63 - HI(volume_table[chan]);
+        return 63 - fmpar_table[chan].volC;
     else
-        return 63 - (LO(volume_table[chan]) + HI(volume_table[chan])) / 2;
+        return 63 - (fmpar_table[chan].volM + fmpar_table[chan].volC) / 2;
 }
 
 static void update_effects_slot(int slot, int chan)
@@ -3165,7 +3162,6 @@ static void init_buffers()
 {
     memset(fmpar_table, 0, sizeof(fmpar_table));
     memset(pan_lock, panlock, sizeof(pan_lock));
-    memset(volume_table, 0, sizeof(volume_table));
     memset(modulator_vol, 0, sizeof(modulator_vol));
     memset(carrier_vol, 0, sizeof(carrier_vol));
     memset(event_table, 0, sizeof(event_table));
