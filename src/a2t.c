@@ -1,5 +1,6 @@
 /*
     TODO:
+    - Bug in the original player: need to reset global_volume after order restart
     - Eliminate the usage of concw() and HI()/LO(),
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
@@ -436,7 +437,9 @@ struct PACK {
     uint16_t volume;
 } tremor_table[2][20];		// array[1..20] of Record pos: Integer; volume: Word; end;
 uint8_t panning_table[20];	// array[1..20] of Byte;
-uint16_t last_effect[2][20];	// array[1..20] of Byte;
+struct {
+    uint8_t def, val;
+} last_effect[2][20];	// array[1..20] of Byte;
 uint8_t volslide_type[20];	// array[1..20] of Byte;
 uint8_t notedel_table[20];	// array[1..20] of Byte;
 uint8_t notecut_table[20];	// array[1..20] of Byte;
@@ -1333,8 +1336,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                    HI(tremor_table[slot][chan].volume), chan);
     }
 
-    eLo = LO(last_effect[slot][chan]);
-    eHi = HI(last_effect[slot][chan]);
+    eLo = last_effect[slot][chan].def;
+    eHi = last_effect[slot][chan].val;
 
     switch (def) {
     case ef_Arpeggio:
@@ -1958,7 +1961,8 @@ static void play_line()
         // put inside process_effects ?
         for (int slot = 0; slot < 2; slot++) {
             if (effect_table[slot][chan] != 0) {
-                last_effect[slot][chan] = effect_table[slot][chan];
+                last_effect[slot][chan].def = LO(effect_table[slot][chan]);
+                last_effect[slot][chan].val = HI(effect_table[slot][chan]);
             }
             if (glfsld_table[slot][chan] != 0) {
                 effect_table[slot][chan] = glfsld_table[slot][chan];
