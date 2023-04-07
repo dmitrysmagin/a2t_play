@@ -443,9 +443,9 @@ struct PACK {
     bool fine;
 } trem_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
 uint8_t retrig_table[2][20];	// array[1..20] of Byte;
-struct PACK {
-    int pos;
-    uint16_t volume;
+struct {
+    int8_t pos;
+    uint8_t volM, volC;
 } tremor_table[2][20];		// array[1..20] of Record pos: Integer; volume: Word; end;
 uint8_t panning_table[20];	// array[1..20] of Byte;
 struct {
@@ -1341,6 +1341,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 break;
             }
 
+            // shouldn't it be int c = 0 ??
             for (int c = chan; c < songdata->nm_tracks; c++) {
                 fslide_table[slot][c] = val;
                 glfsld_table[slot][c].def = effect_table[slot][chan].def;
@@ -1349,10 +1350,9 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         }
     }
 
-    if ((tremor_table[slot][chan].pos != 0) && (def != ef_Tremor)) {
+    if (tremor_table[slot][chan].pos && (def != ef_Tremor)) {
         tremor_table[slot][chan].pos = 0;
-        set_ins_volume(LO(tremor_table[slot][chan].volume),
-                   HI(tremor_table[slot][chan].volume), chan);
+        set_ins_volume(tremor_table[slot][chan].volM, tremor_table[slot][chan].volC, chan);
     }
 
     eLo = last_effect[slot][chan].def;
@@ -1586,7 +1586,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         if (val) { // if hi and lo part != 0
             if (eLo != ef_Tremor) {
                 tremor_table[slot][chan].pos = 0;
-                tremor_table[slot][chan].volume = concw(fmpar_table[chan].volM, fmpar_table[chan].volC);
+                tremor_table[slot][chan].volM = fmpar_table[chan].volM;
+                tremor_table[slot][chan].volC = fmpar_table[chan].volC;
             }
 
             effect_table[slot][chan].def = def;
@@ -1993,7 +1994,7 @@ static void play_line()
                 last_effect[slot][chan].def = effect_table[slot][chan].def;
                 last_effect[slot][chan].val = effect_table[slot][chan].val;
             }
-            if (glfsld_table[slot][chan].def | glfsld_table[slot][chan].val) {
+            if (glfsld_table[slot][chan].def && glfsld_table[slot][chan].val) {
                 effect_table[slot][chan].def = glfsld_table[slot][chan].def;
                 effect_table[slot][chan].val = glfsld_table[slot][chan].val;
             } else {
@@ -2605,8 +2606,7 @@ static void update_effects_slot(int slot, int chan)
             if ((tremor_table[slot][chan].pos - 1) >= -(eHi % 16)) {
                 tremor_table[slot][chan].pos--;
             } else {
-                set_ins_volume(LO(tremor_table[slot][chan].volume),
-                           HI(tremor_table[slot][chan].volume), chan);
+                set_ins_volume(tremor_table[slot][chan].volM, tremor_table[slot][chan].volC, chan);
                 tremor_table[slot][chan].pos = 1;
             }
         }
