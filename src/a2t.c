@@ -347,10 +347,14 @@ uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 #define ef_fix1 0x80
 #define ef_fix2 0x90
 
+#define EFGR_ARPVOLSLIDE 1
+
 // Effect meta data
 const int effects_meta[] = {
-    [ef_Arpeggio] = 1,
-    [ef_GlobalFSlideDown] = 99
+    [ef_Arpeggio] = 0,
+    [ef_GlobalFSlideDown] = 99,
+    [ef_ArpggVSlide] = EFGR_ARPVOLSLIDE,
+    [ef_ArpggVSlideFine] = EFGR_ARPVOLSLIDE
 };
 
 const int MIN_IRQ_FREQ = 50;
@@ -1225,16 +1229,16 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan); // 
 #define UPDATE_effect_table(EFFECTS) \
     do { \
         int effects[] = {ARR_INIT EFFECTS}; \
+        effect_table[slot][chan].def = def; \
         if (val) { \
-            effect_table[slot][chan].def = def; \
             effect_table[slot][chan].val = val; \
         } else { \
             if (INCLUDES(effects, eLo) && eHi) { \
-                effect_table[slot][chan].def = def; \
                 effect_table[slot][chan].val = eHi; \
             } else { \
                 printf("\nCAAATCH\n"); \
                 effect_table[slot][chan].def = 0; \
+                effect_table[slot][chan].val = 0; \
             } \
         } \
     } while(0)
@@ -1242,19 +1246,38 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan); // 
 #define UPDATE_effect_table_def(EFFECTS) \
     do { \
         int effects[] = {ARR_INIT EFFECTS}; \
+        effect_table[slot][chan].def = def; \
         if (val) { \
-            effect_table[slot][chan].def = def; \
             effect_table[slot][chan].val = val; \
         } else { \
             if (INCLUDES(effects, eLo) && eHi) { \
-                effect_table[slot][chan].def = def; \
                 effect_table[slot][chan].val = eHi; \
             } else { \
+                printf("\nCAAATCH_def\n"); \
                 effect_table[slot][chan].def = def; \
                 effect_table[slot][chan].val = 0; \
             } \
         } \
     } while(0)
+
+static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, uint8_t val)
+{
+    uint8_t eLo = last_effect[slot][chan].def;
+    uint8_t eHi = last_effect[slot][chan].val;
+
+    effect_table[slot][chan].def = def;
+
+    // effect_table[slot][chan].val = val ? val : (effects_meta[eLo] == eff_group && eHi ? eHi) : 0;
+    if (val) {
+        effect_table[slot][chan].val = val;
+    } else if (effects_meta[eLo] == eff_group && eHi) {
+        effect_table[slot][chan].val = eHi;
+    } else {
+        printf("\nCAAATCH\n"); // x00 without any previous compatible command
+        effect_table[slot][chan].def = 0;
+        effect_table[slot][chan].val = 0;
+    }
+}
 
 static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 {
@@ -1377,7 +1400,9 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             break;
         case ef_ArpggVSlide:
         case ef_ArpggVSlideFine:
-            UPDATE_effect_table((ef_ArpggVSlide, ef_ArpggVSlideFine));
+            //UPDATE_effect_table((ef_ArpggVSlide, ef_ArpggVSlideFine));
+            update_effect_table(slot, chan, EFGR_ARPVOLSLIDE, def, val);
+
             break;
         }
 
@@ -1385,13 +1410,15 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             arpgg_table[slot][chan].state = 0;
             arpgg_table[slot][chan].note = event->note & 0x7f;
             if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
-                arpgg_table[slot][chan].add1 = val / 16;
-                arpgg_table[slot][chan].add2 = val % 16;
+                arpgg_table[slot][chan].add1 = val >> 4;
+                arpgg_table[slot][chan].add2 = val & 0x0f;
             }
         } else {
             if ((event->note == 0) &&
                 (((event_table[chan].note & 0x7f) >= 1) &&
                 (event_table[chan].note & 0x7f) <= 12 * 8 + 1)) {
+
+                // This never occurs most probably
                 if ((def != ef_Arpeggio) &&
                     (def != ef_ExtraFineArpeggio) &&
                     (def != ef_ArpggVSlide) &&
