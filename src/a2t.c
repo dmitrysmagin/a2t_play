@@ -423,7 +423,9 @@ struct {
     uint8_t def, val;
 } effect_table[2][20];	// array[1..20] of Word;
 uint8_t fslide_table[2][20];		// array[1..20] of Byte;
-uint16_t glfsld_table[2][20];	// array[1..20] of Word;
+struct {
+    uint8_t def, val;
+} glfsld_table[2][20];	// array[1..20] of Word;
 struct PACK {
     uint16_t freq;
     uint8_t speed;
@@ -1341,7 +1343,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
             for (int c = chan; c < songdata->nm_tracks; c++) {
                 fslide_table[slot][c] = val;
-                glfsld_table[slot][c] = concw(effect_table[slot][chan].def, effect_table[slot][chan].val);
+                glfsld_table[slot][c].def = effect_table[slot][chan].def;
+                glfsld_table[slot][c].val = effect_table[slot][chan].val;
             }
         }
     }
@@ -1929,7 +1932,7 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
         if (event->eff[slot].def | event->eff[slot].val) {
             event_table[chan].eff[slot].def = event->eff[slot].def;
             event_table[chan].eff[slot].val = event->eff[slot].val;
-        } else if (glfsld_table[slot][chan] == 0) {
+        } else if (glfsld_table[slot][chan].def == 0 && glfsld_table[slot][chan].val == 0) {
             effect_table[slot][chan].def = 0;
             effect_table[slot][chan].val = 0;
         }
@@ -1990,9 +1993,9 @@ static void play_line()
                 last_effect[slot][chan].def = effect_table[slot][chan].def;
                 last_effect[slot][chan].val = effect_table[slot][chan].val;
             }
-            if (glfsld_table[slot][chan] != 0) {
-                effect_table[slot][chan].def = LO(glfsld_table[slot][chan]);
-                effect_table[slot][chan].val = HI(glfsld_table[slot][chan]);
+            if (glfsld_table[slot][chan].def | glfsld_table[slot][chan].val) {
+                effect_table[slot][chan].def = glfsld_table[slot][chan].def;
+                effect_table[slot][chan].val = glfsld_table[slot][chan].val;
             } else {
                 effect_table[slot][chan].def = 0;
             }
@@ -2864,8 +2867,10 @@ static void update_song_position()
     }
 
     for (int chan = 0; chan < songdata->nm_tracks; chan++) {
-        glfsld_table[0][chan] = 0;
-        glfsld_table[1][chan] = 0;
+        glfsld_table[0][chan].def = 0;
+        glfsld_table[0][chan].val = 0;
+        glfsld_table[1][chan].def = 0;
+        glfsld_table[1][chan].val = 0;
     }
 
     if ((current_line == 0) &&
