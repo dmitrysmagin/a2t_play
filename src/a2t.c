@@ -3,7 +3,6 @@
     - Bug in the original player: need to reset global_volume after order restart
     - Eliminate the usage of concw() and HI()/LO(),
     - Implement fade_out_volume in set_ins_volume() and set_volume
-    - Eliminate UPDATE_effect_table()/UPDATE_effect_table_def()
 
     In order to get into Adplug:
     - Remove PACKED structures, this is not partable
@@ -348,13 +347,43 @@ uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 #define ef_fix2 0x90
 
 #define EFGR_ARPVOLSLIDE 1
+#define EFGR_FSLIDEVOLSLIDE 2
+#define EFGR_TONEPORTAMENTO 3
+#define EFGR_VIBRATO 4
+#define EFGR_TREMOLO 5
+#define EFGR_VIBRATOVOLSLIDE 6
+#define EFGR_PORTAVOLSLIDE 7
 
-// Effect meta data
-const int effects_meta[] = {
-    [ef_Arpeggio] = 0,
-    [ef_GlobalFSlideDown] = 99,
+// Effect can inherit previous effect value only within the group
+// x00 <-- use previous val
+const int effect_group[] = {
     [ef_ArpggVSlide] = EFGR_ARPVOLSLIDE,
-    [ef_ArpggVSlideFine] = EFGR_ARPVOLSLIDE
+    [ef_ArpggVSlideFine] = EFGR_ARPVOLSLIDE,
+
+    [ef_FSlideUpVSlide] = EFGR_FSLIDEVOLSLIDE,
+    [ef_FSlUpVSlF] = EFGR_FSLIDEVOLSLIDE,
+    [ef_FSlideDownVSlide] = EFGR_FSLIDEVOLSLIDE,
+    [ef_FSlDownVSlF] = EFGR_FSLIDEVOLSLIDE,
+    [ef_FSlUpFineVSlide] = EFGR_FSLIDEVOLSLIDE,
+    [ef_FSlUpFineVSlF] = EFGR_FSLIDEVOLSLIDE,
+    [ef_FSlDownFineVSlide] = EFGR_FSLIDEVOLSLIDE,
+    [ef_FSlDownFineVSlF] = EFGR_FSLIDEVOLSLIDE,
+
+    [ef_TonePortamento] = EFGR_TONEPORTAMENTO,
+
+    [ef_Vibrato] = EFGR_VIBRATO,
+    [ef_ExtraFineVibrato] = EFGR_VIBRATO,
+
+    [ef_Tremolo] = EFGR_TREMOLO,
+    [ef_ExtraFineTremolo] = EFGR_TREMOLO,
+
+    [ef_VibratoVolSlide] = EFGR_VIBRATOVOLSLIDE,
+    [ef_VibratoVSlideFine] = EFGR_VIBRATOVOLSLIDE,
+
+    [ef_TPortamVolSlide] = EFGR_PORTAVOLSLIDE,
+    [ef_TPortamVSlideFine] = EFGR_PORTAVOLSLIDE,
+
+    [ef_GlobalFSlideDown] = 0,
 };
 
 const int MIN_IRQ_FREQ = 50;
@@ -1223,43 +1252,6 @@ static bool no_loop(uint8_t current_chan, uint8_t current_line)
 
 static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan); // forward
 
-// Helper macro for copy-pasted code, duh ;(
-// to be used inside process_effects() only
-#define ARR_INIT(...) __VA_ARGS__
-#define UPDATE_effect_table(EFFECTS) \
-    do { \
-        int effects[] = {ARR_INIT EFFECTS}; \
-        effect_table[slot][chan].def = def; \
-        if (val) { \
-            effect_table[slot][chan].val = val; \
-        } else { \
-            if (INCLUDES(effects, eLo) && eHi) { \
-                effect_table[slot][chan].val = eHi; \
-            } else { \
-                printf("\nCAAATCH\n"); \
-                effect_table[slot][chan].def = 0; \
-                effect_table[slot][chan].val = 0; \
-            } \
-        } \
-    } while(0)
-
-#define UPDATE_effect_table_def(EFFECTS) \
-    do { \
-        int effects[] = {ARR_INIT EFFECTS}; \
-        effect_table[slot][chan].def = def; \
-        if (val) { \
-            effect_table[slot][chan].val = val; \
-        } else { \
-            if (INCLUDES(effects, eLo) && eHi) { \
-                effect_table[slot][chan].val = eHi; \
-            } else { \
-                printf("\nCAAATCH_def\n"); \
-                effect_table[slot][chan].def = def; \
-                effect_table[slot][chan].val = 0; \
-            } \
-        } \
-    } while(0)
-
 static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, uint8_t val)
 {
     uint8_t eLo = last_effect[slot][chan].def;
@@ -1267,13 +1259,14 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
 
     effect_table[slot][chan].def = def;
 
-    // effect_table[slot][chan].val = val ? val : (effects_meta[eLo] == eff_group && eHi ? eHi) : 0;
+    // effect_table[slot][chan].val = val ? val : (effect_group[eLo] == eff_group && eHi ? eHi) : 0;
     if (val) {
         effect_table[slot][chan].val = val;
-    } else if (effects_meta[eLo] == eff_group && eHi) {
+    } else if (effect_group[eLo] == eff_group && eHi) {
+        printf("\nUse previous, eff: %02x, val %02x: group %d\n", def, eHi, eff_group);
         effect_table[slot][chan].val = eHi;
     } else {
-        printf("\nCAAATCH\n"); // x00 without any previous compatible command
+        printf("\nCAAATCH\n"); // x00 without any previous compatible command, should never happen
         effect_table[slot][chan].def = 0;
         effect_table[slot][chan].val = 0;
     }
@@ -1284,8 +1277,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     tINSTR_DATA *instr = instrch(chan);
     uint8_t def = event->eff[slot].def;
     uint8_t val = event->eff[slot].val;
-
-    uint8_t eLo, eHi;
 
     // Use previous effect value if needed
     if (!val && def && def == event_table[chan].eff[slot].def)
@@ -1378,8 +1369,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         set_ins_volume(tremor_table[slot][chan].volM, tremor_table[slot][chan].volC, chan);
     }
 
-    eLo = last_effect[slot][chan].def;
-    eHi = last_effect[slot][chan].val;
+    uint8_t eLo = last_effect[slot][chan].def;
 
     switch (def) {
     case ef_Arpeggio:
@@ -1400,7 +1390,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             break;
         case ef_ArpggVSlide:
         case ef_ArpggVSlideFine:
-            //UPDATE_effect_table((ef_ArpggVSlide, ef_ArpggVSlideFine));
             update_effect_table(slot, chan, EFGR_ARPVOLSLIDE, def, val);
 
             break;
@@ -1458,13 +1447,11 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_FSlUpFineVSlF:
     case ef_FSlDownFineVSlide:
     case ef_FSlDownFineVSlF:
-        UPDATE_effect_table((ef_FSlideUpVSlide, ef_FSlUpVSlF, ef_FSlideDownVSlide,
-                             ef_FSlDownVSlF, ef_FSlUpFineVSlide, ef_FSlUpFineVSlF,
-                             ef_FSlDownFineVSlide, ef_FSlDownFineVSlF));
+        update_effect_table(slot, chan, EFGR_FSLIDEVOLSLIDE, def, val);
         break;
 
     case ef_TonePortamento:
-        UPDATE_effect_table_def((ef_TonePortamento));
+        update_effect_table(slot, chan, EFGR_TONEPORTAMENTO, def, val);
 
         if ((event->note >= 1) && (event->note <= 12 * 8 + 1)) {
             porta_table[slot][chan].speed = val;
@@ -1477,12 +1464,13 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
     case ef_TPortamVolSlide:
     case ef_TPortamVSlideFine:
-        UPDATE_effect_table((ef_TPortamVolSlide, ef_TPortamVSlideFine));
+        update_effect_table(slot, chan, EFGR_PORTAVOLSLIDE, def, val);
+
         break;
 
     case ef_Vibrato:
     case ef_ExtraFineVibrato:
-        UPDATE_effect_table_def((ef_Vibrato, ef_ExtraFineVibrato));
+        update_effect_table(slot, chan, EFGR_VIBRATO, def, val);
 
         if ((event->eff[slot ^ 1].def == ef_Extended) &&
             (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
@@ -1495,7 +1483,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
     case ef_Tremolo:
     case ef_ExtraFineTremolo:
-        UPDATE_effect_table_def((ef_Tremolo, ef_ExtraFineTremolo));
+        update_effect_table(slot, chan, EFGR_TREMOLO, def, val);
 
         if ((event->eff[slot ^ 1].def == ef_Extended) &&
             (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
@@ -1508,7 +1496,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
     case ef_VibratoVolSlide:
     case ef_VibratoVSlideFine:
-        UPDATE_effect_table((ef_VibratoVolSlide, ef_VibratoVSlideFine));
+        update_effect_table(slot, chan, EFGR_VIBRATOVOLSLIDE, def, val);
 
         if ((event->eff[slot ^ 1].def == ef_Extended) &&
             (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS))
@@ -4281,7 +4269,7 @@ static int a2m_read_songdata(char *src)
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
     printf("Track volume lock: %d\n", lockvol);
-    printf("effects_meta size= %d\n", sizeof(effects_meta) / sizeof(effects_meta[0]));
+    printf("effect_group size = %d\n", sizeof(effect_group) / sizeof(effect_group[0]));
 
 #if 0
     FILE *f = fopen("songdata.dmp", "wb");
