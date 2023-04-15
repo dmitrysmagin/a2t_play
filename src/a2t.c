@@ -353,6 +353,7 @@ uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
 #define EFGR_TREMOLO 5
 #define EFGR_VIBRATOVOLSLIDE 6
 #define EFGR_PORTAVOLSLIDE 7
+#define EFGR_RETRIGNOTE 8
 
 // Effect can inherit previous effect value only within the group
 // x00 <-- use previous val
@@ -382,6 +383,9 @@ const int effect_group[] = {
 
     [ef_TPortamVolSlide] = EFGR_PORTAVOLSLIDE,
     [ef_TPortamVSlideFine] = EFGR_PORTAVOLSLIDE,
+
+    [ef_RetrigNote] = EFGR_RETRIGNOTE,
+    [ef_MultiRetrigNote] = EFGR_RETRIGNOTE,
 
     [ef_GlobalFSlideDown] = 0,
 };
@@ -1581,9 +1585,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_RetrigNote:
     case ef_MultiRetrigNote:
         if (val) {
-            int effects[] = { ef_RetrigNote, ef_MultiRetrigNote };
-
-            if (!INCLUDES(effects, eLo)) {
+            if (effect_group[eLo] != EFGR_RETRIGNOTE) {
                 retrig_table[slot][chan] = 1;
             }
 
