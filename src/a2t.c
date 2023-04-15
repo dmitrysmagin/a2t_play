@@ -3762,7 +3762,7 @@ static int a2t_read_order(char *src)
 }
 
 // only for importing v 1,2,3,4,5,6,7,8
-typedef struct PACK {
+typedef struct {
     uint8_t note;
     uint8_t instr_def;
     uint8_t effect_def;
@@ -3770,22 +3770,26 @@ typedef struct PACK {
 } tADTRACK2_EVENT_V1234;
 
 // for importing v 1,2,3,4 patterns
-typedef struct PACK {
-  struct PACK {
-    struct PACK {
-      tADTRACK2_EVENT_V1234 ev;
-    } ch[9];
-  } row[64];
+typedef struct {
+    struct {
+        struct {
+            tADTRACK2_EVENT_V1234 ev;
+        } ch[9];
+    } row[64];
 } tPATTERN_DATA_V1234;
 
 // for importing v 5,6,7,8 patterns
-typedef struct PACK {
-  struct PACK {
-    struct PACK {
-      tADTRACK2_EVENT_V1234 ev;
-    } row[64];
-  } ch[18];
+typedef struct {
+    struct {
+        struct {
+            tADTRACK2_EVENT_V1234 ev;
+        } row[64];
+    } ch[18];
 } tPATTERN_DATA_V5678;
+
+C_ASSERT(sizeof(tADTRACK2_EVENT_V1234) == 4);
+C_ASSERT(sizeof(tPATTERN_DATA_V1234) == 2304);
+C_ASSERT(sizeof(tPATTERN_DATA_V5678) == 4608);
 
 // Old v1234 effects
 enum {
@@ -4127,6 +4131,7 @@ static int a2m_read_varheader(char *blockptr, int npatt)
 {
     int lensize;
     int maxblock = (ffver < 5 ? npatt / 16 : npatt / 8) + 1;
+    // NOTE: this may be a problem on BIG ENDIAN archs
     uint16_t *src16 = (uint16_t *)blockptr;
     uint32_t *src32 = (uint32_t *)blockptr;
 
