@@ -4134,13 +4134,16 @@ static void a2t_import(char *tune)
     a2t_read_patterns(blockptr);
 }
 
+typedef uint8_t (tUINT16)[2];
+typedef uint8_t (tUINT32)[4];
+
 static int a2m_read_varheader(char *blockptr, int npatt)
 {
     int lensize;
     int maxblock = (ffver < 5 ? npatt / 16 : npatt / 8) + 1;
-    // NOTE: this may be a problem on BIG ENDIAN archs
-    uint16_t *src16 = (uint16_t *)blockptr;
-    uint32_t *src32 = (uint32_t *)blockptr;
+
+    tUINT16 *src16 = (tUINT16 *)blockptr;
+    tUINT32 *src32 = (tUINT32 *)blockptr;
 
     if (ffver < 5) lensize = 5;		// 1,2,3,4 - uint16_t len[5];
     else if (ffver < 9) lensize = 9;	// 5,6,7,8 - uint16_t len[9];
@@ -4150,14 +4153,14 @@ static int a2m_read_varheader(char *blockptr, int npatt)
     case 1 ... 8:
         // skip possible rubbish (MARIO.A2M)
         for (int i = 0; (i < lensize) && (i <= maxblock); i++)
-            len[i] = src16[i];
+            len[i] = UINT16LE(src16[i]);
 
-        return lensize * sizeof(uint16_t);
+        return lensize * sizeof(tUINT16);
     case 9 ... 14:
         for (int i = 0; i < lensize; i++)
-            len[i] = src32[i];
+            len[i] = UINT32LE(src32[i]);
 
-        return lensize * sizeof(uint32_t);
+        return lensize * sizeof(tUINT32);
     }
 
     return 0;
