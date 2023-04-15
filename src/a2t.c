@@ -3832,160 +3832,156 @@ bool adsr_carrier[9];
 
 void convert_v1234_event(tADTRACK2_EVENT_V1234 *ev, int chan)
 {
-    tADTRACK2_EVENT_V1234 new_ev = *ev; // NOTE: newev overlaps with old one
-
     switch (ev->effect_def) {
-    case fx_Arpeggio:			new_ev.effect_def = ef_Arpeggio;		break;
-    case fx_FSlideUp:			new_ev.effect_def = ef_FSlideUp;		break;
-    case fx_FSlideDown:			new_ev.effect_def = ef_FSlideDown;		break;
-    case fx_FSlideUpFine:		new_ev.effect_def = ef_FSlideUpFine;	break;
-    case fx_FSlideDownFine:		new_ev.effect_def = ef_FSlideDownFine;	break;
-    case fx_TonePortamento:		new_ev.effect_def = ef_TonePortamento;	break;
-    case fx_TPortamVolSlide:	new_ev.effect_def = ef_TPortamVolSlide;break;
-    case fx_Vibrato:			new_ev.effect_def = ef_Vibrato;		break;
-    case fx_VibratoVolSlide:	new_ev.effect_def = ef_VibratoVolSlide;break;
-    case fx_SetInsVolume:		new_ev.effect_def = ef_SetInsVolume;	break;
-    case fx_PatternJump:		new_ev.effect_def = ef_PositionJump;	break;
-    case fx_PatternBreak:		new_ev.effect_def = ef_PatternBreak;	break;
-    case fx_SetTempo:			new_ev.effect_def = ef_SetSpeed;		break;
-    case fx_SetTimer:			new_ev.effect_def = ef_SetTempo;		break;
+    case fx_Arpeggio:           ev->effect_def = ef_Arpeggio;        break;
+    case fx_FSlideUp:           ev->effect_def = ef_FSlideUp;        break;
+    case fx_FSlideDown:         ev->effect_def = ef_FSlideDown;      break;
+    case fx_FSlideUpFine:       ev->effect_def = ef_FSlideUpFine;    break;
+    case fx_FSlideDownFine:     ev->effect_def = ef_FSlideDownFine;  break;
+    case fx_TonePortamento:     ev->effect_def = ef_TonePortamento;  break;
+    case fx_TPortamVolSlide:    ev->effect_def = ef_TPortamVolSlide; break;
+    case fx_Vibrato:            ev->effect_def = ef_Vibrato;         break;
+    case fx_VibratoVolSlide:    ev->effect_def = ef_VibratoVolSlide; break;
+    case fx_SetInsVolume:       ev->effect_def = ef_SetInsVolume;    break;
+    case fx_PatternJump:        ev->effect_def = ef_PositionJump;    break;
+    case fx_PatternBreak:       ev->effect_def = ef_PatternBreak;    break;
+    case fx_SetTempo:           ev->effect_def = ef_SetSpeed;        break;
+    case fx_SetTimer:           ev->effect_def = ef_SetTempo;        break;
     case fx_SetOpIntensity: {
         if (ev->effect & 0xf0) {
-            new_ev.effect_def = ef_SetCarrierVol;
-            new_ev.effect = (ev->effect >> 4) * 4 + 3;
+            ev->effect_def = ef_SetCarrierVol;
+            ev->effect = (ev->effect >> 4) * 4 + 3;
         } else if (ev->effect & 0x0f) {
-            new_ev.effect_def = ef_SetModulatorVol;
-            new_ev.effect = (ev->effect & 0x0f) * 4 + 3;
-        } else new_ev.effect_def = 0;
+            ev->effect_def = ef_SetModulatorVol;
+            ev->effect = (ev->effect & 0x0f) * 4 + 3;
+        } else ev->effect_def = 0;
         break;
     }
     case fx_Extended: {
         switch (ev->effect >> 4) {
         case fx_ex_DefAMdepth:
-            new_ev.effect_def = ef_Extended;
-            new_ev.effect = ef_ex_SetTremDepth << 4 | (ev->effect & 0x0f);
+            ev->effect_def = ef_Extended;
+            ev->effect = ef_ex_SetTremDepth << 4 | (ev->effect & 0x0f);
             break;
         case fx_ex_DefVibDepth:
-            new_ev.effect_def = ef_Extended;
-            new_ev.effect = ef_ex_SetVibDepth << 4 | (ev->effect & 0x0f);
+            ev->effect_def = ef_Extended;
+            ev->effect = ef_ex_SetVibDepth << 4 | (ev->effect & 0x0f);
             break;
         case fx_ex_DefWaveform:
-            new_ev.effect_def = ef_SetWaveform;
+            ev->effect_def = ef_SetWaveform;
             if ((ev->effect & 0x0f) < 4) {
-                new_ev.effect = ((ev->effect & 0x0f) << 4) | 0x0f; // 0..3
+                ev->effect = ((ev->effect & 0x0f) << 4) | 0x0f; // 0..3
             } else {
-                new_ev.effect = ((ev->effect & 0x0f) - 4) | 0xf0; // 4..7
+                ev->effect = ((ev->effect & 0x0f) - 4) | 0xf0; // 4..7
             }
             break;
         case fx_ex_VSlideUp:
-            new_ev.effect_def = ef_VolSlide;
-            new_ev.effect = (ev->effect & 0x0f) << 4;
+            ev->effect_def = ef_VolSlide;
+            ev->effect = (ev->effect & 0x0f) << 4;
             break;
         case fx_ex_VSlideDown:
-            new_ev.effect_def = ef_VolSlide;
-            new_ev.effect = ev->effect & 0x0f;
+            ev->effect_def = ef_VolSlide;
+            ev->effect = ev->effect & 0x0f;
             break;
         case fx_ex_VSlideUpFine:
-            new_ev.effect_def = ef_VolSlideFine;
-            new_ev.effect = (ev->effect & 0x0f) << 4;
+            ev->effect_def = ef_VolSlideFine;
+            ev->effect = (ev->effect & 0x0f) << 4;
             break;
         case fx_ex_VSlideDownFine:
-            new_ev.effect_def = ef_VolSlideFine;
-            new_ev.effect = ev->effect & 0x0f;
+            ev->effect_def = ef_VolSlideFine;
+            ev->effect = ev->effect & 0x0f;
             break;
         case fx_ex_ManSlideUp:
-            new_ev.effect_def = ef_Extended2;
-            new_ev.effect = (ef_ex2_FineTuneUp << 4) | (ev->effect & 0x0f);
+            ev->effect_def = ef_Extended2;
+            ev->effect = (ef_ex2_FineTuneUp << 4) | (ev->effect & 0x0f);
             break;
         case fx_ex_ManSlideDown:
-            new_ev.effect_def = ef_Extended2;
-            new_ev.effect = (ef_ex2_FineTuneDown << 4) | (ev->effect & 0x0f);
+            ev->effect_def = ef_Extended2;
+            ev->effect = (ef_ex2_FineTuneDown << 4) | (ev->effect & 0x0f);
             break;
         case fx_ex_RetrigNote:
-            new_ev.effect_def = ef_RetrigNote;
-            new_ev.effect = (ev->effect & 0x0f) + 1;
+            ev->effect_def = ef_RetrigNote;
+            ev->effect = (ev->effect & 0x0f) + 1;
             break;
         case fx_ex_SetAttckRate:
-            new_ev.effect_def = ef_Extended;
-            new_ev.effect = ev->effect & 0x0f;
+            ev->effect_def = ef_Extended;
+            ev->effect = ev->effect & 0x0f;
             if (!adsr_carrier[chan]) {
-                new_ev.effect |= ef_ex_SetAttckRateM << 4;
+                ev->effect |= ef_ex_SetAttckRateM << 4;
             } else {
-                new_ev.effect |= ef_ex_SetAttckRateC << 4;
+                ev->effect |= ef_ex_SetAttckRateC << 4;
             }
             break;
         case fx_ex_SetDecayRate:
-            new_ev.effect_def = ef_Extended;
-            new_ev.effect = ev->effect & 0x0f;
+            ev->effect_def = ef_Extended;
+            ev->effect = ev->effect & 0x0f;
             if (!adsr_carrier[chan]) {
-                new_ev.effect |= ef_ex_SetDecayRateM << 4;
+                ev->effect |= ef_ex_SetDecayRateM << 4;
             } else {
-                new_ev.effect |= ef_ex_SetDecayRateC << 4;
+                ev->effect |= ef_ex_SetDecayRateC << 4;
             }
             break;
         case fx_ex_SetSustnLevel:
-            new_ev.effect_def = ef_Extended;
-            new_ev.effect = ev->effect & 0x0f;
+            ev->effect_def = ef_Extended;
+            ev->effect = ev->effect & 0x0f;
             if (!adsr_carrier[chan]) {
-                new_ev.effect |= ef_ex_SetSustnLevelM << 4;
+                ev->effect |= ef_ex_SetSustnLevelM << 4;
             } else {
-                new_ev.effect |= ef_ex_SetSustnLevelC << 4;
+                ev->effect |= ef_ex_SetSustnLevelC << 4;
             }
             break;
         case fx_ex_SetReleaseRate:
-            new_ev.effect_def = ef_Extended;
-            new_ev.effect = ev->effect & 0x0f;
+            ev->effect_def = ef_Extended;
+            ev->effect = ev->effect & 0x0f;
             if (!adsr_carrier[chan]) {
-                new_ev.effect |= ef_ex_SetRelRateM << 4;
+                ev->effect |= ef_ex_SetRelRateM << 4;
             } else {
-                new_ev.effect |= ef_ex_SetRelRateC << 4;
+                ev->effect |= ef_ex_SetRelRateC << 4;
             }
             break;
         case fx_ex_SetFeedback:
-            new_ev.effect_def = ef_Extended;
-            new_ev.effect = (ef_ex_SetFeedback << 4) | (ev->effect & 0x0f);
+            ev->effect_def = ef_Extended;
+            ev->effect = (ef_ex_SetFeedback << 4) | (ev->effect & 0x0f);
             break;
         case fx_ex_ExtendedCmd:
-            new_ev.effect_def = ef_Extended;
-            new_ev.effect = ef_ex_ExtendedCmd2 << 4;
+            ev->effect_def = ef_Extended;
+            ev->effect = ef_ex_ExtendedCmd2 << 4;
             if ((ev->effect & 0x0f) < 10) {
                 // FIXME: Should be a parameter
                 bool whole_song = FALSE;
 
                 switch (ev->effect & 0x0f) {
-                case 0: new_ev.effect |= ef_ex_cmd2_RSS;		break;
-                case 1: new_ev.effect |= ef_ex_cmd2_LockVol;	break;
-                case 2: new_ev.effect |= ef_ex_cmd2_UnlockVol;	break;
-                case 3: new_ev.effect |= ef_ex_cmd2_LockVP;	break;
-                case 4: new_ev.effect |= ef_ex_cmd2_UnlockVP;	break;
+                case 0: ev->effect |= ef_ex_cmd2_RSS;       break;
+                case 1: ev->effect |= ef_ex_cmd2_LockVol;   break;
+                case 2: ev->effect |= ef_ex_cmd2_UnlockVol; break;
+                case 3: ev->effect |= ef_ex_cmd2_LockVP;    break;
+                case 4: ev->effect |= ef_ex_cmd2_UnlockVP;  break;
                 case 5:
-                    new_ev.effect_def = (whole_song ? 255 : 0);
-                    new_ev.effect = 0;
+                    ev->effect_def = (whole_song ? 255 : 0);
+                    ev->effect = 0;
                     adsr_carrier[chan] = TRUE;
                     break;
                 case 6:
-                    new_ev.effect_def = (whole_song ? 255 : 0);
-                    new_ev.effect = (whole_song ? 1 : 0);
+                    ev->effect_def = (whole_song ? 255 : 0);
+                    ev->effect = (whole_song ? 1 : 0);
                     adsr_carrier[chan] = FALSE;
                     break;
-                case 7: new_ev.effect |= ef_ex_cmd2_VSlide_car;	break;
-                case 8: new_ev.effect |= ef_ex_cmd2_VSlide_mod;	break;
-                case 9: new_ev.effect |= ef_ex_cmd2_VSlide_def;	break;
+                case 7: ev->effect |= ef_ex_cmd2_VSlide_car; break;
+                case 8: ev->effect |= ef_ex_cmd2_VSlide_mod; break;
+                case 9: ev->effect |= ef_ex_cmd2_VSlide_def; break;
                 }
             } else {
-                new_ev.effect_def = 0;
-                new_ev.effect = 0;
+                ev->effect_def = 0;
+                ev->effect = 0;
             }
             break;
         }
         break;
     }
     default:
-        new_ev.effect_def = 0;
-        new_ev.effect = 0;
+        ev->effect_def = 0;
+        ev->effect = 0;
     }
-
-    *ev = new_ev;
 }
 
 // common for both a2t/a2m
