@@ -24,6 +24,10 @@
 #include "opl3.h"
 #include "a2t.h"
 
+#ifndef C_ASSERT
+#define C_ASSERT(e) typedef char __C_ASSERT__[(e) ? 1 : -1]
+#endif
+
 #ifdef __GNUC__
 #define PACK __attribute__((__packed__))
 #elif _MSC_VER
@@ -41,6 +45,9 @@ typedef signed char bool;
 #define FALSE 0
 #define TRUE !FALSE
 #endif
+
+#define LO(A) ((A) & 0xFF)
+#define HI(A) (((A) >> 8) & 0xFF)
 
 #define keyoff_flag			0x80
 #define fixed_note_flag		0x90
@@ -65,6 +72,8 @@ typedef struct {
         uint8_t data[11];
     };
 } tFM_INST_DATA;
+
+C_ASSERT(sizeof(tFM_INST_DATA) == 11);
 
 typedef struct PACK {
     tFM_INST_DATA fm;
@@ -623,9 +632,6 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
     /* ATTENTION: wtf this calculation should be ? */
     return (vibr[position & 0x1f] * depth) >> 6;
 }
-
-#define LO(A) ((A) & 0xFF)
-#define HI(A) (((A) >> 8) & 0xFF)
 
 static void change_freq(int chan, uint16_t freq)
 {
@@ -3461,9 +3467,6 @@ static int a2_import(char *tune); // forward def
 
 void a2t_play(char *tune) // start_playing()
 {
-    printf("sizeof(tFM_INST_DATA) == %d\n", sizeof(tFM_INST_DATA));
-    assert(sizeof(tFM_INST_DATA) == 11);
-
     a2t_stop();
     int err = a2_import(tune);
 
@@ -3499,21 +3502,25 @@ void a2t_play(char *tune) // start_playing()
 int ffver = 1;
 int len[21];
 
-typedef struct PACK {
+typedef struct {
     char id[15];	// '_a2tiny_module_'
-    uint32_t crc;
+    uint8_t crc[4]; // uint32_t
     uint8_t ffver;
     uint8_t npatt;
     uint8_t tempo;
     uint8_t speed;
 } A2T_HEADER;
 
-typedef struct PACK {
+C_ASSERT(sizeof(A2T_HEADER) == 23);
+
+typedef struct {
     char id[10];	// '_a2module_'
-    uint32_t crc;
+    uint8_t crc[4]; // uint32_t
     uint8_t ffver;
     uint8_t npatt;
 } A2M_HEADER;
+
+C_ASSERT(sizeof(A2M_HEADER) == 16);
 
 char *a2t_load(char *name)
 {
@@ -4145,7 +4152,7 @@ static int a2m_read_varheader(char *blockptr, int npatt)
 }
 
 /* Data for importing A2M format */
-typedef struct PACK {
+typedef struct {
     char songname[43];
     char composer[43];
     char instr_names[250][33];
@@ -4153,10 +4160,10 @@ typedef struct PACK {
     uint8_t pattern_order[128];
     uint8_t tempo;
     uint8_t speed;
-    uint8_t common_flag;		// A2M_SONGDATA_V5678
+    uint8_t common_flag; // A2M_SONGDATA_V5678
 } A2M_SONGDATA_V1234;
 
-typedef struct PACK {
+typedef struct {
     char songname[43];
     char composer[43];
     char instr_names[255][43];
@@ -4167,23 +4174,26 @@ typedef struct PACK {
     uint8_t tempo;
     uint8_t speed;
     uint8_t common_flag;
-    uint16_t patt_len;
+    uint8_t patt_len[2];           // uint16_t
     uint8_t nm_tracks;
-    uint16_t macro_speedup;
-    uint8_t flag_4op;				// A2M_SONGDATA_V10
-    uint8_t lock_flags[20];			// A2M_SONGDATA_V10
-    char pattern_names[128][43];	// A2M_SONGDATA_V11
-    int8_t dis_fmreg_col[255][28];	// A2M_SONGDATA_V11
-    struct PACK {
-        uint8_t		num_4op;
-        uint8_t		idx_4op[128];
-    } ins_4op_flags;				// A2M_SONGDATA_V12_13
-    uint8_t			reserved_data[1024]; // A2M_SONGDATA_V12_13
-    struct PACK {
-        uint8_t		rows_per_beat;
-        int16_t		tempo_finetune;
-    } bpm_data;						// A2M_SONGDATA_V14
+    uint8_t macro_speedup[2];      // uint16_t
+    uint8_t flag_4op;              // A2M_SONGDATA_V10
+    uint8_t lock_flags[20];        // A2M_SONGDATA_V10
+    char pattern_names[128][43];   // A2M_SONGDATA_V11
+    int8_t dis_fmreg_col[255][28]; // A2M_SONGDATA_V11
+    struct {
+        uint8_t num_4op;
+        uint8_t idx_4op[128];
+    } ins_4op_flags;             // A2M_SONGDATA_V12_13
+    uint8_t reserved_data[1024]; // A2M_SONGDATA_V12_13
+    struct {
+        uint8_t rows_per_beat;
+        int8_t tempo_finetune[2]; // int16_t
+    } bpm_data;                   // A2M_SONGDATA_V14
 } A2M_SONGDATA_V9_14;
+
+C_ASSERT(sizeof(A2M_SONGDATA_V1234) == 11717);
+C_ASSERT(sizeof(A2M_SONGDATA_V9_14) == 1138338);
 
 static int a2m_read_songdata(char *src)
 {
@@ -4228,9 +4238,9 @@ static int a2m_read_songdata(char *src)
         songdata->tempo = data->tempo;
         songdata->speed = data->speed;
         songdata->common_flag = data->common_flag;
-        songdata->patt_len = data->patt_len;
+        songdata->patt_len = data->patt_len[0] + (data->patt_len[1] << 8);
         songdata->nm_tracks = data->nm_tracks;
-        songdata->macro_speedup = data->macro_speedup;
+        songdata->macro_speedup = data->macro_speedup[0] + (data->macro_speedup[1] << 8);
 
         // v10
         songdata->flag_4op = data->flag_4op;
@@ -4247,7 +4257,8 @@ static int a2m_read_songdata(char *src)
 
         // v14
         songdata->bpm_data.rows_per_beat = data->bpm_data.rows_per_beat;
-        songdata->bpm_data.tempo_finetune = data->bpm_data.tempo_finetune;
+        songdata->bpm_data.tempo_finetune = // Note: not used anywhere
+            (int16_t)(data->bpm_data.tempo_finetune[0] | (data->bpm_data.tempo_finetune[0] << 8));
 
         free(data);
     }
