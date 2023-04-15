@@ -1,7 +1,7 @@
 /*
     TODO:
     - Bug in the original player: need to reset global_volume after order restart
-    - Eliminate the usage of concw() and HI()/LO(),
+    - Eliminate the usage of HI()/LO(),
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
     In order to get into Adplug:
@@ -691,11 +691,6 @@ static bool is_data_empty(void *data, unsigned int size)
 static inline uint16_t max(uint16_t value, uint16_t maximum)
 {
     return (value > maximum ? maximum : value);
-}
-
-static inline uint16_t concw(uint8_t lo, uint8_t hi)
-{
-    return (lo | (hi << 8));
 }
 
 static void change_frequency(int chan, uint16_t freq)
