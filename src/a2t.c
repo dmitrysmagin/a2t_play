@@ -3568,50 +3568,62 @@ static inline void a2t_depack(void *src, int srcsize, void *dst)
 }
 
 /* Data for importing A2T format */
-typedef struct PACK {
-    uint16_t len[6];
+typedef struct {
+    uint8_t len[6][2]; // uint16_t
 } A2T_VARHEADER_V1234;
 
 typedef struct {
     uint8_t common_flag;
-    uint16_t len[10];
+    uint8_t len[10][2]; // uint16_t
 } A2T_VARHEADER_V5678;
 
-typedef struct PACK {
+typedef struct {
     uint8_t common_flag;
-    uint16_t patt_len;
+    uint8_t patt_len[2]; // uint16_t
     uint8_t nm_tracks;
-    uint16_t macro_speedup;
-    uint32_t len[20];
+    uint8_t macro_speedup[2]; // uint16_t
+    uint8_t len[20][4]; // uint32_t
 } A2T_VARHEADER_V9;
 
-typedef struct PACK {
+typedef struct {
     uint8_t common_flag;
-    uint16_t patt_len;
+    uint8_t patt_len[2]; // uint16_t
     uint8_t nm_tracks;
-    uint16_t macro_speedup;
+    uint8_t macro_speedup[2]; // uint16_t
     uint8_t flag_4op;
     uint8_t lock_flags[20];
-    uint32_t len[20];
+    uint8_t len[20][4]; // uint32_t
 } A2T_VARHEADER_V10;
 
-typedef struct PACK {
+typedef struct {
     uint8_t common_flag;
-    uint16_t patt_len;
+    uint8_t patt_len[2]; // uint16_t
     uint8_t nm_tracks;
-    uint16_t macro_speedup;
+    uint8_t macro_speedup[2]; // uint16_t
     uint8_t flag_4op;
     uint8_t lock_flags[20];
-    uint32_t len[21];
+    uint8_t len[21][4]; // uint32_t
 } A2T_VARHEADER_V11;
 
-typedef union PACK {
+typedef union {
     A2T_VARHEADER_V1234 v1234;
     A2T_VARHEADER_V5678 v5678;
     A2T_VARHEADER_V9    v9;
     A2T_VARHEADER_V10   v10;
     A2T_VARHEADER_V11   v11;
 } A2T_VARHEADER;
+
+C_ASSERT(sizeof(A2T_VARHEADER_V1234) == 12);
+C_ASSERT(sizeof(A2T_VARHEADER_V5678) == 21);
+C_ASSERT(sizeof(A2T_VARHEADER_V9) == 86);
+C_ASSERT(sizeof(A2T_VARHEADER_V10) == 107);
+C_ASSERT(sizeof(A2T_VARHEADER_V11) == 111);
+C_ASSERT(sizeof(A2T_VARHEADER) == 111);
+
+#define INT16LE(A) (int16_t)((A[0]) | (A[1] << 8))
+#define UINT16LE(A) (uint16_t)((A[0]) | (A[1] << 8))
+#define INT32LE(A) (int32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
+#define UINT32LE(A) (uint32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
 
 // read the variable part of the header
 static int a2t_read_varheader(char *blockptr)
@@ -3621,42 +3633,42 @@ static int a2t_read_varheader(char *blockptr)
     switch (ffver) {
     case 1 ... 4:
         for (int i = 0; i < 6; i++)
-            len[i] = varheader->v1234.len[i];
+            len[i] = UINT16LE(varheader->v1234.len[i]);
         return sizeof(A2T_VARHEADER_V1234);
     case 5 ... 8:
         songdata->common_flag = varheader->v5678.common_flag;
         for (int i = 0; i < 10; i++)
-            len[i] = varheader->v5678.len[i];
+            len[i] = UINT16LE(varheader->v5678.len[i]);
         return sizeof(A2T_VARHEADER_V5678);
     case 9:
         songdata->common_flag = varheader->v9.common_flag;
-        songdata->patt_len = varheader->v9.patt_len;
+        songdata->patt_len = UINT16LE(varheader->v9.patt_len);
         songdata->nm_tracks = varheader->v9.nm_tracks;
-        songdata->macro_speedup = varheader->v9.macro_speedup;
+        songdata->macro_speedup = UINT16LE(varheader->v9.macro_speedup);
         for (int i = 0; i < 20; i++)
-            len[i] = varheader->v9.len[i];
+            len[i] = UINT32LE(varheader->v9.len[i]);
         return sizeof(A2T_VARHEADER_V9);
     case 10:
         songdata->common_flag = varheader->v10.common_flag;
-        songdata->patt_len = varheader->v10.patt_len;
+        songdata->patt_len = UINT16LE(varheader->v10.patt_len);
         songdata->nm_tracks = varheader->v10.nm_tracks;
-        songdata->macro_speedup = varheader->v10.macro_speedup;
+        songdata->macro_speedup = UINT16LE(varheader->v10.macro_speedup);
         songdata->flag_4op = varheader->v10.flag_4op;
         for (int i = 0; i < 20; i++)
             songdata->lock_flags[i] = varheader->v10.lock_flags[i];
         for (int i = 0; i < 20; i++)
-            len[i] = varheader->v10.len[i];
+            len[i] = UINT32LE(varheader->v10.len[i]);
         return sizeof(A2T_VARHEADER_V10);
     case 11 ... 14:
         songdata->common_flag = varheader->v11.common_flag;
-        songdata->patt_len = varheader->v11.patt_len;
+        songdata->patt_len = UINT16LE(varheader->v11.patt_len);
         songdata->nm_tracks = varheader->v11.nm_tracks;
-        songdata->macro_speedup = varheader->v11.macro_speedup;
+        songdata->macro_speedup = UINT16LE(varheader->v11.macro_speedup);
         songdata->flag_4op = varheader->v11.flag_4op;
         for (int i = 0; i < 20; i++)
             songdata->lock_flags[i] = varheader->v10.lock_flags[i];
         for (int i = 0; i < 21; i++)
-            len[i] = varheader->v11.len[i];
+            len[i] = UINT32LE(varheader->v11.len[i]);
         return sizeof(A2T_VARHEADER_V11);
     }
 
@@ -4238,9 +4250,9 @@ static int a2m_read_songdata(char *src)
         songdata->tempo = data->tempo;
         songdata->speed = data->speed;
         songdata->common_flag = data->common_flag;
-        songdata->patt_len = data->patt_len[0] + (data->patt_len[1] << 8);
+        songdata->patt_len = UINT16LE(data->patt_len);
         songdata->nm_tracks = data->nm_tracks;
-        songdata->macro_speedup = data->macro_speedup[0] + (data->macro_speedup[1] << 8);
+        songdata->macro_speedup = UINT16LE(data->macro_speedup);
 
         // v10
         songdata->flag_4op = data->flag_4op;
@@ -4258,7 +4270,7 @@ static int a2m_read_songdata(char *src)
         // v14
         songdata->bpm_data.rows_per_beat = data->bpm_data.rows_per_beat;
         songdata->bpm_data.tempo_finetune = // Note: not used anywhere
-            (int16_t)(data->bpm_data.tempo_finetune[0] | (data->bpm_data.tempo_finetune[0] << 8));
+            INT16LE(data->bpm_data.tempo_finetune);
 
         free(data);
     }
