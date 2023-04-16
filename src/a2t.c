@@ -5,9 +5,6 @@
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
     In order to get into Adplug:
-    - Remove PACKED structures, this is not partable
-        HOWEVER: if all members of struct are uint8_t/char the padding is not applied,
-        this is true for multidimensional arrays: char arr[21][11] has no padding between dimensions
     - Reduce the memory used for a tune
 */
 #include <stdio.h>
@@ -26,15 +23,6 @@
 
 #ifndef C_ASSERT
 #define C_ASSERT(e) typedef char __C_ASSERT__[(e) ? 1 : -1]
-#endif
-
-#ifdef __GNUC__
-#define PACK __attribute__((__packed__))
-#elif _MSC_VER
-#define PACK
-#pragma pack(1)
-#else
-#define PACK
 #endif
 
 #ifndef bool
@@ -478,19 +466,19 @@ uint8_t fslide_table[2][20];		// array[1..20] of Byte;
 struct {
     uint8_t def, val;
 } glfsld_table[2][20];	// array[1..20] of Word;
-struct PACK {
+struct {
     uint16_t freq;
     uint8_t speed;
 } porta_table[2][20];	// array[1..20] of Record freq: Word; speed: Byte; end;
 bool portaFK_table[20]; // array[1..20] of Boolean;;
-struct PACK {
+struct {
     uint8_t state, note, add1, add2;
 } arpgg_table[2][20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
-struct PACK {
+struct {
     uint8_t pos, dir, speed, depth;
     bool fine;
 } vibr_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
-struct PACK {
+struct {
     uint8_t pos, dir, speed, depth;
     bool fine;
 } trem_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
@@ -508,7 +496,7 @@ uint8_t notedel_table[20];	// array[1..20] of Byte;
 uint8_t notecut_table[20];	// array[1..20] of Byte;
 int8_t ftune_table[20];		// array[1..20] of Shortint;
 bool keyoff_loop[20];		// array[1..20] of Boolean;
-typedef struct PACK {
+typedef struct {
     uint16_t fmreg_pos,
          arpg_pos,
          vib_pos;
@@ -4295,7 +4283,6 @@ static int a2m_read_songdata(char *src)
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
     printf("Track volume lock: %d\n", lockvol);
-    printf("effect_group size = %d\n", sizeof(effect_group) / sizeof(effect_group[0]));
 
 #if 0
     FILE *f = fopen("songdata.dmp", "wb");
