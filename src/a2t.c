@@ -49,6 +49,11 @@ typedef signed char bool;
 #define LO(A) ((A) & 0xFF)
 #define HI(A) (((A) >> 8) & 0xFF)
 
+#define INT16LE(A) (int16_t)((A[0]) | (A[1] << 8))
+#define UINT16LE(A) (uint16_t)((A[0]) | (A[1] << 8))
+#define INT32LE(A) (int32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
+#define UINT32LE(A) (uint32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
+
 #define keyoff_flag			0x80
 #define fixed_note_flag		0x90
 //#define pattern_loop_flag	0xe0
@@ -75,14 +80,16 @@ typedef struct {
 
 C_ASSERT(sizeof(tFM_INST_DATA) == 11);
 
-typedef struct PACK {
+typedef struct {
     tFM_INST_DATA fm;
     uint8_t panning;
     int8_t  fine_tune;
     uint8_t perc_voice;
 } tINSTR_DATA;
 
-typedef struct PACK {
+C_ASSERT(sizeof(tINSTR_DATA) == 14);
+
+typedef struct {
     uint8_t length;
     uint8_t speed;
     uint8_t loop_begin;
@@ -91,7 +98,7 @@ typedef struct PACK {
     uint8_t data[255]; // array[1..255] of Byte;
 } tARPEGGIO_TABLE;
 
-typedef struct PACK {
+typedef struct {
     uint8_t length;
     uint8_t speed;
     uint8_t delay;
@@ -101,32 +108,34 @@ typedef struct PACK {
     int8_t data[255]; // array[1..255] of Shortint;
 } tVIBRATO_TABLE;
 
-typedef struct PACK {
+typedef struct {
     tFM_INST_DATA fm;
-    int16_t freq_slide;
+    uint8_t freq_slide[2]; // int16_t
     uint8_t panning;
     uint8_t duration;
 } tREGISTER_TABLE_DEF;
 
-typedef struct PACK {
+typedef struct {
     uint8_t length;
     uint8_t loop_begin;
     uint8_t loop_length;
     uint8_t keyoff_pos;
     uint8_t arpeggio_table;
     uint8_t vibrato_table;
-    tREGISTER_TABLE_DEF data[255]; // array[1..255] of tREGISTER_TABLE_DEF;
+    tREGISTER_TABLE_DEF data[255];
 } tINSTR_MACRO;
 
-typedef struct PACK {
+typedef struct {
     tARPEGGIO_TABLE arpeggio;
     tVIBRATO_TABLE vibrato;
 } tMACRO_TABLE;
 
+C_ASSERT(sizeof(tINSTR_MACRO) == 3831);
+C_ASSERT(sizeof(tMACRO_TABLE) == 521);
+
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
 
-// This structure has byte-to-byte equivalence to the file
-typedef struct PACK {
+typedef struct {
     char            songname[43];        // pascal String[42];
     char            composer[43];        // pascal String[42];
     char            instr_names[255][43];// array[1..255] of String[42];
@@ -145,12 +154,12 @@ typedef struct PACK {
     char            pattern_names[128][43];  // array[0..$7f] of String[42];
     //tDIS_FMREG_COL  dis_fmreg_col[255];  // array[1..255] of tDIS_FMREG_COL;
     int8_t          dis_fmreg_col[255][28]; // disabled fm macro columns in the editor
-    struct PACK {
+    struct {
         uint8_t		num_4op;
         uint8_t		idx_4op[128];
     } ins_4op_flags;
     uint8_t			reserved_data[1024];
-    struct PACK {
+    struct {
         uint8_t		rows_per_beat;
         int16_t		tempo_finetune;
     } bpm_data;
@@ -160,31 +169,28 @@ typedef enum {
     isPlaying = 0, isPaused, isStopped
 } tPLAY_STATUS;
 
-typedef struct PACK {
+typedef struct {
     uint8_t note;
     uint8_t instr_def;
-    struct PACK {
+    struct {
         uint8_t def;
         uint8_t val;
     } eff[2];
 } tADTRACK2_EVENT;
 
-//type
-//  tVARIABLE_DATA = array[0..7]    of
-//                   array[1..20]   of
-//                   array[0..$0ff] of tADTRACK2_EVENT;
-//type
-//  tPATTERN_DATA = array[0..15] of tVARIABLE_DATA;
+C_ASSERT(sizeof(tADTRACK2_EVENT) == 6);
 
 // as C doesn't support pointers to typedef'ed arrays, make a struct
 // pattdata[1].ch[2].row[3].ev.note;
-typedef struct PACK {
-  struct PACK {
-    struct PACK {
-      tADTRACK2_EVENT ev;
-    } row[256];
-  } ch[20];
+typedef struct {
+    struct {
+        struct {
+            tADTRACK2_EVENT ev;
+        } row[256];
+    } ch[20];
 } tPATTERN_DATA;
+
+C_ASSERT(sizeof(tPATTERN_DATA) == 20 * 256 * 6);
 
 const uint8_t _panning[3] = {0x30, 0x10, 0x20};
 
@@ -3116,11 +3122,13 @@ static void macro_poll_proc()
                             }
                         }
 
+                        int16_t freq_slide = INT16LE(d->freq_slide);
+
                         if (!songdata->dis_fmreg_col[fmreg_ins][26]) {
-                            if (d->freq_slide > 0) {
-                                portamento_up(chan, d->freq_slide, nFreq(12*8+1));
-                            } else if (d->freq_slide < 0) {
-                                portamento_down(chan, abs(d->freq_slide), nFreq(0));
+                            if (freq_slide > 0) {
+                                portamento_up(chan, freq_slide, nFreq(12*8+1));
+                            } else if (freq_slide < 0) {
+                                portamento_down(chan, abs(freq_slide), nFreq(0));
                             }
                         }
                     }
@@ -3619,11 +3627,6 @@ C_ASSERT(sizeof(A2T_VARHEADER_V9) == 86);
 C_ASSERT(sizeof(A2T_VARHEADER_V10) == 107);
 C_ASSERT(sizeof(A2T_VARHEADER_V11) == 111);
 C_ASSERT(sizeof(A2T_VARHEADER) == 111);
-
-#define INT16LE(A) (int16_t)((A[0]) | (A[1] << 8))
-#define UINT16LE(A) (uint16_t)((A[0]) | (A[1] << 8))
-#define INT32LE(A) (int32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
-#define UINT32LE(A) (uint32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
 
 // read the variable part of the header
 static int a2t_read_varheader(char *blockptr)
