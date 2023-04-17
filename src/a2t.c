@@ -1,7 +1,6 @@
 /*
     TODO:
     - Bug in the original player: need to reset global_volume after order restart
-    - Eliminate the usage of HI()/LO(),
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
     In order to get into Adplug:
@@ -33,9 +32,6 @@ typedef signed char bool;
 #define FALSE 0
 #define TRUE !FALSE
 #endif
-
-#define LO(A) ((A) & 0xFF)
-#define HI(A) (((A) >> 8) & 0xFF)
 
 #define INT16LE(A) (int16_t)((A[0]) | (A[1] << 8))
 #define UINT16LE(A) (uint16_t)((A[0]) | (A[1] << 8))
@@ -636,8 +632,8 @@ static void change_freq(int chan, uint16_t freq)
 
     freq_table[chan] &= ~0x1fff;
     freq_table[chan] |= (freq & 0x1fff);
-    opl3out(0xa0 + _chan_n[chan], LO(freq_table[chan]));
-    opl3out(0xb0 + _chan_n[chan], HI(freq_table[chan]));
+    opl3out(0xa0 + _chan_n[chan], freq_table[chan] & 0xFF);
+    opl3out(0xb0 + _chan_n[chan], (freq_table[chan] >> 8) & 0xFF);
 
     if (is_4op_chan(chan) && is_4op_chan_lo(chan)) {
         freq_table[chan - 1] = freq_table[chan];
@@ -1262,7 +1258,6 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
     if (val) {
         effect_table[slot][chan].val = val;
     } else if (effect_group[eLo] == eff_group && eHi) {
-        printf("\nUse previous, eff: %02x, val %02x: group %d\n", def, eHi, eff_group);
         effect_table[slot][chan].val = eHi;
     } else {
         printf("\nCAAATCH\n"); // x00 without any previous compatible command, should never happen
@@ -2217,7 +2212,6 @@ static void slide_volume_up(int chan, uint8_t slide)
 {
     tINSTR_DATA *i = instrch(chan);
     uint8_t limit1 = 0, limit2 = 0;
-    uint16_t limit1_4op = 0, limit2_4op = 0;
     uint32_t _4op_flag;
     uint8_t _4op_conn;
     uint8_t _4op_ch1, _4op_ch2;
@@ -2230,18 +2224,7 @@ static void slide_volume_up(int chan, uint8_t slide)
     _4op_ins1 = (uint8_t)(_4op_flag >> 11) & 0xff;
     _4op_ins2 = (uint8_t)(_4op_flag >> 19) & 0xff;
 
-    if (_4op_vol_valid_chan(chan)) {
-        tINSTR_DATA *ins1 = instrn(_4op_ins1);
-        tINSTR_DATA *ins2 = instrn(_4op_ins2);
-
-        limit1_4op = peak_lock[_4op_ch1]
-            ? (ins1->fm.volC << 16) + ins1->fm.volM
-            : 0;
-
-        limit2_4op = peak_lock[_4op_ch2]
-            ? (ins2->fm.volC << 16) + ins1->fm.volM
-            : 0;
-    } else {
+    if (!_4op_vol_valid_chan(chan)) {
         tINSTR_DATA *ins = &songdata->instr_data[event_table[chan].instr_def - 1];
 
         limit1 = peak_lock[chan] ? ins->fm.volC : 0;
@@ -2256,26 +2239,34 @@ static void slide_volume_up(int chan, uint8_t slide)
             if (i->fm.connect || (percussion_mode && (chan >= 16)))  // in [17..20]
                slide_modulator_volume_up(chan, slide, limit2);
         } else {
+            tINSTR_DATA *ins1 = instrn(_4op_ins1);
+            tINSTR_DATA *ins2 = instrn(_4op_ins2);
+
+            uint8_t limit1_volC = peak_lock[_4op_ch1] ? ins1->fm.volC : 0;
+            uint8_t limit1_volM = peak_lock[_4op_ch1] ? ins1->fm.volM : 0;
+            uint8_t limit2_volC = peak_lock[_4op_ch2] ? ins2->fm.volC : 0;
+            uint8_t limit2_volM = peak_lock[_4op_ch2] ? ins2->fm.volM : 0;
+
             switch (_4op_conn) {
             // FM/FM
             case 0:
-                slide_carrier_volume_up(_4op_ch1, slide, HI(limit1_4op));
+                slide_carrier_volume_up(_4op_ch1, slide, limit1_volC);
                 break;
             // FM/AM
             case 1:
-                slide_carrier_volume_up(_4op_ch1, slide, HI(limit1_4op));
-                slide_modulator_volume_up(_4op_ch2, slide, LO(limit2_4op));
+                slide_carrier_volume_up(_4op_ch1, slide, limit1_volC);
+                slide_modulator_volume_up(_4op_ch2, slide, limit2_volM);
                 break;
             // AM/FM
             case 2:
-                slide_carrier_volume_up(_4op_ch1, slide, HI(limit1_4op));
-                slide_carrier_volume_up(_4op_ch2, slide, HI(limit2_4op));
+                slide_carrier_volume_up(_4op_ch1, slide, limit1_volC);
+                slide_carrier_volume_up(_4op_ch2, slide, limit2_volC);
                 break;
             // AM/AM
             case 3:
-                slide_carrier_volume_up(_4op_ch1, slide, HI(limit1_4op));
-                slide_modulator_volume_up(_4op_ch1, slide, LO(limit1_4op));
-                slide_modulator_volume_up(_4op_ch2, slide, LO(limit2_4op));
+                slide_carrier_volume_up(_4op_ch1, slide, limit1_volC);
+                slide_modulator_volume_up(_4op_ch1, slide, limit1_volM);
+                slide_modulator_volume_up(_4op_ch2, slide, limit2_volM);
                 break;
            }
         }
@@ -2290,8 +2281,8 @@ static void slide_volume_up(int chan, uint8_t slide)
         break;
 
     case 3:
-        slide_carrier_volume_up(chan,slide, limit1);
-        slide_modulator_volume_up(chan,slide, limit2);
+        slide_carrier_volume_up(chan, slide, limit1);
+        slide_modulator_volume_up(chan, slide, limit2);
         break;
     }
 }
@@ -4173,6 +4164,7 @@ typedef struct {
     char songname[43];
     char composer[43];
     char instr_names[255][43];
+    // TODO: type 3 arrays below for correct loading
     uint8_t instr_data[255][14];
     uint8_t instr_macros[255][3831];
     uint8_t macro_table[255][521];
