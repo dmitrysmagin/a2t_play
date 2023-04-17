@@ -2,6 +2,7 @@
     TODO:
     - Bug in the original player: need to reset global_volume after order restart
     - Implement fade_out_volume in set_ins_volume() and set_volume
+    - Eliminate INCLUDES() macro
 
     In order to get into Adplug:
     - Reduce the memory used for a tune
@@ -1932,6 +1933,16 @@ static bool is_eff_porta(tADTRACK2_EVENT *event)
     return INCLUDES(effects, event->eff[0].def) || INCLUDES(effects, event->eff[1].def);
 }
 
+static bool no_porta_or_delay(int chan)
+{
+    int effects[] = {
+            ef_TonePortamento, ef_TPortamVolSlide, ef_TPortamVSlideFine,
+            ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay
+        };
+
+    return !INCLUDES(effects, effect_table[0][chan].def) && !INCLUDES(effects, effect_table[1][chan].def);
+}
+
 static void new_process_note(tADTRACK2_EVENT *event, int chan)
 {
     bool tporta_flag = is_eff_porta(event);
@@ -1950,12 +1961,7 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
     if (event->note & keyoff_flag) {
         key_off(chan);
     } else {
-        int effects[] = {
-                ef_TonePortamento, ef_TPortamVolSlide, ef_TPortamVSlideFine,
-                ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay
-            };
-        bool no_previous_porta_or_delay =
-            !INCLUDES(effects, effect_table[0][chan].def) && !INCLUDES(effects, effect_table[1][chan].def);
+        bool no_previous_porta_or_delay = no_porta_or_delay(chan);
 
         if (no_previous_porta_or_delay) {
             // Usually we end up here
