@@ -6,6 +6,12 @@
 
     In order to get into Adplug:
     - Reduce the memory used for a tune
+    - Rework tFIXED_SONGDATA:
+        * Make pattdata an array of pointers, but first read data and initialize correctly
+        * Make instr_data an array of pointers
+        * Rework direct access to songdata->instr_data with get_instr(ins) // 1 - based
+        * Make instr_macros/macro_table an array of pointers
+        * But first read data correctly to instr_data/instr_macros/macro_table
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -1994,13 +2000,9 @@ static void play_line()
     }
 
     for (int chan = 0; chan < songdata->nm_tracks; chan++) {
-        //event = &pattdata[current_pattern].ch[chan].row[current_line].ev;
-        // Do a full copy of the event, because we may modify event->note in before_process_note()
+        // Do a full copy of the event, because we modify event->note in before_process_note()
         memcpy(event, &pattdata[current_pattern].ch[chan].row[current_line].ev, sizeof(tADTRACK2_EVENT));
 
-#if 0
-        if (chan != 2 && chan != 3) continue;
-#endif
         // save effect_table into last_effect
         for (int slot = 0; slot < 2; slot++) {
             if (effect_table[slot][chan].def && effect_table[slot][chan].val) {
