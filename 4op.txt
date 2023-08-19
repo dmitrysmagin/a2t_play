@@ -5,3 +5,7 @@ fank5.a2m - 4op, macro-fm, macro-vib
 fm63b_rv.a2m - 4op, macro-fm
 tunes/encore/amegas.a2t - completely wrong 1st inst
 os_sblas.a2m - wrong 4op instrument when 1st channel has only ins, but second has note and effects
+
+
+mario.a2m - version 1
+adven.a2m - version 5

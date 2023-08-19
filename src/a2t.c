@@ -4028,8 +4028,7 @@ static int a2_read_patterns(char *src, int s)
             for (int p = 0; p < 8; p++) // pattern
             for (int c = 0; c < 18; c++) // channel
             for (int r = 0; r < 64; r++) { // row
-                memcpy(&pattdata[i * 16 + p].ch[c].row[r].ev,
-                    &old[p].ch[c].row[r].ev, 4);
+                memcpy(&pattdata[i * 8 + p].ch[c].row[r].ev, &old[p].ch[c].row[r].ev, 4);
             }
 
             src += len[i+s];
