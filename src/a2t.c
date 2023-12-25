@@ -2,7 +2,6 @@
     TODO:
     - Bug in the original player: need to reset global_volume after order restart
     - Implement fade_out_volume in set_ins_volume() and set_volume
-    - Eliminate INCLUDES() macro
 
     In order to get into Adplug:
     - Reduce the memory used for a tune
@@ -221,15 +220,6 @@ const uint16_t _chpm_c[20] = {
 };
 
 uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
-
-#define INCLUDES(ARRAY, VALUE) \
-    ({ \
-        int len = (sizeof((ARRAY))/sizeof((ARRAY)[0])); \
-        int res = FALSE; \
-        while (--len >= 0) { \
-            res = (ARRAY[len] == (VALUE)); \
-        } \
-        res; })
 
 #define ef_Arpeggio            0
 #define ef_FSlideUp            1
@@ -1935,18 +1925,30 @@ static bool no_swap_and_restart(tADTRACK2_EVENT *event)
 
 static bool is_eff_porta(tADTRACK2_EVENT *event)
 {
-    int effects[] = { ef_TonePortamento, ef_TPortamVolSlide, ef_TPortamVSlideFine };
-    return INCLUDES(effects, event->eff[0].def) || INCLUDES(effects, event->eff[1].def);
+    int eff0 = event->eff[0].def;
+    bool is_p0 = (eff0 == ef_TonePortamento) ||
+                (eff0 == ef_TPortamVolSlide) ||
+                (eff0 == ef_TPortamVSlideFine);
+    int eff1 = event->eff[1].def;
+    bool is_p1 = (eff1 == ef_TonePortamento) ||
+                (eff1 == ef_TPortamVolSlide) ||
+                (eff1 == ef_TPortamVSlideFine);
+    return is_p0 || is_p1;
 }
 
 static bool no_porta_or_delay(int chan)
 {
-    int effects[] = {
-            ef_TonePortamento, ef_TPortamVolSlide, ef_TPortamVSlideFine,
-            ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay
-        };
-
-    return !INCLUDES(effects, effect_table[0][chan].def) && !INCLUDES(effects, effect_table[1][chan].def);
+    int eff0 = effect_table[0][chan].def;
+    bool is_p0 = (eff0 == ef_TonePortamento) ||
+                (eff0 == ef_TPortamVolSlide) ||
+                (eff0 == ef_TPortamVSlideFine) ||
+                (eff0 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay);
+    int eff1 = effect_table[1][chan].def;
+    bool is_p1 = (eff1 == ef_TonePortamento) ||
+                (eff1 == ef_TPortamVolSlide) ||
+                (eff1 == ef_TPortamVSlideFine) ||
+                (eff1 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay);
+    return !is_p0 && !is_p1;
 }
 
 static void new_process_note(tADTRACK2_EVENT *event, int chan)
