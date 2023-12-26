@@ -4162,11 +4162,6 @@ static void a2t_import(char *tune)
     songdata->nm_tracks = 18;
     songdata->macro_speedup = 1;
 
-    printf("A2T version: %d\n", header->ffver);
-    printf("Number of patterns: %d\n", header->npatt);
-    printf("Tempo: %d\n", header->tempo);
-    printf("Speed: %d\n", header->speed);
-
     // Read variable part after header, fill len[] with values
     blockptr += a2t_read_varheader(blockptr);
 
@@ -4178,9 +4173,6 @@ static void a2t_import(char *tune)
     panlock         = (songdata->common_flag >> 5) & 1;
     percussion_mode = (songdata->common_flag >> 6) & 1;
     volume_scaling  = (songdata->common_flag >> 7) & 1;
-
-    printf("Volume scaling: %d\n", volume_scaling);
-    printf("Percussion mode: %d\n", percussion_mode);
 
     // Read instruments; all versions
     blockptr += a2t_read_instruments(blockptr);
@@ -4199,6 +4191,14 @@ static void a2t_import(char *tune)
 
     // Read patterns
     a2t_read_patterns(blockptr);
+
+    printf("A2T version: %d\n", header->ffver);
+    printf("Number of patterns: %d\n", header->npatt);
+    printf("Rows per pattern: %d\n", songdata->patt_len);
+    printf("Tempo: %d\n", header->tempo);
+    printf("Speed: %d\n", header->speed);
+    printf("Volume scaling: %d\n", volume_scaling);
+    printf("Percussion mode: %d\n", percussion_mode);
 }
 
 typedef uint8_t (tUINT16)[2];
@@ -4355,12 +4355,6 @@ static int a2m_read_songdata(char *src)
     percussion_mode = (songdata->common_flag >> 6) & 1;
     volume_scaling  = (songdata->common_flag >> 7) & 1;
 
-    printf("Tempo: %d\n", songdata->tempo);
-    printf("Speed: %d\n", songdata->speed);
-    printf("Volume scaling: %d\n", volume_scaling);
-    printf("Percussion mode: %d\n", percussion_mode);
-    printf("Track volume lock: %d\n", lockvol);
-
 #if 0
     FILE *f = fopen("songdata.dmp", "wb");
     fwrite(songdata, 1, sizeof(*songdata), f);
@@ -4396,9 +4390,6 @@ static void a2m_import(char *tune)
     songdata->nm_tracks = 18;
     songdata->macro_speedup = 1;
 
-    printf("A2M version: %d\n", header->ffver);
-    printf("Number of patterns: %d\n", header->npatt);
-
     // Read variable part after header, fill len[] with values
     blockptr += a2m_read_varheader(blockptr, header->npatt);
 
@@ -4407,6 +4398,15 @@ static void a2m_import(char *tune)
 
     // Read patterns
     a2m_read_patterns(blockptr);
+
+    printf("A2M version: %d\n", header->ffver);
+    printf("Number of patterns: %d\n", header->npatt);
+    printf("Rows per pattern: %d\n", songdata->patt_len);
+    printf("Tempo: %d\n", songdata->tempo);
+    printf("Speed: %d\n", songdata->speed);
+    printf("Volume scaling: %d\n", volume_scaling);
+    printf("Percussion mode: %d\n", percussion_mode);
+    printf("Track volume lock: %d\n", lockvol);
 }
 
 static int a2_import(char *tune)
