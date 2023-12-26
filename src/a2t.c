@@ -540,21 +540,24 @@ static void copy_event(tADTRACK2_EVENT *event, int pattern, int chan, int row)
     memcpy(event, &pattdata[pattern].ch[chan].row[row].ev, sizeof(tADTRACK2_EVENT));
 }
 
-static tPATTERN_DATA* get_pattern_ptr(int pattern)
+// Copy from buffer to an allocated pattern
+static void copy_to_pattern(int pattern, tPATTERN_DATA *old)
 {
-    // TODO: more checks
-    if (pattern < 0 || pattern >= _patterns_allocated || pattern >= 128) {
-        printf("ERROR: get_pattern_ptr(%d)\n", pattern);
-        return 0;
-    }
+        // don't overflow header->npatt;
+        if (pattern < 0 || pattern >= (_patterns_allocated < 128 ? _patterns_allocated : 128)) {
+            printf("ERROR: copy_to_pattern(%d, %08x)\n", pattern, old);
+            return;
+        }
 
-    return &pattdata[pattern];
+        tPATTERN_DATA *dst = &pattdata[pattern];
+
+        memcpy(dst, old, sizeof(*old));
 }
 
 static tADTRACK2_EVENT* get_event_ptr(int pattern, int chan, int row)
 {
     // TODO: more checks
-    if (pattern < 0 || pattern >= _patterns_allocated || pattern >= 128) {
+    if (pattern < 0 || pattern >= (_patterns_allocated < 128 ? _patterns_allocated : 128)) {
         printf("ERROR: get_event_ptr(%d, %d, %02x)\n", pattern, chan, row);
         return 0;
     }
@@ -4102,10 +4105,7 @@ static int a2_read_patterns(char *src, int s)
                 if (i * 8 + p >= _patterns_allocated)
                         break;
 
-                // pattern_copy?
-                tPATTERN_DATA *dst = get_pattern_ptr(i * 8 + p);
-                if (!dst) continue; // don't overflow header->npatt;
-                memcpy(dst, old + p, sizeof(*old));
+                copy_to_pattern(i * 8 + p, old + p);
             }
         }
 

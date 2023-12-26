@@ -2,7 +2,7 @@ mmori.a2m - ef_GlobalFSlideUp/ef_GlobalFSlideDown
 badapple.a2m - macro-vib
 crisis.a2m - 4op, macro-fm, macro-arp
 fank5.a2m - 4op, macro-fm, macro-vib
-fm63b_rv.a2m - 4op, macro-fm
+fm63b_rv.a2m - 4op, macro-fm - a2t vs a2m problem
 tunes/encore/amegas.a2t - completely wrong 1st inst
 os_sblas.a2m - wrong 4op instrument when 1st channel has only ins, but second has note and effects
 
