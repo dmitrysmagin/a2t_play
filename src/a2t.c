@@ -188,9 +188,6 @@ const uint8_t _instr[12] = {
     0x20, 0x20, 0x40, 0x40, 0x60, 0x60, 0x80, 0x80, 0xe0, 0xe0, 0xc0, 0xbd
 };
 
-#define INSTRUMENT_SIZE sizeof(tINSTR_DATA)
-#define CHUNK_SIZE sizeof(tADTRACK2_EVENT)
-#define PATTERN_SIZE (20*256*CHUNK_SIZE)
 #define BYTE_NULL (uint8_t)(0xFFFFFFFF)
 
 const uint16_t _chmm_n[20] = {
@@ -391,7 +388,7 @@ const int MAX_IRQ_FREQ = 1000;
 
 uint8_t current_order = 0;
 uint8_t current_pattern = 0;
-uint8_t current_line = 0;
+uint8_t current_line = 0; // TODO: rename to current_row
 
 uint8_t tempo = 50;
 uint8_t speed = 6;
@@ -524,6 +521,47 @@ bool reset_chan[20];	// array[1..20] of Boolean;
 // This would be later moved to class or struct
 tFIXED_SONGDATA _songdata, *songdata = &_songdata;
 tPATTERN_DATA _pattdata[128], *pattdata = _pattdata;
+
+// Helpers for patterns
+int _patterns_allocated = 0;
+static bool patterns_alloc(int number)
+{
+    printf("Allocating %d patterns\n", number);
+    _patterns_allocated = number;
+
+    // TODO: allocate properly
+    memset(pattdata, 0, sizeof(_pattdata));
+
+    return TRUE;
+}
+
+static void copy_event(tADTRACK2_EVENT *event, int pattern, int chan, int row)
+{
+    memcpy(event, &pattdata[pattern].ch[chan].row[row].ev, sizeof(tADTRACK2_EVENT));
+}
+
+static tPATTERN_DATA* get_pattern_ptr(int pattern)
+{
+    // TODO: more checks
+    if (pattern < 0 || pattern >= _patterns_allocated || pattern >= 128) {
+        printf("ERROR: get_pattern_ptr(%d)\n", pattern);
+        return 0;
+    }
+
+    return &pattdata[pattern];
+}
+
+static tADTRACK2_EVENT* get_event_ptr(int pattern, int chan, int row)
+{
+    // TODO: more checks
+    if (pattern < 0 || pattern >= _patterns_allocated || pattern >= 128) {
+        printf("ERROR: get_event_ptr(%d, %d, %02x)\n", pattern, chan, row);
+        return 0;
+    }
+
+    return &pattdata[pattern].ch[chan].row[row].ev;
+}
+// End of helpers
 
 double time_playing;
 
@@ -2003,7 +2041,7 @@ static void play_line()
 
     for (int chan = 0; chan < songdata->nm_tracks; chan++) {
         // Do a full copy of the event, because we modify event->note in before_process_note()
-        memcpy(event, &pattdata[current_pattern].ch[chan].row[current_line].ev, sizeof(tADTRACK2_EVENT));
+        copy_event(event, current_pattern, chan, current_line);
 
         // save effect_table into last_effect
         for (int slot = 0; slot < 2; slot++) {
@@ -2024,7 +2062,7 @@ static void play_line()
 
         if (event->instr_def) {
             // NOTE: adjust ins
-            if (is_data_empty(&songdata->instr_data[event->instr_def - 1], INSTRUMENT_SIZE)) {
+            if (is_data_empty(&songdata->instr_data[event->instr_def - 1], sizeof(tINSTR_DATA))) {
                 release_sustaining_sound(chan);
             }
             set_ins_data(event->instr_def, chan);
@@ -3441,7 +3479,6 @@ static void init_songdata()
 
     memset(songdata, 0, sizeof(_songdata));
     memset(songdata->pattern_order, 0x80, sizeof(songdata->pattern_order));
-    memset(pattdata, 0, sizeof(_pattdata));
 
     IRQ_freq_shift = 0;
     playback_speed_shift = 0;
@@ -4004,11 +4041,17 @@ static int a2_read_patterns(char *src, int s)
 
             a2t_depack(src, len[i+s], old);
 
-            for (int p = 0; p < 16; p++) // pattern
-            for (int r = 0; r < 64; r++) // row
-            for (int c = 0; c < 9; c++) { // channel
-                convert_v1234_event(&old[p].row[r].ch[c].ev, c);
-                memcpy(&pattdata[i * 16 + p].ch[c].row[r].ev, &old[p].row[r].ch[c].ev, 4);
+            for (int p = 0; p < 16; p++) { // pattern
+                if (i * 8 + p >= _patterns_allocated)
+                        break;
+                for (int r = 0; r < 64; r++) // row
+                for (int c = 0; c < 9; c++) { // channel
+                    convert_v1234_event(&old[p].row[r].ch[c].ev, c);
+                    // pattern_event_copy?
+                    tADTRACK2_EVENT *ev = get_event_ptr(i * 16 + p, c, r);
+                    if (!ev) continue;
+                    memcpy(ev, &old[p].row[r].ch[c].ev, 4);
+                }
             }
 
             src += len[i+s];
@@ -4027,10 +4070,16 @@ static int a2_read_patterns(char *src, int s)
 
             a2t_depack(src, len[i+s], old);
 
-            for (int p = 0; p < 8; p++) // pattern
-            for (int c = 0; c < 18; c++) // channel
-            for (int r = 0; r < 64; r++) { // row
-                memcpy(&pattdata[i * 8 + p].ch[c].row[r].ev, &old[p].ch[c].row[r].ev, 4);
+            for (int p = 0; p < 8; p++) { // pattern
+                if (i * 8 + p >= _patterns_allocated)
+                    break;
+                for (int c = 0; c < 18; c++) // channel
+                for (int r = 0; r < 64; r++) { // row
+                    // pattern_event_copy?
+                    tADTRACK2_EVENT *ev = get_event_ptr(i * 8 + p, c, r);
+                    if (!ev) continue; // don't overflow header->npatt;
+                    memcpy(ev, &old[p].ch[c].row[r].ev, 4);
+                }
             }
 
             src += len[i+s];
@@ -4049,10 +4098,15 @@ static int a2_read_patterns(char *src, int s)
             a2t_depack(src, len[i+s], old);
             src += len[i+s];
 
-            // temporarily
-            memcpy(&pattdata[i * 8], old, sizeof(*old) * 8);
-            // TODO: roll through the block of 8 patterns and copy one-by-one
-            // keeping track of number of patterns allocated
+            for (int p = 0; p < 8; p++) { // pattern
+                if (i * 8 + p >= _patterns_allocated)
+                        break;
+
+                // pattern_copy?
+                tPATTERN_DATA *dst = get_pattern_ptr(i * 8 + p);
+                if (!dst) continue; // don't overflow header->npatt;
+                memcpy(dst, old + p, sizeof(*old));
+            }
         }
 
         free(old);
@@ -4086,6 +4140,8 @@ static void a2t_import(char *tune)
 
     if(strncmp(header->id, "_A2tiny_module_", 15))
         return;
+
+    patterns_alloc(header->npatt);
 
     init_songdata();
 
@@ -4148,9 +4204,9 @@ static int a2m_read_varheader(char *blockptr, int npatt)
     tUINT16 *src16 = (tUINT16 *)blockptr;
     tUINT32 *src32 = (tUINT32 *)blockptr;
 
-    if (ffver < 5) lensize = 5;		// 1,2,3,4 - uint16_t len[5];
-    else if (ffver < 9) lensize = 9;	// 5,6,7,8 - uint16_t len[9];
-    else lensize = 17;			// 9,10,11 - uint32_t len[17];
+    if (ffver < 5) lensize = 5;         // 1,2,3,4 - uint16_t len[5];
+    else if (ffver < 9) lensize = 9;    // 5,6,7,8 - uint16_t len[9];
+    else lensize = 17;                  // 9,10,11 - uint32_t len[17];
 
     switch (ffver) {
     case 1 ... 8:
@@ -4328,7 +4384,9 @@ static void a2m_import(char *tune)
         return;
 
     memset(songdata, 0, sizeof(_songdata));
-    memset(pattdata, 0, sizeof(_pattdata));
+
+    patterns_alloc(header->npatt);
+
     memset(len, 0, sizeof(len));
 
     ffver = header->ffver;
