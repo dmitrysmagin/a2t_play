@@ -4040,12 +4040,24 @@ static int a2_read_patterns(char *src, int s)
         break;
         }
     case 9 ... 14:	// [16][8][20][256][6]
+        {
+        tPATTERN_DATA *old = (tPATTERN_DATA *)calloc(sizeof(*old) * 8, 1);
+
+        // 16 groups of 8 patterns
         for (int i = 0; i < 16; i++) {
             if (!len[i+s]) continue;
-            a2t_depack(src, len[i+s], &pattdata[i * 8]);
+            a2t_depack(src, len[i+s], old);
             src += len[i+s];
+
+            // temporarily
+            memcpy(&pattdata[i * 8], old, sizeof(*old) * 8);
+            // TODO: roll through the block of 8 patterns and copy one-by-one
+            // keeping track of number of patterns allocated
         }
+
+        free(old);
         break;
+        }
     }
 
     return 0;
