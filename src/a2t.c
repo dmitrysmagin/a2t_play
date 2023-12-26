@@ -554,15 +554,17 @@ static void copy_to_pattern(int pattern, tPATTERN_DATA *old)
         memcpy(dst, old, sizeof(*old));
 }
 
-static tADTRACK2_EVENT* get_event_ptr(int pattern, int chan, int row)
+// Copy from old event v1-8 to v9-14 to an allocated pattern
+static void copy_to_event(int pattern, int chan, int row, /*tADTRACK2_EVENT_V1234*/ void *old)
 {
-    // TODO: more checks
     if (pattern < 0 || pattern >= (_patterns_allocated < 128 ? _patterns_allocated : 128)) {
-        printf("ERROR: get_event_ptr(%d, %d, %02x)\n", pattern, chan, row);
-        return 0;
+        printf("ERROR: copy_to_event(%d, %d, %02x, %08x)\n", pattern, chan, row, old);
+        return;
     }
 
-    return &pattdata[pattern].ch[chan].row[row].ev;
+    tADTRACK2_EVENT *ev = &pattdata[pattern].ch[chan].row[row].ev;
+
+    memcpy(ev, old, 4);
 }
 // End of helpers
 
@@ -4050,10 +4052,7 @@ static int a2_read_patterns(char *src, int s)
                 for (int r = 0; r < 64; r++) // row
                 for (int c = 0; c < 9; c++) { // channel
                     convert_v1234_event(&old[p].row[r].ch[c].ev, c);
-                    // pattern_event_copy?
-                    tADTRACK2_EVENT *ev = get_event_ptr(i * 16 + p, c, r);
-                    if (!ev) continue;
-                    memcpy(ev, &old[p].row[r].ch[c].ev, 4);
+                    copy_to_event(i * 16 + p, c, r, &old[p].row[r].ch[c].ev);
                 }
             }
 
@@ -4079,9 +4078,7 @@ static int a2_read_patterns(char *src, int s)
                 for (int c = 0; c < 18; c++) // channel
                 for (int r = 0; r < 64; r++) { // row
                     // pattern_event_copy?
-                    tADTRACK2_EVENT *ev = get_event_ptr(i * 8 + p, c, r);
-                    if (!ev) continue; // don't overflow header->npatt;
-                    memcpy(ev, &old[p].ch[c].row[r].ev, 4);
+                    copy_to_event(i * 8 + p, c, r, &old[p].ch[c].row[r].ev);
                 }
             }
 
