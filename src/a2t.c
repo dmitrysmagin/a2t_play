@@ -6,7 +6,6 @@
     In order to get into Adplug:
     - Reduce the memory used for a tune
     - Rework tFIXED_SONGDATA:
-        * Make pattdata an array of pointers, but first read data and initialize correctly
         * Make instr_data an array of pointers
         * Rework direct access to songdata->instr_data with get_instr(ins) // 1 - based
         * Make instr_macros/macro_table an array of pointers
@@ -170,8 +169,6 @@ typedef struct {
 
 C_ASSERT(sizeof(tADTRACK2_EVENT) == 6);
 
-// as C doesn't support pointers to typedef'ed arrays, make a struct
-// pattdata[1].ch[2].row[3].ev.note;
 typedef struct {
     struct {
         struct {
@@ -404,7 +401,7 @@ const bool timer_fix = TRUE;
 bool pattern_break = FALSE;
 bool pattern_delay = FALSE;
 uint8_t next_line = 0;
-const uint8_t max_patterns = 128;
+
 int playback_speed_shift = 0;
 tPLAY_STATUS play_status = isStopped;
 uint8_t overall_volume = 63;
@@ -520,36 +517,56 @@ bool reset_chan[20];	// array[1..20] of Boolean;
 
 // This would be later moved to class or struct
 tFIXED_SONGDATA _songdata, *songdata = &_songdata;
-tPATTERN_DATA _pattdata[128], *pattdata = _pattdata;
 
-// Helpers for patterns
+// Helpers for patterns ===========================================================================
+#define MAX_PATTERNS    128
+#define ASSERT_PATTERN(PATTERN) (PATTERN < 0 || PATTERN >= (_patterns_allocated < MAX_PATTERNS ? _patterns_allocated : MAX_PATTERNS))
 int _patterns_allocated = 0;
+tPATTERN_DATA *_patterns[MAX_PATTERNS] = { 0 };
+
+static void patterns_free()
+{
+    for (int i = 0; i < MAX_PATTERNS; i++) {
+        if (_patterns[i]) {
+            free(_patterns[i]);
+            _patterns[i] = NULL;
+        }
+    }
+}
+
 static bool patterns_alloc(int number)
 {
-    printf("Allocating %d patterns\n", number);
+    patterns_free();
+
+    printf("Allocating %d patterns == %d bytes\n", number, number * sizeof(tPATTERN_DATA));
     _patterns_allocated = number;
 
-    // TODO: allocate properly
-    memset(pattdata, 0, sizeof(_pattdata));
+    for (int i = 0; i < _patterns_allocated; i++) {
+        _patterns[i] = calloc(1, sizeof(tPATTERN_DATA));
+    }
 
     return TRUE;
 }
 
 static void copy_event(tADTRACK2_EVENT *event, int pattern, int chan, int row)
 {
-    memcpy(event, &pattdata[pattern].ch[chan].row[row].ev, sizeof(tADTRACK2_EVENT));
+    if (ASSERT_PATTERN(pattern)) {
+        printf("ERROR: copy_event(%08x, %d, %d, %02x)\n", event, pattern, chan, row);
+        return;
+    }
+
+    memcpy(event, &_patterns[pattern]->ch[chan].row[row].ev, sizeof(tADTRACK2_EVENT));
 }
 
 // Copy from buffer to an allocated pattern
 static void copy_to_pattern(int pattern, tPATTERN_DATA *old)
 {
-        // don't overflow header->npatt;
-        if (pattern < 0 || pattern >= (_patterns_allocated < 128 ? _patterns_allocated : 128)) {
+        if (ASSERT_PATTERN(pattern)) {
             printf("ERROR: copy_to_pattern(%d, %08x)\n", pattern, old);
             return;
         }
 
-        tPATTERN_DATA *dst = &pattdata[pattern];
+        tPATTERN_DATA *dst = _patterns[pattern];
 
         memcpy(dst, old, sizeof(*old));
 }
@@ -557,16 +574,16 @@ static void copy_to_pattern(int pattern, tPATTERN_DATA *old)
 // Copy from old event v1-8 to v9-14 to an allocated pattern
 static void copy_to_event(int pattern, int chan, int row, /*tADTRACK2_EVENT_V1234*/ void *old)
 {
-    if (pattern < 0 || pattern >= (_patterns_allocated < 128 ? _patterns_allocated : 128)) {
+    if (ASSERT_PATTERN(pattern)) {
         printf("ERROR: copy_to_event(%d, %d, %02x, %08x)\n", pattern, chan, row, old);
         return;
     }
 
-    tADTRACK2_EVENT *ev = &pattdata[pattern].ch[chan].row[row].ev;
+    tADTRACK2_EVENT *ev = &_patterns[pattern]->ch[chan].row[row].ev;
 
     memcpy(ev, old, 4);
 }
-// End of helpers
+// End of patterns helpers ========================================================================
 
 double time_playing;
 
@@ -4121,12 +4138,6 @@ static int a2t_read_patterns(char *src)
 
     a2_read_patterns(src, s);
 
-#if 0
-    FILE *f = fopen("5_patterns.dmp", "wb");
-    fwrite(pattdata, 1, 16*8*20*256*6, f);
-    fclose(f);
-#endif
-
     return 0;
 }
 
@@ -4363,12 +4374,6 @@ static int a2m_read_patterns(char *src)
 {
     a2_read_patterns(src, 1);
 
-#if 0
-    FILE *f = fopen("patterns.dmp", "wb");
-    fwrite(pattdata, 1, sizeof(_pattdata), f);
-    fclose(f);
-#endif
-
     return 0;
 }
 
@@ -4444,6 +4449,7 @@ void a2t_init(int freq)
 
 void a2t_shut()
 {
+    patterns_free();
     OPL3_Reset(&opl, freqhz);
 }
 
