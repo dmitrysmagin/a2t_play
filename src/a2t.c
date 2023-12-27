@@ -3741,8 +3741,7 @@ static int a2t_read_instruments(char *src)
     int instsize = (ffver < 9 ? 13 : 14);
     int dstsize = (ffver < 9 ? 250 * 13 : 255 * 14) +
                   (ffver > 11 ? 129 + 1024 + 3: 0);
-    char *dst = (char *)malloc(dstsize);
-    memset(dst, 0, dstsize);
+    char *dst = (char *)calloc(dstsize, 1);
 
     a2t_depack(src, len[0], dst);
 
@@ -3777,8 +3776,13 @@ static int a2t_read_instmacros(char *src)
 {
     if (ffver < 9) return 0;
 
-    // TODO: read to temp then allocate instrument macros
-    a2t_depack(src, len[1], songdata->instr_macros);
+    tINSTR_MACRO *data = (tINSTR_MACRO *)calloc(255, sizeof(tINSTR_MACRO));
+    a2t_depack(src, len[1], data);
+
+    // TODO: properly handle intrument macros
+    // import_instrument_macros(data);
+    memcpy(songdata->instr_macros, data, sizeof(*data));
+    free(data);
 
 #if 0
     FILE *f = fopen("1_inst_macro.dmp", "wb");
@@ -3793,7 +3797,12 @@ static int a2t_read_macrotable(char *src)
 {
     if (ffver < 9) return 0;
 
-    a2t_depack(src, len[2], songdata->macro_table);
+    tMACRO_TABLE *data = (tMACRO_TABLE *)calloc(255, sizeof(tMACRO_TABLE));
+    a2t_depack(src, len[2], data);
+
+    // properly handle arpergio/vibrato tables
+    memcpy(songdata->macro_table, data, sizeof(*data));
+    free(data);
 
 #if 0
     FILE *f = fopen("2_macrotable.dmp", "wb");
@@ -4210,6 +4219,7 @@ static void a2t_import(char *tune)
     printf("Speed: %d\n", header->speed);
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
+    printf("Songdata: %d bytes\n", sizeof(tFIXED_SONGDATA));
 }
 
 typedef uint8_t (tUINT16)[2];
@@ -4260,10 +4270,9 @@ typedef struct {
     char songname[43];
     char composer[43];
     char instr_names[255][43];
-    // TODO: type 3 arrays below for correct loading
-    uint8_t instr_data[255][14];
-    uint8_t instr_macros[255][3831];
-    uint8_t macro_table[255][521];
+    tINSTR_DATA instr_data[255];
+    tINSTR_MACRO instr_macros[255];
+    tMACRO_TABLE macro_table[255];
     uint8_t pattern_order[128];
     uint8_t tempo;
     uint8_t speed;
@@ -4322,7 +4331,7 @@ static int a2m_read_songdata(char *src)
 
         for (int i = 0; i < 255; i++) {
             memcpy(songdata->instr_names[i], data->instr_names[i], 43);
-            memcpy(&songdata->instr_data[i], data->instr_data[i], 14);
+            memcpy(&songdata->instr_data[i], &data->instr_data[i], 14);
         }
 
         // TODO: allocate instr macros
@@ -4435,6 +4444,7 @@ static void a2m_import(char *tune)
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
     printf("Track volume lock: %d\n", lockvol);
+    printf("Songdata: %d bytes\n", sizeof(tFIXED_SONGDATA));
 }
 
 static int a2_import(char *tune)
