@@ -590,8 +590,6 @@ static void copy_to_event(int pattern, int chan, int row, /*tADTRACK2_EVENT_V123
 }
 // End of patterns helpers ========================================================================
 
-double time_playing;
-
 int ticks, tickD, tickXF;
 
 #define FreqStart 0x156
@@ -2057,9 +2055,6 @@ static int calc_following_order(uint8_t order);
 static void play_line()
 {
     tADTRACK2_EVENT _event, *event = &_event;
-
-    if ((current_line == 0) && current_order == calc_following_order(0))
-        time_playing = 0;
 
     if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) && current_order != last_order) {
         memset(loopbck_table, BYTE_NULL, sizeof(loopbck_table));
@@ -3555,7 +3550,6 @@ void a2t_play(char *tune) // start_playing()
     irq_mode = TRUE;
     play_status = isPlaying;
 
-    time_playing = 0;
     ticklooper = 0;
     macro_ticklooper = 0;
     speed = songdata->speed;
