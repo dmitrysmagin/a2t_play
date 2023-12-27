@@ -124,6 +124,7 @@ C_ASSERT(sizeof(tMACRO_TABLE) == 521);
 
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
 
+// NOTE: doesn't map to a2m anymore!
 typedef struct {
     char            songname[43];        // pascal String[42];
     char            composer[43];        // pascal String[42];
@@ -550,8 +551,12 @@ static bool patterns_alloc(int number)
 
 static void copy_event(tADTRACK2_EVENT *event, int pattern, int chan, int row)
 {
+    // If outside of allocated patterns, return zero event
+    // This may happen if the order contains a void pattern that serves as a 'pause'
+    // at the end of the tune
     if (ASSERT_PATTERN(pattern)) {
-        printf("ERROR: copy_event(%08x, %d, %d, %02x)\n", event, pattern, chan, row);
+        //printf("ERROR: copy_event(%08x, %d, %d, %02x)\n", event, pattern, chan, row);
+        memset(event, 0, sizeof(tADTRACK2_EVENT));
         return;
     }
 
@@ -1317,7 +1322,8 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
     } else if (effect_group[eLo] == eff_group && eHi) {
         effect_table[slot][chan].val = eHi;
     } else {
-        printf("\nCAAATCH\n"); // x00 without any previous compatible command, should never happen
+        // x00 without any previous compatible command, should never happen
+        printf("\nERROR: x00 without any previous compatible command\n");
         effect_table[slot][chan].def = 0;
         effect_table[slot][chan].val = 0;
     }
@@ -2997,10 +3003,14 @@ static void macro_poll_proc()
 
         tCH_MACRO_TABLE *mt = &macro_table[chan];
         uint8_t fmreg_ins = mt->fmreg_ins - 1;
+        // TODO: check if instr macro exist
         tINSTR_MACRO *rt = &songdata->instr_macros[fmreg_ins];
         bool force_macro_keyon = FALSE;
 
-        if (mt->fmreg_ins /*&& (speed != 0)*/) { // FIXME: what speed?
+        if (rt->length && mt->fmreg_ins /* && (speed != 0)*/) { // FIXME: what speed?
+            if (rt->length == 0) {
+                printf("\nCAUGHT length=0\n");
+            }
             if (mt->fmreg_duration > 1) {
                 mt->fmreg_duration--;
             } else {
@@ -3767,6 +3777,7 @@ static int a2t_read_instmacros(char *src)
 {
     if (ffver < 9) return 0;
 
+    // TODO: read to temp then allocate instrument macros
     a2t_depack(src, len[1], songdata->instr_macros);
 
 #if 0
@@ -4314,7 +4325,24 @@ static int a2m_read_songdata(char *src)
             memcpy(&songdata->instr_data[i], data->instr_data[i], 14);
         }
 
+        // TODO: allocate instr macros
         memcpy(songdata->instr_macros, data->instr_macros, 255 * 3831);
+
+        for (int i = 0; i < 256; i++) {
+            // MACRO:FM
+            if (songdata->instr_macros[i].length) {
+                printf("MACRO:FM ins: %d, length: %d\n", i, songdata->instr_macros[i].length);
+            }
+            // MACRO:VIB
+            if (songdata->instr_macros[i].vibrato_table) {
+                printf("MACRO:VIB ins: %d, vibrato_table: %d\n", i, songdata->instr_macros[i].vibrato_table);
+            }
+            // MACRO:ARP
+            if (songdata->instr_macros[i].arpeggio_table) {
+                printf("MACRO:ARP ins: %d, arpeggio_table: %d\n", i, songdata->instr_macros[i].arpeggio_table);
+            }
+        }
+
         memcpy(songdata->macro_table, data->macro_table, 255 * 521);
         memcpy(songdata->pattern_order, data->pattern_order, 128);
 

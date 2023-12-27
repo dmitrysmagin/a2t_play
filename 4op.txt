@@ -5,7 +5,7 @@ fank5.a2m - 4op, macro-fm, macro-vib
 fm63b_rv.a2m - 4op, macro-fm - a2t vs a2m problem
 tunes/encore/amegas.a2t - completely wrong 1st inst
 os_sblas.a2m - wrong 4op instrument when 1st channel has only ins, but second has note and effects
-
+tunes/madbrain/sinner.a2m - pattern in the order is beyond max patters
 
 mario.a2m - version 1
 adven.a2m - version 5
