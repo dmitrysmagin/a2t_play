@@ -112,14 +112,14 @@ typedef struct {
     uint8_t arpeggio_table;
     uint8_t vibrato_table;
     tREGISTER_TABLE_DEF data[255];
-} tINSTR_MACRO;
+} tFMREG_TABLE;
 
 typedef struct {
     tARPEGGIO_TABLE arpeggio;
     tVIBRATO_TABLE vibrato;
 } tARPVIB_TABLE;
 
-C_ASSERT(sizeof(tINSTR_MACRO) == 3831);
+C_ASSERT(sizeof(tFMREG_TABLE) == 3831);
 C_ASSERT(sizeof(tARPVIB_TABLE) == 521);
 
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
@@ -132,7 +132,7 @@ typedef struct {
     tINSTR_DATA     instr_data[255];     // array[1..255] of tADTRACK2_INS;
     uint8_t         instr_arpeggio[255];  // todo: include into tINSTR_DATA_EXT
     uint8_t         instr_vibrato[255];  // todo: include into tINSTR_DATA_EXT
-    tINSTR_MACRO    instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
+    tFMREG_TABLE    instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
     tARPVIB_TABLE   arpvib_table[255];    // array[1..255] of tARPVIB_TABLE;
     uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
     uint8_t         tempo;
@@ -525,11 +525,11 @@ tFIXED_SONGDATA _songdata, *songdata = &_songdata;
 // Helpers for macro tables =======================================================================
 
 // fmregs/arpeggio/vibrato macro table
-tINSTR_MACRO *fmreg_table[255] = { 0 };
+tFMREG_TABLE *fmreg_table[255] = { 0 };
 tVIBRATO_TABLE *vibrato_table[255] = { 0 };
 tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
 
-static void fmreg_table_allocate(tINSTR_MACRO *im)
+static void fmreg_table_allocate(tFMREG_TABLE *im)
 {
     memcpy(songdata->instr_macros, im, 255 * 3831);
 
@@ -3051,7 +3051,7 @@ static void macro_poll_proc()
         tCH_MACRO_TABLE *mt = &macro_table[chan];
         uint8_t fmreg_ins = mt->fmreg_ins - 1;
         // TODO: check if instr macro exist
-        tINSTR_MACRO *rt = &songdata->instr_macros[fmreg_ins];
+        tFMREG_TABLE *rt = &songdata->instr_macros[fmreg_ins];
         bool force_macro_keyon = FALSE;
 
         if (rt->length && mt->fmreg_ins /* && (speed != 0)*/) { // FIXME: what speed?
@@ -3822,7 +3822,7 @@ static int a2t_read_instmacros(char *src)
 {
     if (ffver < 9) return 0;
 
-    tINSTR_MACRO *data = (tINSTR_MACRO *)calloc(255, sizeof(tINSTR_MACRO));
+    tFMREG_TABLE *data = (tFMREG_TABLE *)calloc(255, sizeof(tFMREG_TABLE));
     a2t_depack(src, len[1], data);
 
     // Allocate instrument register macros
@@ -4323,7 +4323,7 @@ typedef struct {
     char composer[43];
     char instr_names[255][43];
     tINSTR_DATA instr_data[255];
-    tINSTR_MACRO instr_macros[255];
+    tFMREG_TABLE instr_macros[255];
     tARPVIB_TABLE arpvib_table[255];
     uint8_t pattern_order[128];
     uint8_t tempo;
