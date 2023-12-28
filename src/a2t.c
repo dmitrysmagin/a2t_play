@@ -8,8 +8,8 @@
     - Rework tFIXED_SONGDATA:
         * Make instr_data an array of pointers
         * Rework direct access to songdata->instr_data with get_instr(ins) // 1 - based
-        * Make instr_macros/arpvib_table an array of pointers
-        * But first read data correctly to instr_data/instr_macros/arpvib_table
+        * Make fmreg_table/arpvib_table an array of pointers
+        * But first read data correctly to instr_data/fmreg_table/arpvib_table
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -132,7 +132,7 @@ typedef struct {
     tINSTR_DATA     instr_data[255];     // array[1..255] of tADTRACK2_INS;
     uint8_t         instr_arpeggio[255];  // todo: include into tINSTR_DATA_EXT
     uint8_t         instr_vibrato[255];  // todo: include into tINSTR_DATA_EXT
-    tFMREG_TABLE    instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
+    tFMREG_TABLE    fmreg_table[255];   // array[1..255] of tREGISTER_TABLE;
     tARPVIB_TABLE   arpvib_table[255];    // array[1..255] of tARPVIB_TABLE;
     uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
     uint8_t         tempo;
@@ -531,20 +531,20 @@ tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
 
 static void fmreg_table_allocate(tFMREG_TABLE *im)
 {
-    memcpy(songdata->instr_macros, im, 255 * 3831);
+    memcpy(songdata->fmreg_table, im, 255 * 3831);
 
     /*for (int i = 0; i < 255; i++) {
         // MACRO:FM
-        if (songdata->instr_macros[i].length) {
-            printf("MACRO:FM ins: %d, length: %d\n", i, songdata->instr_macros[i].length);
+        if (songdata->fmreg_table[i].length) {
+            printf("MACRO:FM ins: %d, length: %d\n", i, songdata->fmreg_table[i].length);
         }
         // MACRO:VIB
-        if (songdata->instr_macros[i].vibrato_table) {
-            printf("MACRO:VIB ins: %d, vibrato_table: %d\n", i, songdata->instr_macros[i].vibrato_table);
+        if (songdata->fmreg_table[i].vibrato_table) {
+            printf("MACRO:VIB ins: %d, vibrato_table: %d\n", i, songdata->fmreg_table[i].vibrato_table);
         }
         // MACRO:ARP
-        if (songdata->instr_macros[i].arpeggio_table) {
-            printf("MACRO:ARP ins: %d, arpeggio_table: %d\n", i, songdata->instr_macros[i].arpeggio_table);
+        if (songdata->fmreg_table[i].arpeggio_table) {
+            printf("MACRO:ARP ins: %d, arpeggio_table: %d\n", i, songdata->fmreg_table[i].arpeggio_table);
         }
     }*/
 }
@@ -994,7 +994,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
     // force muted instrument volume with missing channel ADSR data
     // when there is additionally no FM-reg macro defined for this instrument
     if (is_chan_adsr_data_empty(chan) &&
-        !(songdata->instr_macros[voice_table[chan] - 1].length)) {
+        !(songdata->fmreg_table[voice_table[chan] - 1].length)) {
             modulator = 63;
             carrier = 63;
     }
@@ -1045,7 +1045,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     // force muted instrument volume with missing channel ADSR data
     // when there is additionally no FM-reg macro defined for this instrument
     if (is_chan_adsr_data_empty(chan) &&
-        !(songdata->instr_macros[voice_table[chan] - 1].length)) {
+        !(songdata->fmreg_table[voice_table[chan] - 1].length)) {
             modulator = 63;
             carrier = 63;
     }
@@ -1168,12 +1168,12 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
     macro_table[chan].fmreg_ins = ins;
     macro_table[chan].arpg_count = 1;
     macro_table[chan].arpg_pos = 0;
-    macro_table[chan].arpg_table = songdata->instr_arpeggio[ins - 1]; //songdata->instr_macros[ins - 1].arpeggio_table;
+    macro_table[chan].arpg_table = songdata->instr_arpeggio[ins - 1]; //songdata->fmreg_table[ins - 1].arpeggio_table;
     macro_table[chan].arpg_note = note;
     macro_table[chan].vib_count = 1;
     macro_table[chan].vib_paused = FALSE;
     macro_table[chan].vib_pos = 0;
-    macro_table[chan].vib_table = songdata->instr_vibrato[ins - 1]; //songdata->instr_macros[ins - 1].vibrato_table;
+    macro_table[chan].vib_table = songdata->instr_vibrato[ins - 1]; //songdata->fmreg_table[ins - 1].vibrato_table;
     macro_table[chan].vib_freq = freq;
     macro_table[chan].vib_delay = songdata->arpvib_table[macro_table[chan].vib_table - 1].vibrato.delay;
     zero_fq_table[chan] = 0;
@@ -3051,7 +3051,7 @@ static void macro_poll_proc()
         tCH_MACRO_TABLE *mt = &macro_table[chan];
         uint8_t fmreg_ins = mt->fmreg_ins - 1;
         // TODO: check if instr macro exist
-        tFMREG_TABLE *rt = &songdata->instr_macros[fmreg_ins];
+        tFMREG_TABLE *rt = &songdata->fmreg_table[fmreg_ins];
         bool force_macro_keyon = FALSE;
 
         if (rt->length && mt->fmreg_ins /* && (speed != 0)*/) { // FIXME: what speed?
@@ -3838,7 +3838,7 @@ static int a2t_read_instmacros(char *src)
 
 #if 0
     FILE *f = fopen("1_inst_macro.dmp", "wb");
-    fwrite(songdata->instr_macros, 1, sizeof(songdata->instr_macros), f);
+    fwrite(songdata->fmreg_table, 1, sizeof(songdata->fmreg_table), f);
     fclose(f);
 #endif
 
@@ -4323,7 +4323,7 @@ typedef struct {
     char composer[43];
     char instr_names[255][43];
     tINSTR_DATA instr_data[255];
-    tFMREG_TABLE instr_macros[255];
+    tFMREG_TABLE fmreg_table[255];
     tARPVIB_TABLE arpvib_table[255];
     uint8_t pattern_order[128];
     uint8_t tempo;
@@ -4386,12 +4386,12 @@ static int a2m_read_songdata(char *src)
             memcpy(&songdata->instr_data[i], &data->instr_data[i], 14);
 
             // Instrument arpegio/vibrato references
-            songdata->instr_arpeggio[i] = data->instr_macros[i].arpeggio_table;
-            songdata->instr_vibrato[i] = data->instr_macros[i].vibrato_table;
+            songdata->instr_arpeggio[i] = data->fmreg_table[i].arpeggio_table;
+            songdata->instr_vibrato[i] = data->fmreg_table[i].vibrato_table;
         }
 
         // Allocate instrument register macros
-        fmreg_table_allocate(data->instr_macros);
+        fmreg_table_allocate(data->fmreg_table);
 
         // Allocate arpeggio/vibrato macro tables
         arpvib_tables_allocate(data->arpvib_table);
