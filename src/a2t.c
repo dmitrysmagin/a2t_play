@@ -5,6 +5,10 @@
 
     In order to get into Adplug:
     - Reduce the memory used for a tune
+    - Rework tPATTERN_DATA:
+        * It has channel-row-event structure that doesn't allow expanding without events regrouping
+        * Better use row-channel-event to allow dynamic expanding of patterns
+        * Each pattern always has 256 rows, but usually less is used, need to reduce memory usage
     - Rework tFIXED_SONGDATA:
         * Make instr_data an array of pointers
         * Rework direct access to songdata->instr_data with get_instr(ins) // 1 - based
