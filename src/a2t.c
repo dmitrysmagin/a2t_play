@@ -486,6 +486,7 @@ uint8_t notedel_table[20];	// array[1..20] of Byte;
 uint8_t notecut_table[20];	// array[1..20] of Byte;
 int8_t ftune_table[20];		// array[1..20] of Shortint;
 bool keyoff_loop[20];		// array[1..20] of Boolean;
+
 typedef struct {
     uint16_t fmreg_pos,
          arpg_pos,
@@ -524,15 +525,15 @@ tFIXED_SONGDATA _songdata, *songdata = &_songdata;
 // Helpers for macro tables =======================================================================
 
 // fmregs/arpeggio/vibrato macro table
-tINSTR_MACRO *fmregs_table[255] = { 0 };
+tINSTR_MACRO *fmreg_table[255] = { 0 };
 tVIBRATO_TABLE *vibrato_table[255] = { 0 };
 tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
 
-static void fmregs_table_allocate(tINSTR_MACRO *im)
+static void fmreg_table_allocate(tINSTR_MACRO *im)
 {
     memcpy(songdata->instr_macros, im, 255 * 3831);
 
-    for (int i = 0; i < 255; i++) {
+    /*for (int i = 0; i < 255; i++) {
         // MACRO:FM
         if (songdata->instr_macros[i].length) {
             printf("MACRO:FM ins: %d, length: %d\n", i, songdata->instr_macros[i].length);
@@ -545,10 +546,10 @@ static void fmregs_table_allocate(tINSTR_MACRO *im)
         if (songdata->instr_macros[i].arpeggio_table) {
             printf("MACRO:ARP ins: %d, arpeggio_table: %d\n", i, songdata->instr_macros[i].arpeggio_table);
         }
-    }
+    }*/
 }
 
-static void macro_tables_allocate(tMACRO_TABLE *mt)
+static void arpvib_tables_allocate(tMACRO_TABLE *mt)
 {
     for (int i = 0; i < 255; i++) {
         tVIBRATO_TABLE *vibrato = &(mt + i)->vibrato;
@@ -3825,8 +3826,7 @@ static int a2t_read_instmacros(char *src)
     a2t_depack(src, len[1], data);
 
     // Allocate instrument register macros
-    fmregs_table_allocate(data);
-    //memcpy(songdata->instr_macros, data, sizeof(*data));
+    fmreg_table_allocate(data);
 
     for (int i = 0; i < 255; i++) {
         // Instrument arpegio/vibrato references
@@ -3852,7 +3852,7 @@ static int a2t_read_macrotable(char *src)
     tMACRO_TABLE *data = (tMACRO_TABLE *)calloc(255, sizeof(tMACRO_TABLE));
     a2t_depack(src, len[2], data);
 
-    macro_tables_allocate(data);
+    arpvib_tables_allocate(data);
 
     free(data);
 
@@ -4384,17 +4384,17 @@ static int a2m_read_songdata(char *src)
         for (int i = 0; i < 255; i++) {
             memcpy(songdata->instr_names[i], data->instr_names[i], 43);
             memcpy(&songdata->instr_data[i], &data->instr_data[i], 14);
+
             // Instrument arpegio/vibrato references
             songdata->instr_arpeggio[i] = data->instr_macros[i].arpeggio_table;
             songdata->instr_vibrato[i] = data->instr_macros[i].vibrato_table;
         }
 
         // Allocate instrument register macros
-        fmregs_table_allocate(data->instr_macros);
-        //memcpy(songdata->instr_macros, data->instr_macros, 255 * 3831);
+        fmreg_table_allocate(data->instr_macros);
 
         // Allocate arpeggio/vibrato macro tables
-        macro_tables_allocate(data->macro_table);
+        arpvib_tables_allocate(data->macro_table);
 
         memcpy(songdata->pattern_order, data->pattern_order, 128);
 
