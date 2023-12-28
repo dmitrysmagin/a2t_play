@@ -150,7 +150,6 @@ typedef struct {
     uint8_t         instr_arpeggio[255]; // todo: include into tINSTR_DATA_EXT
     uint8_t         instr_vibrato[255];  // todo: include into tINSTR_DATA_EXT
     tFMREG_TABLE    fmreg_table[255];    // array[1..255] of tREGISTER_TABLE;
-    tARPVIB_TABLE   arpvib_table[255];   // array[1..255] of tARPVIB_TABLE;
     uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
     uint8_t         tempo;
     uint8_t         speed;
@@ -580,11 +579,32 @@ static void arpvib_tables_allocate(tARPVIB_TABLE *mt)
             //printf("Allocating arpeggio table entry %d, length: %d\n", i + 1, arpeggio->length);
         }
     }
-
-    // TODO: eliminate
-    memcpy(songdata->arpvib_table, mt, 255 * 521);
 }
 
+static uint8_t get_arpeggio_length(uint8_t arp_table)
+{
+    return arp_table && arpeggio_table[arp_table - 1] ? arpeggio_table[arp_table - 1]->length : 0;
+}
+
+static tARPEGGIO_TABLE *get_arpeggio_table(uint8_t arp_table)
+{
+    return arp_table && arpeggio_table[arp_table - 1] ? arpeggio_table[arp_table - 1] : NULL;
+}
+
+static uint8_t get_vibrato_length(uint8_t vib_table)
+{
+    return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1]->length : 0;
+}
+
+static uint8_t get_vibrato_delay(uint8_t vib_table)
+{
+    return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1]->delay : 0;
+}
+
+static tVIBRATO_TABLE *get_vibrato_table(uint8_t vib_table)
+{
+    return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1] : NULL;
+}
 // Helpers for patterns ===========================================================================
 #define MAX_PATTERNS    128
 #define ASSERT_PATTERN(PATTERN) (PATTERN < 0 || PATTERN >= (_patterns_allocated < MAX_PATTERNS ? _patterns_allocated : MAX_PATTERNS))
@@ -1195,21 +1215,6 @@ void set_overall_volume(unsigned char level)
 {
     overall_volume = max(level, 63);
     set_global_volume();
-}
-
-static uint8_t get_arpeggio_length(uint8_t arp_table)
-{
-    return arp_table ? (arpeggio_table[arp_table - 1] ? arpeggio_table[arp_table - 1]->length : 0) : 0;
-}
-
-static uint8_t get_vibrato_length(uint8_t vib_table)
-{
-    return vib_table ? (vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1]->length : 0) : 0;
-}
-
-static uint8_t get_vibrato_delay(uint8_t vib_table)
-{
-    return vib_table ? (vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1]->delay : 0) : 0;
 }
 
 // FIXME: check ins
@@ -3295,9 +3300,9 @@ static void macro_poll_proc()
             }
         }
 
-        tARPEGGIO_TABLE *at = &songdata->arpvib_table[mt->arpg_table - 1].arpeggio;
+        tARPEGGIO_TABLE *at = get_arpeggio_table(mt->arpg_table);
 
-        if ((mt->arpg_table != 0) && (at->speed != 0)) {
+        if (at && at->length && at->speed) {
             if (mt->arpg_count == at->speed) {
                 mt->arpg_count = 1;
 
@@ -3356,9 +3361,9 @@ static void macro_poll_proc()
             }
         }
 
-        tVIBRATO_TABLE *vt = &songdata->arpvib_table[mt->vib_table - 1].vibrato;
+        tVIBRATO_TABLE *vt = get_vibrato_table(mt->vib_table);
 
-        if (!mt->vib_paused && (mt->vib_table != 0) && (vt->speed != 0)) {
+        if (vt && vt->length && vt->speed && !mt->vib_paused) {
             if (mt->vib_count == vt->speed) {
                 if (mt->vib_delay != 0) {
                     mt->vib_delay--;
@@ -3878,7 +3883,7 @@ static int a2t_read_fmregtable(char *src)
     tFMREG_TABLE *data = (tFMREG_TABLE *)calloc(255, sizeof(tFMREG_TABLE));
     a2t_depack(src, len[1], data);
 
-    // Allocate instrument register macros
+    // Allocate fmreg macro tables
     fmreg_table_allocate(data);
 
     for (int i = 0; i < 255; i++) {
@@ -3902,12 +3907,12 @@ static int a2t_read_arpvibtable(char *src)
 {
     if (ffver < 9) return 0;
 
-    tARPVIB_TABLE *data = (tARPVIB_TABLE *)calloc(255, sizeof(tARPVIB_TABLE));
-    a2t_depack(src, len[2], data);
+    tARPVIB_TABLE *arpvib_table = (tARPVIB_TABLE *)calloc(255, sizeof(tARPVIB_TABLE));
+    a2t_depack(src, len[2], arpvib_table);
 
-    arpvib_tables_allocate(data);
+    arpvib_tables_allocate(arpvib_table);
 
-    free(data);
+    free(arpvib_table);
 
 #if 0
     FILE *f = fopen("2_macrotable.dmp", "wb");
@@ -4444,7 +4449,7 @@ static int a2m_read_songdata(char *src)
             songdata->instr_vibrato[i] = data->fmreg_table[i].vibrato_table;
         }
 
-        // Allocate instrument register macros
+        // Allocate fmreg macro tables
         fmreg_table_allocate(data->fmreg_table);
 
         // Allocate arpeggio/vibrato macro tables
