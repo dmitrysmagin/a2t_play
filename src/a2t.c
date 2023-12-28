@@ -8,8 +8,8 @@
     - Rework tFIXED_SONGDATA:
         * Make instr_data an array of pointers
         * Rework direct access to songdata->instr_data with get_instr(ins) // 1 - based
-        * Make instr_macros/macro_table an array of pointers
-        * But first read data correctly to instr_data/instr_macros/macro_table
+        * Make instr_macros/arpvib_table an array of pointers
+        * But first read data correctly to instr_data/instr_macros/arpvib_table
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -133,7 +133,7 @@ typedef struct {
     uint8_t         instr_arpeggio[255];  // todo: include into tINSTR_DATA_EXT
     uint8_t         instr_vibrato[255];  // todo: include into tINSTR_DATA_EXT
     tINSTR_MACRO    instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
-    tARPVIB_TABLE   macro_table[255];    // array[1..255] of tARPVIB_TABLE;
+    tARPVIB_TABLE   arpvib_table[255];    // array[1..255] of tARPVIB_TABLE;
     uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
     uint8_t         tempo;
     uint8_t         speed;
@@ -568,7 +568,7 @@ static void arpvib_tables_allocate(tARPVIB_TABLE *mt)
     }
 
     // TODO: eliminate
-    memcpy(songdata->macro_table, mt, 255 * 521);
+    memcpy(songdata->arpvib_table, mt, 255 * 521);
 }
 
 // Helpers for patterns ===========================================================================
@@ -1175,7 +1175,7 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
     macro_table[chan].vib_pos = 0;
     macro_table[chan].vib_table = songdata->instr_vibrato[ins - 1]; //songdata->instr_macros[ins - 1].vibrato_table;
     macro_table[chan].vib_freq = freq;
-    macro_table[chan].vib_delay = songdata->macro_table[macro_table[chan].vib_table - 1].vibrato.delay;
+    macro_table[chan].vib_delay = songdata->arpvib_table[macro_table[chan].vib_table - 1].vibrato.delay;
     zero_fq_table[chan] = 0;
 }
 
@@ -2220,9 +2220,9 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_SwapArpeggio:
         if (is_norestart) {
             if (macro_table[chan].arpg_pos >
-                songdata->macro_table[event->eff[slot].val - 1].arpeggio.length)
+                songdata->arpvib_table[event->eff[slot].val - 1].arpeggio.length)
                 macro_table[chan].arpg_pos =
-                    songdata->macro_table[event->eff[slot].val - 1].arpeggio.length;
+                    songdata->arpvib_table[event->eff[slot].val - 1].arpeggio.length;
             macro_table[chan].arpg_table = event->eff[slot].val;
         } else {
             macro_table[chan].arpg_count = 1;
@@ -2235,16 +2235,16 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_SwapVibrato:
         if (is_norestart) {
             if (macro_table[chan].vib_table >
-                songdata->macro_table[event->eff[slot].val - 1].vibrato.length)
+                songdata->arpvib_table[event->eff[slot].val - 1].vibrato.length)
                 macro_table[chan].vib_pos =
-                    songdata->macro_table[event->eff[slot].val - 1].vibrato.length;
+                    songdata->arpvib_table[event->eff[slot].val - 1].vibrato.length;
             macro_table[chan].vib_table = event->eff[slot].val;
         } else {
             macro_table[chan].vib_count = 1;
             macro_table[chan].vib_pos = 0;
             macro_table[chan].vib_table = event->eff[slot].val;
             macro_table[chan].vib_delay =
-                songdata->macro_table[macro_table[chan].vib_table - 1].vibrato.delay;
+                songdata->arpvib_table[macro_table[chan].vib_table - 1].vibrato.delay;
         }
         break;
     case ef_SetCustomSpeedTab:
@@ -3242,7 +3242,7 @@ static void macro_poll_proc()
             }
         }
 
-        tARPEGGIO_TABLE *at = &songdata->macro_table[mt->arpg_table - 1].arpeggio;
+        tARPEGGIO_TABLE *at = &songdata->arpvib_table[mt->arpg_table - 1].arpeggio;
 
         if ((mt->arpg_table != 0) && (at->speed != 0)) {
             if (mt->arpg_count == at->speed) {
@@ -3303,7 +3303,7 @@ static void macro_poll_proc()
             }
         }
 
-        tVIBRATO_TABLE *vt = &songdata->macro_table[mt->vib_table - 1].vibrato;
+        tVIBRATO_TABLE *vt = &songdata->arpvib_table[mt->vib_table - 1].vibrato;
 
         if (!mt->vib_paused && (mt->vib_table != 0) && (vt->speed != 0)) {
             if (mt->vib_count == vt->speed) {
@@ -3845,7 +3845,7 @@ static int a2t_read_instmacros(char *src)
     return len[1];
 }
 
-static int a2t_read_macrotable(char *src)
+static int a2t_read_arpvibtable(char *src)
 {
     if (ffver < 9) return 0;
 
@@ -4253,7 +4253,7 @@ static void a2t_import(char *tune)
     blockptr += a2t_read_instmacros(blockptr);
 
     // Read arpeggio/vibrato macro table (v >= 9,10,11)
-    blockptr += a2t_read_macrotable(blockptr);
+    blockptr += a2t_read_arpvibtable(blockptr);
 
     // Read disabled fm regs (v == 11)
     blockptr += a2t_read_disabled_fmregs(blockptr);
@@ -4324,7 +4324,7 @@ typedef struct {
     char instr_names[255][43];
     tINSTR_DATA instr_data[255];
     tINSTR_MACRO instr_macros[255];
-    tARPVIB_TABLE macro_table[255];
+    tARPVIB_TABLE arpvib_table[255];
     uint8_t pattern_order[128];
     uint8_t tempo;
     uint8_t speed;
@@ -4394,7 +4394,7 @@ static int a2m_read_songdata(char *src)
         fmreg_table_allocate(data->instr_macros);
 
         // Allocate arpeggio/vibrato macro tables
-        arpvib_tables_allocate(data->macro_table);
+        arpvib_tables_allocate(data->arpvib_table);
 
         memcpy(songdata->pattern_order, data->pattern_order, 128);
 

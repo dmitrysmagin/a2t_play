@@ -9,3 +9,5 @@ tunes/madbrain/sinner.a2m - void pattern in the order is beyond max patters
 
 mario.a2m - version 1
 adven.a2m - version 5
+OLD_001.A2M - version 5
+newtune.a2m - version 5
