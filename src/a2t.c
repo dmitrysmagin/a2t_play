@@ -9,6 +9,8 @@
         * It has channel-row-event structure that doesn't allow expanding without events regrouping
         * Better use row-channel-event to allow dynamic expanding of patterns
         * Each pattern always has 256 rows, but usually less is used, need to reduce memory usage
+    - Rework tDIS_FMREG_COL:
+        * Move out of the songdata
     - Rework tFIXED_SONGDATA:
         * Make instr_data an array of pointers
         * Rework direct access to songdata->instr_data with get_instr(ins) // 1 - based
@@ -81,6 +83,17 @@ typedef struct {
 } tINSTR_DATA;
 
 C_ASSERT(sizeof(tINSTR_DATA) == 14);
+
+typedef struct { // extend tINSTR_DATA
+    tFM_INST_DATA fm;
+    uint8_t panning;
+    int8_t  fine_tune;
+    uint8_t perc_voice;
+    uint8_t vibrato;
+    uint8_t arpeggio;
+} tINSTR_DATA_EXT;
+
+C_ASSERT(sizeof(tINSTR_DATA_EXT) == 16);
 
 typedef struct {
     uint8_t length;
@@ -1184,23 +1197,41 @@ void set_overall_volume(unsigned char level)
     set_global_volume();
 }
 
+static uint8_t get_arpeggio_length(uint8_t arp_table)
+{
+    return arp_table ? (arpeggio_table[arp_table - 1] ? arpeggio_table[arp_table - 1]->length : 0) : 0;
+}
+
+static uint8_t get_vibrato_length(uint8_t vib_table)
+{
+    return vib_table ? (vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1]->length : 0) : 0;
+}
+
+static uint8_t get_vibrato_delay(uint8_t vib_table)
+{
+    return vib_table ? (vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1]->delay : 0) : 0;
+}
+
 // FIXME: check ins
 static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 {
     macro_table[chan].fmreg_count = 1;
     macro_table[chan].fmreg_pos = 0;
     macro_table[chan].fmreg_duration = 0;
-    macro_table[chan].fmreg_ins = ins;
+    macro_table[chan].fmreg_ins = ins; // todo: check against fmreg_table[ins - 1]->length
     macro_table[chan].arpg_count = 1;
     macro_table[chan].arpg_pos = 0;
-    macro_table[chan].arpg_table = songdata->instr_arpeggio[ins - 1]; //songdata->fmreg_table[ins - 1].arpeggio_table;
+    macro_table[chan].arpg_table = songdata->instr_arpeggio[ins - 1];
     macro_table[chan].arpg_note = note;
+
+    uint8_t vib_table = songdata->instr_vibrato[ins - 1];
     macro_table[chan].vib_count = 1;
     macro_table[chan].vib_paused = FALSE;
     macro_table[chan].vib_pos = 0;
-    macro_table[chan].vib_table = songdata->instr_vibrato[ins - 1]; //songdata->fmreg_table[ins - 1].vibrato_table;
+    macro_table[chan].vib_table = vib_table;
     macro_table[chan].vib_freq = freq;
-    macro_table[chan].vib_delay = songdata->arpvib_table[macro_table[chan].vib_table - 1].vibrato.delay;
+    macro_table[chan].vib_delay = get_vibrato_delay(vib_table);
+
     zero_fq_table[chan] = 0;
 }
 
@@ -2244,10 +2275,9 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
     switch (event->eff[slot].def) {
     case ef_SwapArpeggio:
         if (is_norestart) {
-            if (macro_table[chan].arpg_pos >
-                songdata->arpvib_table[event->eff[slot].val - 1].arpeggio.length)
-                macro_table[chan].arpg_pos =
-                    songdata->arpvib_table[event->eff[slot].val - 1].arpeggio.length;
+            uint8_t length = get_arpeggio_length(event->eff[slot].val);
+            if (macro_table[chan].arpg_pos > length)
+                macro_table[chan].arpg_pos = length;
             macro_table[chan].arpg_table = event->eff[slot].val;
         } else {
             macro_table[chan].arpg_count = 1;
@@ -2259,17 +2289,15 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
 
     case ef_SwapVibrato:
         if (is_norestart) {
-            if (macro_table[chan].vib_table >
-                songdata->arpvib_table[event->eff[slot].val - 1].vibrato.length)
-                macro_table[chan].vib_pos =
-                    songdata->arpvib_table[event->eff[slot].val - 1].vibrato.length;
+            uint8_t length = get_vibrato_length(event->eff[slot].val);
+            if (macro_table[chan].vib_pos > length)
+                macro_table[chan].vib_pos = length;
             macro_table[chan].vib_table = event->eff[slot].val;
         } else {
             macro_table[chan].vib_count = 1;
             macro_table[chan].vib_pos = 0;
             macro_table[chan].vib_table = event->eff[slot].val;
-            macro_table[chan].vib_delay =
-                songdata->arpvib_table[macro_table[chan].vib_table - 1].vibrato.delay;
+            macro_table[chan].vib_delay = get_vibrato_delay(macro_table[chan].vib_table);
         }
         break;
     case ef_SetCustomSpeedTab:
