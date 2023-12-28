@@ -130,6 +130,8 @@ typedef struct {
     char            composer[43];        // pascal String[42];
     char            instr_names[255][43];// array[1..255] of String[42];
     tINSTR_DATA     instr_data[255];     // array[1..255] of tADTRACK2_INS;
+    uint8_t         instr_arpeggio[255];  // todo: include into tINSTR_DATA_EXT
+    uint8_t         instr_vibrato[255];  // todo: include into tINSTR_DATA_EXT
     tINSTR_MACRO    instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
     tMACRO_TABLE    macro_table[255];    // array[1..255] of tMACRO_TABLE;
     uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
@@ -518,6 +520,55 @@ bool reset_chan[20];	// array[1..20] of Boolean;
 
 // This would be later moved to class or struct
 tFIXED_SONGDATA _songdata, *songdata = &_songdata;
+
+// Helpers for macro tables =======================================================================
+
+// fmregs/arpeggio/vibrato macro table
+tINSTR_MACRO *fmregs_table[255] = { 0 };
+tVIBRATO_TABLE *vibrato_table[255] = { 0 };
+tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
+
+static void fmregs_table_allocate(tINSTR_MACRO *im)
+{
+    memcpy(songdata->instr_macros, im, 255 * 3831);
+
+    for (int i = 0; i < 255; i++) {
+        // MACRO:FM
+        if (songdata->instr_macros[i].length) {
+            printf("MACRO:FM ins: %d, length: %d\n", i, songdata->instr_macros[i].length);
+        }
+        // MACRO:VIB
+        if (songdata->instr_macros[i].vibrato_table) {
+            printf("MACRO:VIB ins: %d, vibrato_table: %d\n", i, songdata->instr_macros[i].vibrato_table);
+        }
+        // MACRO:ARP
+        if (songdata->instr_macros[i].arpeggio_table) {
+            printf("MACRO:ARP ins: %d, arpeggio_table: %d\n", i, songdata->instr_macros[i].arpeggio_table);
+        }
+    }
+}
+
+static void macro_tables_allocate(tMACRO_TABLE *mt)
+{
+    for (int i = 0; i < 255; i++) {
+        tVIBRATO_TABLE *vibrato = &(mt + i)->vibrato;
+        tARPEGGIO_TABLE *arpeggio = &(mt + i)->arpeggio;
+
+        if (vibrato->length) {
+            vibrato_table[i] = calloc(sizeof(tVIBRATO_TABLE), 1);
+            memcpy(vibrato_table[i], vibrato, sizeof(tVIBRATO_TABLE));
+            printf("Allocating vibrato table entry %d, length: %d\n", i + 1, vibrato->length);
+        }
+        if (arpeggio->length) {
+            arpeggio_table[i] = calloc(sizeof(tARPEGGIO_TABLE), 1);
+            memcpy(arpeggio_table[i], arpeggio, sizeof(tARPEGGIO_TABLE));
+            printf("Allocating arpeggio table entry %d, length: %d\n", i + 1, arpeggio->length);
+        }
+    }
+
+    // TODO: eliminate
+    memcpy(songdata->macro_table, mt, 255 * 521);
+}
 
 // Helpers for patterns ===========================================================================
 #define MAX_PATTERNS    128
@@ -1116,12 +1167,12 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
     macro_table[chan].fmreg_ins = ins;
     macro_table[chan].arpg_count = 1;
     macro_table[chan].arpg_pos = 0;
-    macro_table[chan].arpg_table = songdata->instr_macros[ins - 1].arpeggio_table;
+    macro_table[chan].arpg_table = songdata->instr_arpeggio[ins - 1]; //songdata->instr_macros[ins - 1].arpeggio_table;
     macro_table[chan].arpg_note = note;
     macro_table[chan].vib_count = 1;
     macro_table[chan].vib_paused = FALSE;
     macro_table[chan].vib_pos = 0;
-    macro_table[chan].vib_table = songdata->instr_macros[ins - 1].vibrato_table;
+    macro_table[chan].vib_table = songdata->instr_vibrato[ins - 1]; //songdata->instr_macros[ins - 1].vibrato_table;
     macro_table[chan].vib_freq = freq;
     macro_table[chan].vib_delay = songdata->macro_table[macro_table[chan].vib_table - 1].vibrato.delay;
     zero_fq_table[chan] = 0;
@@ -3773,9 +3824,16 @@ static int a2t_read_instmacros(char *src)
     tINSTR_MACRO *data = (tINSTR_MACRO *)calloc(255, sizeof(tINSTR_MACRO));
     a2t_depack(src, len[1], data);
 
-    // TODO: properly handle intrument macros
-    // import_instrument_macros(data);
-    memcpy(songdata->instr_macros, data, sizeof(*data));
+    // Allocate instrument register macros
+    fmregs_table_allocate(data);
+    //memcpy(songdata->instr_macros, data, sizeof(*data));
+
+    for (int i = 0; i < 255; i++) {
+        // Instrument arpegio/vibrato references
+        songdata->instr_arpeggio[i] = data[i].arpeggio_table;
+        songdata->instr_vibrato[i] = data[i].vibrato_table;
+    }
+
     free(data);
 
 #if 0
@@ -3794,8 +3852,8 @@ static int a2t_read_macrotable(char *src)
     tMACRO_TABLE *data = (tMACRO_TABLE *)calloc(255, sizeof(tMACRO_TABLE));
     a2t_depack(src, len[2], data);
 
-    // properly handle arpergio/vibrato tables
-    memcpy(songdata->macro_table, data, sizeof(*data));
+    macro_tables_allocate(data);
+
     free(data);
 
 #if 0
@@ -4326,27 +4384,18 @@ static int a2m_read_songdata(char *src)
         for (int i = 0; i < 255; i++) {
             memcpy(songdata->instr_names[i], data->instr_names[i], 43);
             memcpy(&songdata->instr_data[i], &data->instr_data[i], 14);
+            // Instrument arpegio/vibrato references
+            songdata->instr_arpeggio[i] = data->instr_macros[i].arpeggio_table;
+            songdata->instr_vibrato[i] = data->instr_macros[i].vibrato_table;
         }
 
-        // TODO: allocate instr macros
-        memcpy(songdata->instr_macros, data->instr_macros, 255 * 3831);
+        // Allocate instrument register macros
+        fmregs_table_allocate(data->instr_macros);
+        //memcpy(songdata->instr_macros, data->instr_macros, 255 * 3831);
 
-        for (int i = 0; i < 256; i++) {
-            // MACRO:FM
-            if (songdata->instr_macros[i].length) {
-                printf("MACRO:FM ins: %d, length: %d\n", i, songdata->instr_macros[i].length);
-            }
-            // MACRO:VIB
-            if (songdata->instr_macros[i].vibrato_table) {
-                printf("MACRO:VIB ins: %d, vibrato_table: %d\n", i, songdata->instr_macros[i].vibrato_table);
-            }
-            // MACRO:ARP
-            if (songdata->instr_macros[i].arpeggio_table) {
-                printf("MACRO:ARP ins: %d, arpeggio_table: %d\n", i, songdata->instr_macros[i].arpeggio_table);
-            }
-        }
+        // Allocate arpeggio/vibrato macro tables
+        macro_tables_allocate(data->macro_table);
 
-        memcpy(songdata->macro_table, data->macro_table, 255 * 521);
         memcpy(songdata->pattern_order, data->pattern_order, 128);
 
         songdata->tempo = data->tempo;
