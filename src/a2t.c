@@ -117,10 +117,10 @@ typedef struct {
 typedef struct {
     tARPEGGIO_TABLE arpeggio;
     tVIBRATO_TABLE vibrato;
-} tMACRO_TABLE;
+} tARPVIB_TABLE;
 
 C_ASSERT(sizeof(tINSTR_MACRO) == 3831);
-C_ASSERT(sizeof(tMACRO_TABLE) == 521);
+C_ASSERT(sizeof(tARPVIB_TABLE) == 521);
 
 typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
 
@@ -133,7 +133,7 @@ typedef struct {
     uint8_t         instr_arpeggio[255];  // todo: include into tINSTR_DATA_EXT
     uint8_t         instr_vibrato[255];  // todo: include into tINSTR_DATA_EXT
     tINSTR_MACRO    instr_macros[255];   // array[1..255] of tREGISTER_TABLE;
-    tMACRO_TABLE    macro_table[255];    // array[1..255] of tMACRO_TABLE;
+    tARPVIB_TABLE   macro_table[255];    // array[1..255] of tARPVIB_TABLE;
     uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
     uint8_t         tempo;
     uint8_t         speed;
@@ -549,7 +549,7 @@ static void fmreg_table_allocate(tINSTR_MACRO *im)
     }*/
 }
 
-static void arpvib_tables_allocate(tMACRO_TABLE *mt)
+static void arpvib_tables_allocate(tARPVIB_TABLE *mt)
 {
     for (int i = 0; i < 255; i++) {
         tVIBRATO_TABLE *vibrato = &(mt + i)->vibrato;
@@ -3849,7 +3849,7 @@ static int a2t_read_macrotable(char *src)
 {
     if (ffver < 9) return 0;
 
-    tMACRO_TABLE *data = (tMACRO_TABLE *)calloc(255, sizeof(tMACRO_TABLE));
+    tARPVIB_TABLE *data = (tARPVIB_TABLE *)calloc(255, sizeof(tARPVIB_TABLE));
     a2t_depack(src, len[2], data);
 
     arpvib_tables_allocate(data);
@@ -4324,7 +4324,7 @@ typedef struct {
     char instr_names[255][43];
     tINSTR_DATA instr_data[255];
     tINSTR_MACRO instr_macros[255];
-    tMACRO_TABLE macro_table[255];
+    tARPVIB_TABLE macro_table[255];
     uint8_t pattern_order[128];
     uint8_t tempo;
     uint8_t speed;
