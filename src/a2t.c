@@ -14,8 +14,6 @@
     - Rework tFIXED_SONGDATA:
         * Make instr_data an array of pointers
         * Rework direct access to songdata->instr_data with get_instr(ins) // 1 - based
-        * Make fmreg_table/arpvib_table an array of pointers
-        * But first read data correctly to instr_data/fmreg_table/arpvib_table
 */
 #include <stdio.h>
 #include <stdlib.h>
