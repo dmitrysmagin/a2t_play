@@ -130,10 +130,10 @@ typedef struct {
     char            composer[43];        // pascal String[42];
     char            instr_names[255][43];// array[1..255] of String[42];
     tINSTR_DATA     instr_data[255];     // array[1..255] of tADTRACK2_INS;
-    uint8_t         instr_arpeggio[255];  // todo: include into tINSTR_DATA_EXT
+    uint8_t         instr_arpeggio[255]; // todo: include into tINSTR_DATA_EXT
     uint8_t         instr_vibrato[255];  // todo: include into tINSTR_DATA_EXT
-    tFMREG_TABLE    fmreg_table[255];   // array[1..255] of tREGISTER_TABLE;
-    tARPVIB_TABLE   arpvib_table[255];    // array[1..255] of tARPVIB_TABLE;
+    tFMREG_TABLE    fmreg_table[255];    // array[1..255] of tREGISTER_TABLE;
+    tARPVIB_TABLE   arpvib_table[255];   // array[1..255] of tARPVIB_TABLE;
     uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
     uint8_t         tempo;
     uint8_t         speed;
@@ -438,6 +438,7 @@ uint8_t vibtrem_speed_factor;
 uint8_t vibtrem_table_size;
 uint8_t vibtrem_table[256];
 
+// Channel data that changes during playback
 tFM_INST_DATA fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
 bool volume_lock[20];			// array[1..20] of Boolean;
 bool vol4op_lock[20] ;			// array[1..20] of Boolean;
@@ -524,29 +525,25 @@ tFIXED_SONGDATA _songdata, *songdata = &_songdata;
 
 // Helpers for macro tables =======================================================================
 
-// fmregs/arpeggio/vibrato macro table
+// fmreg/arpeggio/vibrato macro tables
 tFMREG_TABLE *fmreg_table[255] = { 0 };
 tVIBRATO_TABLE *vibrato_table[255] = { 0 };
 tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
 
-static void fmreg_table_allocate(tFMREG_TABLE *im)
+static void fmreg_table_allocate(tFMREG_TABLE *rt)
 {
-    memcpy(songdata->fmreg_table, im, 255 * 3831);
+    for (int i = 0; i < 255; i++) {
+        tFMREG_TABLE *fmreg = (rt + i);
 
-    /*for (int i = 0; i < 255; i++) {
-        // MACRO:FM
-        if (songdata->fmreg_table[i].length) {
-            printf("MACRO:FM ins: %d, length: %d\n", i, songdata->fmreg_table[i].length);
+        if (fmreg->length) {
+            fmreg_table[i] = calloc(sizeof(tFMREG_TABLE), 1);
+            memcpy(fmreg_table[i], fmreg, sizeof(tFMREG_TABLE));
+            //printf("Allocating fmreg table entry %d, length: %d\n", i + 1, fmreg->length);
         }
-        // MACRO:VIB
-        if (songdata->fmreg_table[i].vibrato_table) {
-            printf("MACRO:VIB ins: %d, vibrato_table: %d\n", i, songdata->fmreg_table[i].vibrato_table);
-        }
-        // MACRO:ARP
-        if (songdata->fmreg_table[i].arpeggio_table) {
-            printf("MACRO:ARP ins: %d, arpeggio_table: %d\n", i, songdata->fmreg_table[i].arpeggio_table);
-        }
-    }*/
+    }
+
+    // TODO: eliminate
+    memcpy(songdata->fmreg_table, rt, 255 * 3831);
 }
 
 static void arpvib_tables_allocate(tARPVIB_TABLE *mt)
@@ -558,12 +555,12 @@ static void arpvib_tables_allocate(tARPVIB_TABLE *mt)
         if (vibrato->length) {
             vibrato_table[i] = calloc(sizeof(tVIBRATO_TABLE), 1);
             memcpy(vibrato_table[i], vibrato, sizeof(tVIBRATO_TABLE));
-            printf("Allocating vibrato table entry %d, length: %d\n", i + 1, vibrato->length);
+            //printf("Allocating vibrato table entry %d, length: %d\n", i + 1, vibrato->length);
         }
         if (arpeggio->length) {
             arpeggio_table[i] = calloc(sizeof(tARPEGGIO_TABLE), 1);
             memcpy(arpeggio_table[i], arpeggio, sizeof(tARPEGGIO_TABLE));
-            printf("Allocating arpeggio table entry %d, length: %d\n", i + 1, arpeggio->length);
+            //printf("Allocating arpeggio table entry %d, length: %d\n", i + 1, arpeggio->length);
         }
     }
 
@@ -591,7 +588,7 @@ static bool patterns_alloc(int number)
 {
     patterns_free();
 
-    printf("Allocating %d patterns == %d bytes\n", number, number * sizeof(tPATTERN_DATA));
+    //printf("Allocating %d patterns == %d bytes\n", number, number * sizeof(tPATTERN_DATA));
     _patterns_allocated = number;
 
     for (int i = 0; i < _patterns_allocated; i++) {
@@ -640,13 +637,37 @@ static void copy_to_event(int pattern, int chan, int row, /*tADTRACK2_EVENT_V123
 
     memcpy(ev, old, 4);
 }
+
+static void memory_usage()
+{
+    // Count patterns
+    int npatterns = 0;
+    for (int i = 0; i < 128; i++) {
+        npatterns += (_patterns[i] ? 1 : 0);
+    }
+
+    // Count fmreg/vib/arp macros
+    int nfmregs = 0, nvib = 0, narp = 0;
+    for (int i = 0; i < 255; i++) {
+        nfmregs += (fmreg_table[i] ? 1 : 0);
+        nvib += (vibrato_table[i] ? 1 : 0);
+        narp += (arpeggio_table[i] ? 1 : 0);
+    }
+
+    printf("Memory usage:\n");
+    printf("\tSongdata: %d bytes\n", sizeof(tFIXED_SONGDATA));
+    printf("\tPatterns * %d: %d bytes\n", npatterns, npatterns * sizeof(tPATTERN_DATA));
+    printf("\tFmreg * %d: %d bytes\n", nfmregs, nfmregs * sizeof(tFMREG_TABLE));
+    printf("\tVibrato * %d: %d bytes\n", nvib, nvib * sizeof(tVIBRATO_TABLE));
+    printf("\tArpeggio * %d: %d bytes\n", narp, narp * sizeof(tARPEGGIO_TABLE));
+}
 // End of patterns helpers ========================================================================
 
 int ticks, tickD, tickXF;
 
-#define FreqStart 0x156
-#define FreqEnd   0x2ae
-#define FreqRange  (FreqEnd - FreqStart)
+#define FreqStart   0x156
+#define FreqEnd     0x2ae
+#define FreqRange   (FreqEnd - FreqStart)
 
 /* PLAYER */
 static void opl_out(uint8_t port, uint8_t val); // forward def
@@ -3818,7 +3839,7 @@ static int a2t_read_instruments(char *src)
     return len[0];
 }
 
-static int a2t_read_instmacros(char *src)
+static int a2t_read_fmregtable(char *src)
 {
     if (ffver < 9) return 0;
 
@@ -4250,7 +4271,7 @@ static void a2t_import(char *tune)
     blockptr += a2t_read_instruments(blockptr);
 
     // Read instrument macro (v >= 9,10,11)
-    blockptr += a2t_read_instmacros(blockptr);
+    blockptr += a2t_read_fmregtable(blockptr);
 
     // Read arpeggio/vibrato macro table (v >= 9,10,11)
     blockptr += a2t_read_arpvibtable(blockptr);
@@ -4271,7 +4292,8 @@ static void a2t_import(char *tune)
     printf("Speed: %d\n", header->speed);
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
-    printf("Songdata: %d bytes\n", sizeof(tFIXED_SONGDATA));
+
+    memory_usage();
 }
 
 typedef uint8_t (tUINT16)[2];
@@ -4487,7 +4509,8 @@ static void a2m_import(char *tune)
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
     printf("Track volume lock: %d\n", lockvol);
-    printf("Songdata: %d bytes\n", sizeof(tFIXED_SONGDATA));
+
+    memory_usage();
 }
 
 static int a2_import(char *tune)
