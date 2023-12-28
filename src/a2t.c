@@ -149,7 +149,6 @@ typedef struct {
     tINSTR_DATA     instr_data[255];     // array[1..255] of tADTRACK2_INS;
     uint8_t         instr_arpeggio[255]; // todo: include into tINSTR_DATA_EXT
     uint8_t         instr_vibrato[255];  // todo: include into tINSTR_DATA_EXT
-    tFMREG_TABLE    fmreg_table[255];    // array[1..255] of tREGISTER_TABLE;
     uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
     uint8_t         tempo;
     uint8_t         speed;
@@ -557,9 +556,6 @@ static void fmreg_table_allocate(tFMREG_TABLE *rt)
             //printf("Allocating fmreg table entry %d, length: %d\n", i + 1, fmreg->length);
         }
     }
-
-    // TODO: eliminate
-    memcpy(songdata->fmreg_table, rt, 255 * 3831);
 }
 
 static void arpvib_tables_allocate(tARPVIB_TABLE *mt)
@@ -604,6 +600,16 @@ static uint8_t get_vibrato_delay(uint8_t vib_table)
 static tVIBRATO_TABLE *get_vibrato_table(uint8_t vib_table)
 {
     return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1] : NULL;
+}
+
+static uint8_t get_fmreg_length(uint8_t fmreg_ins)
+{
+    return fmreg_ins && fmreg_table[fmreg_ins - 1] ? fmreg_table[fmreg_ins - 1]->length : 0;
+}
+
+static tFMREG_TABLE *get_fmreg_table(uint8_t fmreg_ins)
+{
+    return fmreg_ins && fmreg_table[fmreg_ins - 1] ? fmreg_table[fmreg_ins - 1] : NULL;
 }
 // Helpers for patterns ===========================================================================
 #define MAX_PATTERNS    128
@@ -1051,8 +1057,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
     // when there is additionally no FM-reg macro defined for this instrument
-    if (is_chan_adsr_data_empty(chan) &&
-        !(songdata->fmreg_table[voice_table[chan] - 1].length)) {
+    if (is_chan_adsr_data_empty(chan) && !get_fmreg_length(voice_table[chan])) {
             modulator = 63;
             carrier = 63;
     }
@@ -1102,8 +1107,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
     // when there is additionally no FM-reg macro defined for this instrument
-    if (is_chan_adsr_data_empty(chan) &&
-        !(songdata->fmreg_table[voice_table[chan] - 1].length)) {
+    if (is_chan_adsr_data_empty(chan) && !get_fmreg_length(voice_table[chan])) {
             modulator = 63;
             carrier = 63;
     }
@@ -3107,15 +3111,10 @@ static void macro_poll_proc()
         }*/
 
         tCH_MACRO_TABLE *mt = &macro_table[chan];
-        uint8_t fmreg_ins = mt->fmreg_ins - 1;
-        // TODO: check if instr macro exist
-        tFMREG_TABLE *rt = &songdata->fmreg_table[fmreg_ins];
+        tFMREG_TABLE *rt = get_fmreg_table(mt->fmreg_ins);
         bool force_macro_keyon = FALSE;
 
-        if (rt->length && mt->fmreg_ins /* && (speed != 0)*/) { // FIXME: what speed?
-            if (rt->length == 0) {
-                printf("\nCAUGHT length=0\n");
-            }
+        if (rt && rt->length /* && (speed != 0)*/) { // FIXME: what speed?
             if (mt->fmreg_duration > 1) {
                 mt->fmreg_duration--;
             } else {
@@ -3155,6 +3154,8 @@ static void macro_poll_proc()
 
                 if ((mt->fmreg_pos != 0) &&
                     (mt->fmreg_pos != IDLE) && (mt->fmreg_pos != finished_flag)) {
+
+                    uint8_t fmreg_ins = mt->fmreg_ins - 1;
                     mt->fmreg_duration = rt->data[mt->fmreg_pos - 1].duration;
                     if (mt->fmreg_duration != 0) {
                         tREGISTER_TABLE_DEF *d = &rt->data[mt->fmreg_pos - 1];
