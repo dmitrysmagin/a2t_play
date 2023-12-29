@@ -13,7 +13,7 @@
         * Move out of the songdata
     - Rework tFIXED_SONGDATA:
         * Make instr_data an array of pointers
-        * Rework direct access to songdata->instr_data with get_instr(ins) // 1 - based
+        * Rework direct access to songdata->instr_data with get_instr_data(ins) // 1 - based
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -814,12 +814,17 @@ static void change_freq(int chan, uint16_t freq)
     }
 }
 
-static inline tINSTR_DATA *instrch(int chan)
+static inline int8_t get_instr_fine_tune(uint8_t ins)
+{
+    return ins ? songdata->instr_data[ins - 1].fine_tune : 0;
+}
+
+static inline tINSTR_DATA *get_instr_data_by_ch(int chan)
 {
     return &songdata->instr_data[voice_table[chan] - 1];
 }
 
-static inline tINSTR_DATA *instrn(uint8_t ins)
+static inline tINSTR_DATA *get_instr_data(uint8_t ins)
 {
     return &songdata->instr_data[ins - 1];
 }
@@ -838,7 +843,7 @@ static bool is_chan_adsr_data_empty(int chan)
 
 static bool is_ins_adsr_data_empty(int ins)
 {
-    tINSTR_DATA *i = instrn(ins);
+    tINSTR_DATA *i = get_instr_data(ins);
 
     return (
         !i->fm.data[4] &&
@@ -1016,7 +1021,7 @@ static uint32_t _4op_data_flag(uint8_t chan)
 
         if (_4op_ins1 && _4op_ins2) {
             _4op_mode = TRUE;
-            _4op_conn = (instrn(_4op_ins1)->fm.connect << 1) | instrn(_4op_ins2)->fm.connect;
+            _4op_conn = (get_instr_data(_4op_ins1)->fm.connect << 1) | get_instr_data(_4op_ins2)->fm.connect;
         }
 /*
   {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
@@ -1050,7 +1055,7 @@ static bool _4op_vol_valid_chan(int chan)
 // inverted volume here
 static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 {
-    tINSTR_DATA *instr = instrch(chan);
+    tINSTR_DATA *instr = get_instr_data_by_ch(chan);
 
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
@@ -1100,7 +1105,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 
 static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
-    tINSTR_DATA *instr = instrch(chan);
+    tINSTR_DATA *instr = get_instr_data_by_ch(chan);
 
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
@@ -1187,7 +1192,7 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
 
 static void reset_ins_volume(int chan)
 {
-    tINSTR_DATA *instr = instrch(chan);
+    tINSTR_DATA *instr = get_instr_data_by_ch(chan);
     uint8_t vol_mod = instr->fm.volM;
     uint8_t vol_car = instr->fm.volC;
     uint8_t conn = instr->fm.connect;
@@ -1206,7 +1211,7 @@ static void set_global_volume()
         if (_4op_vol_valid_chan(chan)) {
             set_ins_volume_4op(BYTE_NULL, chan);
         } else if (!((carrier_vol[chan] == 0) && (modulator_vol[chan] == 0))) {
-            tINSTR_DATA *instr = instrch(chan);
+            tINSTR_DATA *instr = get_instr_data_by_ch(chan);
 
             set_ins_volume(instr->fm.connect ? fmpar_table[chan].volM : BYTE_NULL, fmpar_table[chan].volC, chan);
         }
@@ -1244,7 +1249,7 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 
 static void set_ins_data(uint8_t ins, int chan)
 {
-    tINSTR_DATA *i = instrn(ins);
+    tINSTR_DATA *i = get_instr_data(ins);
     uint8_t old_ins;
 
     if ((ins != event_table[chan].instr_def) || reset_chan[chan]) {
@@ -1370,7 +1375,7 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
     if ((note == 0) || (note > 12*8+1)) { // If NOT (note in [1..12*8+1])
         freq = freq_table[chan];
     } else {
-        freq = nFreq(note - 1) + songdata->instr_data[ins - 1].fine_tune;
+        freq = nFreq(note - 1) + get_instr_fine_tune(ins);
 
         if (restart_adsr) {
             key_on(chan);
@@ -1444,7 +1449,7 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
 
 static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 {
-    tINSTR_DATA *instr = instrch(chan);
+    tINSTR_DATA *instr = get_instr_data_by_ch(chan);
     uint8_t def = event->eff[slot].def;
     uint8_t val = event->eff[slot].val;
 
@@ -1473,7 +1478,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         (arpgg_table[slot][chan].note != 0) && (arpgg_table[slot][chan].state != 1)) {
         arpgg_table[slot][chan].state = 1;
         change_frequency(chan, nFreq(arpgg_table[slot][chan].note - 1) +
-            songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
+            get_instr_fine_tune(event_table[chan].instr_def));
     }
 
     if ((def == ef_GlobalFSlideUp) || (def == ef_GlobalFSlideDown)) {
@@ -1626,7 +1631,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         if ((event->note >= 1) && (event->note <= 12 * 8 + 1)) {
             porta_table[slot][chan].speed = val;
             porta_table[slot][chan].freq = nFreq(event->note - 1) +
-                songdata->instr_data[event_table[chan].instr_def - 1].fine_tune;
+                get_instr_fine_tune(event_table[chan].instr_def);
         } else {
             porta_table[slot][chan].speed = effect_table[slot][chan].val;
         }
@@ -2199,8 +2204,7 @@ static void play_line()
         before_process_note(event, chan);
 
         if (event->instr_def) {
-            // NOTE: adjust ins
-            if (is_data_empty(&songdata->instr_data[event->instr_def - 1], sizeof(tINSTR_DATA))) {
+            if (is_data_empty(get_instr_data(event->instr_def), sizeof(tINSTR_DATA))) {
                 release_sustaining_sound(chan);
             }
             set_ins_data(event->instr_def, chan);
@@ -2393,7 +2397,7 @@ static void slide_modulator_volume_up(uint8_t chan, uint8_t slide, uint8_t limit
 
 static void slide_volume_up(int chan, uint8_t slide)
 {
-    tINSTR_DATA *i = instrch(chan);
+    tINSTR_DATA *i = get_instr_data_by_ch(chan);
     uint8_t limit1 = 0, limit2 = 0;
     uint32_t _4op_flag;
     uint8_t _4op_conn;
@@ -2408,7 +2412,7 @@ static void slide_volume_up(int chan, uint8_t slide)
     _4op_ins2 = (uint8_t)(_4op_flag >> 19) & 0xff;
 
     if (!_4op_vol_valid_chan(chan)) {
-        tINSTR_DATA *ins = &songdata->instr_data[event_table[chan].instr_def - 1];
+        tINSTR_DATA *ins = get_instr_data(event_table[chan].instr_def);
 
         limit1 = peak_lock[chan] ? ins->fm.volC : 0;
         limit2 = peak_lock[chan] ? ins->fm.volM : 0;
@@ -2422,8 +2426,8 @@ static void slide_volume_up(int chan, uint8_t slide)
             if (i->fm.connect || (percussion_mode && (chan >= 16)))  // in [17..20]
                slide_modulator_volume_up(chan, slide, limit2);
         } else {
-            tINSTR_DATA *ins1 = instrn(_4op_ins1);
-            tINSTR_DATA *ins2 = instrn(_4op_ins2);
+            tINSTR_DATA *ins1 = get_instr_data(_4op_ins1);
+            tINSTR_DATA *ins2 = get_instr_data(_4op_ins2);
 
             uint8_t limit1_volC = peak_lock[_4op_ch1] ? ins1->fm.volC : 0;
             uint8_t limit1_volM = peak_lock[_4op_ch1] ? ins1->fm.volM : 0;
@@ -2488,7 +2492,7 @@ static void slide_modulator_volume_down(uint8_t chan, uint8_t slide)
 
 static void slide_volume_down(int chan, uint8_t slide)
 {
-    tINSTR_DATA *instr = instrch(chan);
+    tINSTR_DATA *instr = get_instr_data_by_ch(chan);
     uint32_t _4op_flag;
     uint8_t _4op_conn;
     uint8_t _4op_ch1, _4op_ch2;
@@ -2586,7 +2590,7 @@ static void arpeggio(int slot, int chan)
 
     arpgg_table[slot][chan].state = arpgg_state[arpgg_table[slot][chan].state];
     change_frequency(chan, freq +
-            songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
+            get_instr_fine_tune(event_table[chan].instr_def));
 }
 
 static void vibrato(int slot, int chan)
@@ -2632,7 +2636,7 @@ static void tremolo(int slot, int chan)
 
 static inline int chanvol(int chan)
 {
-    tINSTR_DATA *instr = instrch(chan);
+    tINSTR_DATA *instr = get_instr_data_by_ch(chan);
 
     if (instr->fm.connect == 0)
         return 63 - fmpar_table[chan].volC;
@@ -3338,20 +3342,21 @@ static void macro_poll_proc()
 
                 if ((mt->arpg_pos != 0) &&
                     (mt->arpg_pos != IDLE) && (mt->arpg_pos != finished_flag)) {
+                    int8_t fine_tune = get_instr_fine_tune(event_table[chan].instr_def);
                     switch (at->data[mt->arpg_pos - 1]) {
                     case 0:
                         change_frequency(chan, nFreq(mt->arpg_note - 1) +
-                            songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
+                            fine_tune);
                         break;
 
                     case 1 ... 96:
                         change_frequency(chan, nFreq(max(mt->arpg_note + at->data[mt->arpg_pos], 97) - 1) +
-                            songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
+                            fine_tune);
                         break;
 
                     case 0x80 ... 0x80+12*8+1:
                         change_frequency(chan, nFreq(at->data[mt->arpg_pos - 1] - 0x80 - 1) +
-                            songdata->instr_data[event_table[chan].instr_def - 1].fine_tune);
+                            fine_tune);
                         break;
                     }
                 }
