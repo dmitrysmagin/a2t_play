@@ -2120,18 +2120,19 @@ static bool is_eff_porta(tADTRACK2_EVENT *event)
     return is_p0 || is_p1;
 }
 
+// Note: commenting out fixes fank5.a2m - porta after delay note
 static bool no_porta_or_delay(int chan)
 {
     int eff0 = effect_table[0][chan].def;
     bool is_p0 = (eff0 == ef_TonePortamento) ||
                 (eff0 == ef_TPortamVolSlide) ||
-                (eff0 == ef_TPortamVSlideFine) ||
-                (eff0 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay);
+                (eff0 == ef_TPortamVSlideFine) /*||
+                (eff0 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay)*/;
     int eff1 = effect_table[1][chan].def;
     bool is_p1 = (eff1 == ef_TonePortamento) ||
                 (eff1 == ef_TPortamVolSlide) ||
-                (eff1 == ef_TPortamVSlideFine) ||
-                (eff1 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay);
+                (eff1 == ef_TPortamVSlideFine) /*||
+                (eff1 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay)*/;
     return !is_p0 && !is_p1;
 }
 
@@ -2188,11 +2189,11 @@ static void play_line()
 
         // save effect_table into last_effect
         for (int slot = 0; slot < 2; slot++) {
-            if (effect_table[slot][chan].def && effect_table[slot][chan].val) {
+            if (effect_table[slot][chan].def | effect_table[slot][chan].val) {
                 last_effect[slot][chan].def = effect_table[slot][chan].def;
                 last_effect[slot][chan].val = effect_table[slot][chan].val;
             }
-            if (glfsld_table[slot][chan].def && glfsld_table[slot][chan].val) {
+            if (glfsld_table[slot][chan].def | glfsld_table[slot][chan].val) {
                 effect_table[slot][chan].def = glfsld_table[slot][chan].def;
                 effect_table[slot][chan].val = glfsld_table[slot][chan].val;
             } else {
