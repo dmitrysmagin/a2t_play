@@ -2156,7 +2156,7 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
     } else {
         bool no_previous_porta_or_delay = no_porta_or_delay(chan);
 
-        if (no_previous_porta_or_delay) {
+        if (!tporta_flag && no_previous_porta_or_delay) {
             // Usually we end up here
             output_note(event->note, voice_table[chan], chan, TRUE, no_swap_and_restart(event));
         } else if (event->note && tporta_flag) {
