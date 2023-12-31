@@ -1427,18 +1427,17 @@ static bool no_loop(uint8_t current_chan, uint8_t current_line)
 
 static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan); // forward
 
+// In case of x00 set value of the previous compatible effect command
 static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, uint8_t val)
 {
-    uint8_t eLo = last_effect[slot][chan].def;
-    uint8_t eHi = last_effect[slot][chan].val;
+    uint8_t lval = last_effect[slot][chan].val;
 
     effect_table[slot][chan].def = def;
 
-    // effect_table[slot][chan].val = val ? val : (effect_group[eLo] == eff_group && eHi ? eHi) : 0;
     if (val) {
         effect_table[slot][chan].val = val;
-    } else if (effect_group[eLo] == eff_group && eHi) {
-        effect_table[slot][chan].val = eHi;
+    } else if (effect_group[last_effect[slot][chan].def] == eff_group && lval) {
+        effect_table[slot][chan].val = lval;
     } else {
         // x00 without any previous compatible command, should never happen
         printf("\nERROR: x00 without any previous compatible command\n");
@@ -1543,8 +1542,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         tremor_table[slot][chan].pos = 0;
         set_ins_volume(tremor_table[slot][chan].volM, tremor_table[slot][chan].volC, chan);
     }
-
-    uint8_t eLo = last_effect[slot][chan].def;
 
     switch (def) {
     case ef_Arpeggio:
@@ -1756,7 +1753,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_RetrigNote:
     case ef_MultiRetrigNote:
         if (val) {
-            if (effect_group[eLo] != EFGR_RETRIGNOTE) {
+            if (effect_group[last_effect[slot][chan].def] != EFGR_RETRIGNOTE) {
                 retrig_table[slot][chan] = 1;
             }
 
@@ -1771,8 +1768,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         break;
 
     case ef_Tremor:
-        if (val) { // if hi and lo part != 0
-            if (eLo != ef_Tremor) {
+        if (val) {
+            if (last_effect[slot][chan].def != ef_Tremor) {
                 tremor_table[slot][chan].pos = 0;
                 tremor_table[slot][chan].volM = fmpar_table[chan].volM;
                 tremor_table[slot][chan].volC = fmpar_table[chan].volC;
@@ -2647,18 +2644,16 @@ static inline int chanvol(int chan)
 
 static void update_effects_slot(int slot, int chan)
 {
-    uint8_t eLo, eHi;
+    uint8_t def  = effect_table[slot][chan].def;
+    uint8_t val  = effect_table[slot][chan].val;
 
-    eLo  = effect_table[slot][chan].def;
-    eHi  = effect_table[slot][chan].val;
-
-    switch (eLo) {
+    switch (def) {
     case ef_Arpeggio + ef_fix1:
         arpeggio(slot, chan);
         break;
 
     case ef_ArpggVSlide:
-        volume_slide(chan, eHi / 16, eHi % 16);
+        volume_slide(chan, val / 16, val % 16);
         arpeggio(slot, chan);
         break;
 
@@ -2667,16 +2662,16 @@ static void update_effects_slot(int slot, int chan)
         break;
 
     case ef_FSlideUp:
-        portamento_up(chan, eHi, nFreq(12*8+1));
+        portamento_up(chan, val, nFreq(12*8+1));
         break;
 
     case ef_FSlideDown:
-        portamento_down(chan, eHi, nFreq(0));
+        portamento_down(chan, val, nFreq(0));
         break;
 
     case ef_FSlideUpVSlide:
         portamento_up(chan, fslide_table[slot][chan], nFreq(12*8+1));
-        volume_slide(chan, eHi / 16, eHi % 16);
+        volume_slide(chan, val / 16, val % 16);
         break;
 
     case ef_FSlUpVSlF:
@@ -2685,7 +2680,7 @@ static void update_effects_slot(int slot, int chan)
 
     case ef_FSlideDownVSlide:
         portamento_down(chan, fslide_table[slot][chan], nFreq(0));
-        volume_slide(chan, eHi / 16, eHi % 16);
+        volume_slide(chan, val / 16, val % 16);
         break;
 
     case ef_FSlDownVSlF:
@@ -2693,11 +2688,11 @@ static void update_effects_slot(int slot, int chan)
         break;
 
     case ef_FSlUpFineVSlide:
-        volume_slide(chan, eHi / 16, eHi % 16);
+        volume_slide(chan, val / 16, val % 16);
         break;
 
     case ef_FSlDownFineVSlide:
-        volume_slide(chan, eHi / 16, eHi % 16);
+        volume_slide(chan, val / 16, val % 16);
         break;
 
     case ef_TonePortamento:
@@ -2705,7 +2700,7 @@ static void update_effects_slot(int slot, int chan)
         break;
 
     case ef_TPortamVolSlide:
-        volume_slide(chan, eHi / 16, eHi % 16);
+        volume_slide(chan, val / 16, val % 16);
         tone_portamento(slot, chan);
         break;
 
@@ -2724,7 +2719,7 @@ static void update_effects_slot(int slot, int chan)
         break;
 
     case ef_VibratoVolSlide:
-        volume_slide(chan, eHi / 16, eHi % 16);
+        volume_slide(chan, val / 16, val % 16);
         if (!vibr_table[slot][chan].fine)
             vibrato(slot, chan);
         break;
@@ -2735,11 +2730,11 @@ static void update_effects_slot(int slot, int chan)
         break;
 
     case ef_VolSlide:
-        volume_slide(chan, eHi / 16, eHi % 16);
+        volume_slide(chan, val / 16, val % 16);
         break;
 
     case ef_RetrigNote:
-        if (retrig_table[slot][chan] >= eHi) {
+        if (retrig_table[slot][chan] >= val) {
             retrig_table[slot][chan] = 0;
             output_note(event_table[chan].note, event_table[chan].instr_def, chan, TRUE, TRUE);
         } else {
@@ -2748,8 +2743,8 @@ static void update_effects_slot(int slot, int chan)
         break;
 
     case ef_MultiRetrigNote:
-        if (retrig_table[slot][chan] >= eHi / 16) {
-            switch (eHi % 16) {
+        if (retrig_table[slot][chan] >= val / 16) {
+            switch (val % 16) {
             case 0: break;
             case 8: break;
 
@@ -2787,14 +2782,14 @@ static void update_effects_slot(int slot, int chan)
 
     case ef_Tremor:
         if (tremor_table[slot][chan].pos >= 0) {
-            if ((tremor_table[slot][chan].pos + 1) <= eHi / 16) {
+            if ((tremor_table[slot][chan].pos + 1) <= val / 16) {
                 tremor_table[slot][chan].pos++;
             } else {
                 slide_volume_down(chan, 63);
                 tremor_table[slot][chan].pos = -1;
             }
         } else {
-            if ((tremor_table[slot][chan].pos - 1) >= -(eHi % 16)) {
+            if ((tremor_table[slot][chan].pos - 1) >= -(val % 16)) {
                 tremor_table[slot][chan].pos--;
             } else {
                 set_ins_volume(tremor_table[slot][chan].volM, tremor_table[slot][chan].volC, chan);
@@ -2822,11 +2817,11 @@ static void update_effects_slot(int slot, int chan)
         break;
 
     case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUp:
-        global_volume_slide(eHi % 16, BYTE_NULL);
+        global_volume_slide(val % 16, BYTE_NULL);
         break;
 
     case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDn:
-        global_volume_slide(BYTE_NULL, eHi % 16);
+        global_volume_slide(BYTE_NULL, val % 16);
         break;
     }
 }
@@ -2927,21 +2922,16 @@ static void update_fine_effects(int slot, int chan)
 
 static void update_extra_fine_effects_slot(int slot, int chan)
 {
-    //int def, val;
-    uint8_t eLo, eHi;
+    uint8_t def = effect_table[slot][chan].def;
+    uint8_t val = effect_table[slot][chan].val;
 
-    //def = event_table[chan].eff[slot].def;
-    //val = event_table[chan].eff[slot].val;
-    eLo = effect_table[slot][chan].def;
-    eHi = effect_table[slot][chan].val;
-
-    switch (eLo) {
-    case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldUpXF:  global_volume_slide(eHi, BYTE_NULL); break;
-    case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldDnXF:  global_volume_slide(BYTE_NULL, eHi); break;
-    case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideUpXF:  volume_slide(chan, eHi, 0); break;
-    case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideDnXF:  volume_slide(chan, 0, eHi); break;
-    case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF: portamento_up(chan, eHi, nFreq(12*8+1)); break;
-    case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF: portamento_down(chan, eHi, nFreq(0)); break;
+    switch (def) {
+    case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldUpXF:  global_volume_slide(val, BYTE_NULL); break;
+    case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldDnXF:  global_volume_slide(BYTE_NULL, val); break;
+    case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideUpXF:  volume_slide(chan, val, 0); break;
+    case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideDnXF:  volume_slide(chan, 0, val); break;
+    case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF: portamento_up(chan, val, nFreq(12*8+1)); break;
+    case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF: portamento_down(chan, val, nFreq(0)); break;
 
     case ef_ExtraFineArpeggio:
         arpeggio(slot, chan);
