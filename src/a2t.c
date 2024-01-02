@@ -3106,6 +3106,7 @@ static void macro_poll_proc()
 
         tCH_MACRO_TABLE *mt = &macro_table[chan];
         tFMREG_TABLE *rt = get_fmreg_table(mt->fmreg_ins);
+
         bool force_macro_keyon = FALSE;
 
         if (rt && rt->length /* && (speed != 0)*/) { // FIXME: what speed?
@@ -3146,110 +3147,103 @@ static void macro_poll_proc()
                         mt->fmreg_pos = rt->keyoff_pos;
                 }
 
-                if ((mt->fmreg_pos != 0) &&
-                    (mt->fmreg_pos != IDLE) && (mt->fmreg_pos != finished_flag)) {
-
-                    uint8_t fmreg_ins = mt->fmreg_ins - 1;
+                if (mt->fmreg_pos && mt->fmreg_pos != IDLE && mt->fmreg_pos != finished_flag) {
                     mt->fmreg_duration = rt->data[mt->fmreg_pos - 1].duration;
-                    if (mt->fmreg_duration != 0) {
+
+                    if (mt->fmreg_duration) {
                         tREGISTER_TABLE_DEF *d = &rt->data[mt->fmreg_pos - 1];
+                        int8_t *p = songdata->dis_fmreg_col[mt->fmreg_ins - 1];
 
                         // force KEY-ON with missing ADSR instrument data
                         force_macro_keyon = FALSE;
                         if (mt->fmreg_pos == 1) {
                             if (is_ins_adsr_data_empty(voice_table[chan]) &&
-                                !(songdata->dis_fmreg_col[fmreg_ins][0] &&
-                                  songdata->dis_fmreg_col[fmreg_ins][1] &&
-                                  songdata->dis_fmreg_col[fmreg_ins][2] &&
-                                  songdata->dis_fmreg_col[fmreg_ins][3] &&
-                                  songdata->dis_fmreg_col[fmreg_ins][12] &&
-                                  songdata->dis_fmreg_col[fmreg_ins][13] &&
-                                  songdata->dis_fmreg_col[fmreg_ins][14] &&
-                                  songdata->dis_fmreg_col[fmreg_ins][15])) {
+                                !(p[0] && p[1] && p[2] && p[3] &&
+                                  p[12] && p[13] && p[14] && p[15])) {
                                 force_macro_keyon = TRUE;
                             }
                         }
 
                         // use translation_table[column] = { offset, mask, shift}
-                        if (!songdata->dis_fmreg_col[fmreg_ins][0])
+                        if (!p[0])
                             fmpar_table[chan].attckM = d->fm.attckM;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][1])
+                        if (!p[1])
                             fmpar_table[chan].decM = d->fm.decM;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][2])
+                        if (!p[2])
                             fmpar_table[chan].sustnM = d->fm.sustnM;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][3])
+                        if (!p[3])
                             fmpar_table[chan].relM = d->fm.relM;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][4])
+                        if (!p[4])
                             fmpar_table[chan].wformM = d->fm.wformM;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][6])
+                        if (!p[6])
                             fmpar_table[chan].kslM = d->fm.kslM;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][7])
+                        if (!p[7])
                             fmpar_table[chan].multipM = d->fm.multipM;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][8])
+                        if (!p[8])
                             fmpar_table[chan].tremM = d->fm.tremM;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][9])
+                        if (!p[9])
                             fmpar_table[chan].vibrM = d->fm.vibrM;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][10])
+                        if (!p[10])
                             fmpar_table[chan].ksrM = d->fm.ksrM;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][11])
+                        if (!p[11])
                             fmpar_table[chan].sustM = d->fm.sustM;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][12])
+                        if (!p[12])
                             fmpar_table[chan].attckC = d->fm.attckC;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][13])
+                        if (!p[13])
                             fmpar_table[chan].decC = d->fm.decC;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][14])
+                        if (!p[14])
                             fmpar_table[chan].sustnC = d->fm.sustnC;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][15])
+                        if (!p[15])
                             fmpar_table[chan].relC = d->fm.relC;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][16])
+                        if (!p[16])
                             fmpar_table[chan].wformC = d->fm.wformC;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][18])
+                        if (!p[18])
                             fmpar_table[chan].kslC = d->fm.kslC;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][19])
+                        if (!p[19])
                             fmpar_table[chan].multipC = d->fm.multipC;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][20])
+                        if (!p[20])
                             fmpar_table[chan].tremC = d->fm.tremC;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][21])
+                        if (!p[21])
                             fmpar_table[chan].vibrC = d->fm.vibrC;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][22])
+                        if (!p[22])
                             fmpar_table[chan].ksrC = d->fm.ksrC;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][23])
+                        if (!p[23])
                             fmpar_table[chan].sustC = d->fm.sustC;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][24])
+                        if (!p[24])
                             fmpar_table[chan].connect = d->fm.connect;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][25])
+                        if (!p[25])
                             fmpar_table[chan].feedb = d->fm.feedb;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][27] && !pan_lock[chan])
+                        if (!p[27] && !pan_lock[chan])
                             panning_table[chan] = d->panning;
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][5])
+                        if (!p[5])
                             set_ins_volume(63 - d->fm.volM, BYTE_NULL, chan);
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][17])
+                        if (!p[17])
                             set_ins_volume(BYTE_NULL, 63 - d->fm.volC, chan);
 
                         update_modulator_adsrw(chan);
@@ -3283,7 +3277,7 @@ static void macro_poll_proc()
 
                         int16_t freq_slide = INT16LE(d->freq_slide);
 
-                        if (!songdata->dis_fmreg_col[fmreg_ins][26]) {
+                        if (!p[26]) {
                             if (freq_slide > 0) {
                                 portamento_up(chan, freq_slide, nFreq(12*8+1));
                             } else if (freq_slide < 0) {
