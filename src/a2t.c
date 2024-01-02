@@ -611,29 +611,30 @@ static tFMREG_TABLE *get_fmreg_table(uint8_t fmreg_ins)
 }
 // Helpers for patterns ===========================================================================
 #define MAX_PATTERNS    128
-#define ASSERT_PATTERN(PATTERN) (PATTERN < 0 || PATTERN >= (_patterns_allocated < MAX_PATTERNS ? _patterns_allocated : MAX_PATTERNS))
-int _patterns_allocated = 0;
-tPATTERN_DATA *_patterns[MAX_PATTERNS] = { 0 };
+#define ASSERT_PATTERN(PATTERN) (PATTERN < 0 || PATTERN >= (patterns_allocated < MAX_PATTERNS ? patterns_allocated : MAX_PATTERNS))
+int patterns_allocated = 0;
+tPATTERN_DATA *patterns[MAX_PATTERNS] = { 0 };
 
 static void patterns_free()
 {
     for (int i = 0; i < MAX_PATTERNS; i++) {
-        if (_patterns[i]) {
-            free(_patterns[i]);
-            _patterns[i] = NULL;
+        if (patterns[i]) {
+            free(patterns[i]);
+            patterns[i] = NULL;
         }
     }
 }
 
-static bool patterns_alloc(int number)
+// TODO: allocate exactly as much rows as needed
+static bool patterns_alloc(int number/*, int rows */)
 {
     patterns_free();
 
     //printf("Allocating %d patterns == %d bytes\n", number, number * sizeof(tPATTERN_DATA));
-    _patterns_allocated = number;
+    patterns_allocated = number;
 
-    for (int i = 0; i < _patterns_allocated; i++) {
-        _patterns[i] = calloc(1, sizeof(tPATTERN_DATA));
+    for (int i = 0; i < patterns_allocated; i++) {
+        patterns[i] = calloc(1, sizeof(tPATTERN_DATA));
     }
 
     return TRUE;
@@ -650,7 +651,7 @@ static void copy_event(tADTRACK2_EVENT *event, int pattern, int chan, int row)
         return;
     }
 
-    memcpy(event, &_patterns[pattern]->ch[chan].row[row].ev, sizeof(tADTRACK2_EVENT));
+    memcpy(event, &patterns[pattern]->ch[chan].row[row].ev, sizeof(tADTRACK2_EVENT));
 }
 
 // Copy from buffer to an allocated pattern
@@ -661,7 +662,7 @@ static void copy_to_pattern(int pattern, tPATTERN_DATA *old)
             return;
         }
 
-        tPATTERN_DATA *dst = _patterns[pattern];
+        tPATTERN_DATA *dst = patterns[pattern];
 
         memcpy(dst, old, sizeof(*old));
 }
@@ -674,7 +675,7 @@ static void copy_to_event(int pattern, int chan, int row, /*tADTRACK2_EVENT_V123
         return;
     }
 
-    tADTRACK2_EVENT *ev = &_patterns[pattern]->ch[chan].row[row].ev;
+    tADTRACK2_EVENT *ev = &patterns[pattern]->ch[chan].row[row].ev;
 
     memcpy(ev, old, 4);
 }
@@ -684,7 +685,7 @@ static void memory_usage()
     // Count patterns
     int npatterns = 0;
     for (int i = 0; i < 128; i++) {
-        npatterns += (_patterns[i] ? 1 : 0);
+        npatterns += (patterns[i] ? 1 : 0);
     }
 
     // Count fmreg/vib/arp macros
@@ -4189,7 +4190,7 @@ static int a2_read_patterns(char *src, int s)
             a2t_depack(src, len[i+s], old);
 
             for (int p = 0; p < 16; p++) { // pattern
-                if (i * 8 + p >= _patterns_allocated)
+                if (i * 8 + p >= patterns_allocated)
                         break;
                 for (int r = 0; r < 64; r++) // row
                 for (int c = 0; c < 9; c++) { // channel
@@ -4215,7 +4216,7 @@ static int a2_read_patterns(char *src, int s)
             a2t_depack(src, len[i+s], old);
 
             for (int p = 0; p < 8; p++) { // pattern
-                if (i * 8 + p >= _patterns_allocated)
+                if (i * 8 + p >= patterns_allocated)
                     break;
                 for (int c = 0; c < 18; c++) // channel
                 for (int r = 0; r < 64; r++) { // row
@@ -4241,7 +4242,7 @@ static int a2_read_patterns(char *src, int s)
             src += len[i+s];
 
             for (int p = 0; p < 8; p++) { // pattern
-                if (i * 8 + p >= _patterns_allocated)
+                if (i * 8 + p >= patterns_allocated)
                         break;
 
                 copy_to_pattern(i * 8 + p, old + p);
