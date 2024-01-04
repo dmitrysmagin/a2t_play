@@ -1,5 +1,9 @@
 // sdl backend for a2t/a2m player
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #include "a2t.h"
 #include <SDL.h>
 
@@ -49,6 +53,39 @@ static int kbhit(void)
 }
 #endif
 
+void rewind_console(int lines)
+{
+    #ifdef _WIN32
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO cbsi;
+
+    if (GetConsoleScreenBufferInfo(hConsole, &cbsi)) {
+        COORD coord = {
+            cbsi.dwCursorPosition.X,
+            coord.Y = cbsi.dwCursorPosition.Y - lines
+        };
+
+        SetConsoleCursorPosition(hConsole, coord);
+    }
+    #else
+    // linux ansi terminal
+    printf("\033[%dA", lines);
+    #endif
+}
+
+void show_info()
+{
+    printf("Order %03d, Pattern %03d, Row %03d\n", current_order, current_pattern, current_line);
+    printf("VOIC: ");
+    for (int i = 0; i < 20; i++) {
+        printf("  %02x%s", voice_table[i], i < 19 ? "|" : "\n");
+    }
+    printf("FREQ: ");
+    for (int i = 0; i < 20; i++) {
+        printf("%04x%s", freq_table[i], i < 19 ? "|" : "\n");
+    }
+}
+
 #undef main
 int main(int argc, char *argv[])
 {
@@ -90,10 +127,12 @@ int main(int argc, char *argv[])
     printf("Playing - press anything to exit\n");
 
     while (!kbhit()) {
-        printf("Order %03d, Pattern %03d, Row %03d\r",
-               current_order, current_pattern, current_line);
+        show_info();
+        rewind_console(3);
         SDL_Delay(10);
     }
+
+    show_info();
 
     a2t_stop();
     SDL_PauseAudio(1);

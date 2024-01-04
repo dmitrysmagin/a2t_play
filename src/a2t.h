@@ -15,4 +15,7 @@ extern uint8_t current_order;
 extern uint8_t current_pattern;
 extern uint8_t current_line;
 
+extern uint8_t voice_table[20];
+extern uint16_t freq_table[20];
+
 #endif // _A2T_H_
