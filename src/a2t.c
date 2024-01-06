@@ -463,9 +463,10 @@ tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
 uint8_t voice_table[20];		// array[1..20] of Byte;
 uint16_t freq_table[20];		// array[1..20] of Word;
 uint16_t zero_fq_table[20];		// array[1..20] of Word;
-struct {
+/*struct {
     uint8_t def, val;
-} effect_table[2][20];	// array[1..20] of Word;
+}*/
+tEFFECT_TABLE effect_table[2][20];	// array[1..20] of Word;
 uint8_t fslide_table[2][20];		// array[1..20] of Byte;
 struct {
     uint8_t def, val;

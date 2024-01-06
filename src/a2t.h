@@ -15,7 +15,12 @@ extern uint8_t current_order;
 extern uint8_t current_pattern;
 extern uint8_t current_line;
 
+typedef struct {
+    uint8_t def, val;
+} tEFFECT_TABLE;
+
 extern uint8_t voice_table[20];
 extern uint16_t freq_table[20];
+extern tEFFECT_TABLE effect_table[2][20];
 
 #endif // _A2T_H_

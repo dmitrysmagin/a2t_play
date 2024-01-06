@@ -75,6 +75,8 @@ void rewind_console(int lines)
 
 void show_info()
 {
+    static char effects[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^";
+
     printf("Order %03d, Pattern %03d, Row %03d\n", current_order, current_pattern, current_line);
     printf("VOIC: ");
     for (int i = 0; i < 20; i++) {
@@ -83,6 +85,13 @@ void show_info()
     printf("FREQ: ");
     for (int i = 0; i < 20; i++) {
         printf("%04x%s", freq_table[i], i < 19 ? "|" : "\n");
+    }
+    printf("EFF1: ");
+    for (int i = 0; i < 20; i++) {
+        uint8_t def = effect_table[0][i].def & 0x3f;
+        printf(" %c%02x%s",
+            def < 45 ? effects[def] : '?',
+            effect_table[0][i].val, i < 19 ? "|" : "\n");
     }
 }
 
@@ -128,7 +137,7 @@ int main(int argc, char *argv[])
 
     while (!kbhit()) {
         show_info();
-        rewind_console(3);
+        rewind_console(4);
         SDL_Delay(10);
     }
 
