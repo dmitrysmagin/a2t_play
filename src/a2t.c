@@ -2123,13 +2123,13 @@ static bool no_porta_or_delay(int chan)
     int eff0 = effect_table[0][chan].def;
     bool is_p0 = (eff0 == ef_TonePortamento) ||
                 (eff0 == ef_TPortamVolSlide) ||
-                (eff0 == ef_TPortamVSlideFine) /*||
-                (eff0 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay)*/;
+                (eff0 == ef_TPortamVSlideFine) ||
+                (eff0 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay);
     int eff1 = effect_table[1][chan].def;
     bool is_p1 = (eff1 == ef_TonePortamento) ||
                 (eff1 == ef_TPortamVolSlide) ||
-                (eff1 == ef_TPortamVSlideFine) /*||
-                (eff1 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay)*/;
+                (eff1 == ef_TPortamVSlideFine) ||
+                (eff1 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay);
     return !is_p0 && !is_p1;
 }
 
@@ -2139,7 +2139,6 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
 
     for (int slot = 0; slot < 2; slot++) {
         if (event->eff[slot].def | event->eff[slot].val) {
-            assert(event_table[chan].eff[slot].def == event->eff[slot].def);
             event_table[chan].eff[slot].def = event->eff[slot].def;
             event_table[chan].eff[slot].val = event->eff[slot].val;
         } else if (glfsld_table[slot][chan].def == 0 && glfsld_table[slot][chan].val == 0) {
@@ -2152,9 +2151,9 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
     if (event->note & keyoff_flag) {
         key_off(chan);
     } else {
-        bool no_previous_porta_or_delay = no_porta_or_delay(chan);
+        bool no_current_porta_or_delay = no_porta_or_delay(chan);
 
-        if (!tporta_flag && no_previous_porta_or_delay) {
+        if (no_current_porta_or_delay) {
             // Usually we end up here
             output_note(event->note, voice_table[chan], chan, TRUE, no_swap_and_restart(event));
         } else if (event->note && tporta_flag) {
@@ -2165,6 +2164,8 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
             } else {
                 event_table[chan].note = event->note;
             }
+        } else {
+            event_table[chan].note = event->note;
         }
     }
 }
