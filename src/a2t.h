@@ -22,5 +22,6 @@ typedef struct {
 extern uint8_t voice_table[20];
 extern uint16_t freq_table[20];
 extern tEFFECT_TABLE effect_table[2][20];
+extern tEFFECT_TABLE glfsld_table[2][20];
 
 #endif // _A2T_H_

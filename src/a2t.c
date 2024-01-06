@@ -468,9 +468,7 @@ uint16_t zero_fq_table[20];		// array[1..20] of Word;
 }*/
 tEFFECT_TABLE effect_table[2][20];	// array[1..20] of Word;
 uint8_t fslide_table[2][20];		// array[1..20] of Byte;
-struct {
-    uint8_t def, val;
-} glfsld_table[2][20];	// array[1..20] of Word;
+tEFFECT_TABLE glfsld_table[2][20];	// array[1..20] of Word;
 struct {
     uint16_t freq;
     uint8_t speed;
@@ -1968,13 +1966,13 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
         case ef_ex2_NoteDelay:
             effect_table[slot][chan].def = ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay;
-            effect_table[slot][chan].val = 0;
+            effect_table[slot][chan].val = val & 0xf;
             notedel_table[chan] = val % 16;
             break;
 
         case ef_ex2_NoteCut:
             effect_table[slot][chan].def = ef_Extended2 + ef_fix2 + ef_ex2_NoteCut;
-            effect_table[slot][chan].val = 0;
+            effect_table[slot][chan].val = val & 0xf;
             notecut_table[chan] = val % 16;
             break;
 
@@ -2141,6 +2139,7 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
 
     for (int slot = 0; slot < 2; slot++) {
         if (event->eff[slot].def | event->eff[slot].val) {
+            assert(event_table[chan].eff[slot].def == event->eff[slot].def);
             event_table[chan].eff[slot].def = event->eff[slot].def;
             event_table[chan].eff[slot].val = event->eff[slot].val;
         } else if (glfsld_table[slot][chan].def == 0 && glfsld_table[slot][chan].val == 0) {

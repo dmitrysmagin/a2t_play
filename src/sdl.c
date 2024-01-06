@@ -86,12 +86,21 @@ void show_info()
     for (int i = 0; i < 20; i++) {
         printf("%04x%s", freq_table[i], i < 19 ? "|" : "\n");
     }
-    printf("EFF1: ");
-    for (int i = 0; i < 20; i++) {
-        uint8_t def = effect_table[0][i].def & 0x3f;
-        printf(" %c%02x%s",
-            def < 45 ? effects[def] : '?',
-            effect_table[0][i].val, i < 19 ? "|" : "\n");
+    for (int j = 0; j < 2; j++) {
+        printf("EFF%d: ", j + 1);
+        for (int i = 0; i < 20; i++) {
+            uint8_t def = effect_table[j][i].def;
+            uint8_t val = effect_table[j][i].val;
+
+            if (def & 0x90) { // ef_fix2
+                val |= ((def - 0x90 - 36) << 4); // def - ef_Extended2 - ef_fix2
+                def = 36;
+            } else {
+                def &= 0x3f;
+            }
+
+            printf(" %c%02x%s", def < 45 ? effects[def] : '?', val, i < 19 ? "|" : "\n");
+        }
     }
 }
 
@@ -137,7 +146,7 @@ int main(int argc, char *argv[])
 
     while (!kbhit()) {
         show_info();
-        rewind_console(4);
+        rewind_console(5);
         SDL_Delay(10);
     }
 
