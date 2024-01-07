@@ -653,6 +653,14 @@ static void copy_event(tADTRACK2_EVENT *event, int pattern, int chan, int row)
     memcpy(event, &patterns[pattern]->ch[chan].row[row].ev, sizeof(tADTRACK2_EVENT));
 }
 
+static tADTRACK2_EVENT get_event(int p, int chan, int row)
+{
+    tADTRACK2_EVENT event = { 0 };
+
+    // return structs by value
+    return ASSERT_PATTERN(p) ? event : patterns[p]->ch[chan].row[row].ev;
+}
+
 // Copy from buffer to an allocated pattern
 static void copy_to_pattern(int pattern, tPATTERN_DATA *old)
 {
@@ -2184,7 +2192,8 @@ static void play_line()
 
     for (int chan = 0; chan < songdata->nm_tracks; chan++) {
         // Do a full copy of the event, because we modify event->note in before_process_note()
-        copy_event(event, current_pattern, chan, current_line);
+        //copy_event(event, current_pattern, chan, current_line);
+        *event = get_event(current_pattern, chan, current_line);
 
         // save effect_table into last_effect
         for (int slot = 0; slot < 2; slot++) {
