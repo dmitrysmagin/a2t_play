@@ -537,16 +537,14 @@ tFMREG_TABLE *fmreg_table[255] = { 0 };
 tVIBRATO_TABLE *vibrato_table[255] = { 0 };
 tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
 
-// (size_t n, tFMREG_TABLE rt[n])
-static void fmreg_table_allocate(tFMREG_TABLE *rt)
+// use VLA feature
+static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
 {
-    for (int i = 0; i < 255; i++) {
-        tFMREG_TABLE *fmreg = (rt + i);
-
-        if (fmreg->length) {
+    for (unsigned int i = 0; i < n; i++) {
+        if (rt[i].length) {
             fmreg_table[i] = calloc(sizeof(tFMREG_TABLE), 1);
-            memcpy(fmreg_table[i], fmreg, sizeof(tFMREG_TABLE));
-            //printf("Allocating fmreg table entry %d, length: %d\n", i + 1, fmreg->length);
+            assert(fmreg_table[i]);
+            *fmreg_table[i] = rt[i]; // copy struct
         }
     }
 }
@@ -3863,7 +3861,7 @@ static int a2t_read_fmregtable(char *src)
     a2t_depack(src, len[1], data);
 
     // Allocate fmreg macro tables
-    fmreg_table_allocate(data);
+    fmreg_table_allocate(255, data);
 
     for (int i = 0; i < 255; i++) {
         // Instrument arpegio/vibrato references
@@ -4429,7 +4427,7 @@ static int a2m_read_songdata(char *src)
         }
 
         // Allocate fmreg macro tables
-        fmreg_table_allocate(data->fmreg_table);
+        fmreg_table_allocate(255, data->fmreg_table);
 
         // Allocate arpeggio/vibrato macro tables
         arpvib_tables_allocate(data->arpvib_table);
