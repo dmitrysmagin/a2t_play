@@ -9,8 +9,6 @@
         * It has channel-row-event structure that doesn't allow expanding without events regrouping
         * Better use row-channel-event to allow dynamic expanding of patterns
         * Each pattern always has 256 rows, but usually less is used, need to reduce memory usage
-    - Rework tDIS_FMREG_COL:
-        * Move out of the songdata
     - Rework tFIXED_SONGDATA:
         * Make instr_data an array of pointers
         * Rework direct access to songdata->instr_data with get_instr_data(ins) // 1 - based
@@ -137,8 +135,6 @@ typedef struct {
 C_ASSERT(sizeof(tFMREG_TABLE) == 3831);
 C_ASSERT(sizeof(tARPVIB_TABLE) == 521);
 
-typedef bool tDIS_FMREG_COL[28]; // array[0..27] of Boolean;
-
 // NOTE: doesn't map to a2m anymore!
 typedef struct {
     char            songname[43];        // pascal String[42];
@@ -157,13 +153,11 @@ typedef struct {
     uint8_t         flag_4op;
     uint8_t         lock_flags[20];
     char            pattern_names[128][43];  // array[0..$7f] of String[42];
-    //tDIS_FMREG_COL  dis_fmreg_col[255];  // array[1..255] of tDIS_FMREG_COL;
-    int8_t          dis_fmreg_col[255][28]; // disabled fm macro columns in the editor
     struct {
         uint8_t		num_4op;
         uint8_t		idx_4op[128];
     } ins_4op_flags;
-    uint8_t			reserved_data[1024];
+    //uint8_t			reserved_data[1024];
     struct {
         uint8_t		rows_per_beat;
         int16_t		tempo_finetune;
@@ -534,6 +528,7 @@ tFIXED_SONGDATA _songdata, *songdata = &_songdata;
 
 // fmreg/arpeggio/vibrato macro tables
 tFMREG_TABLE *fmreg_table[255] = { 0 };
+uint32_t dis_fmreg_table[255] = { 0 };
 tVIBRATO_TABLE *vibrato_table[255] = { 0 };
 tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
 
@@ -546,6 +541,18 @@ static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
             assert(fmreg_table[i]);
             *fmreg_table[i] = rt[i]; // copy struct
         }
+    }
+}
+
+static void disabled_fmregs_allocate(size_t n, bool dis_fmregs[n][28])
+{
+    // shrink bool[255][28] to uint32_t[255], use bits as enable/disable flag
+    for (unsigned int i = 0; i < n; i++) {
+        uint32_t result = 0; // all enabled by default
+        for (unsigned int bit = 0; bit < 28; bit++) {
+            result |= (dis_fmregs[i][bit] & 1) << bit;
+        }
+        dis_fmreg_table[i] = result;
     }
 }
 
@@ -3136,105 +3143,58 @@ static void macro_poll_proc()
 
                     if (mt->fmreg_duration) {
                         tREGISTER_TABLE_DEF *d = &rt->data[mt->fmreg_pos - 1];
-                        int8_t *p = songdata->dis_fmreg_col[mt->fmreg_ins - 1];
+                        uint32_t disabled = dis_fmreg_table[mt->fmreg_ins - 1];
 
                         // force KEY-ON with missing ADSR instrument data
                         force_macro_keyon = FALSE;
                         if (mt->fmreg_pos == 1) {
-                            if (is_ins_adsr_data_empty(voice_table[chan]) &&
-                                !(p[0] && p[1] && p[2] && p[3] &&
-                                  p[12] && p[13] && p[14] && p[15])) {
+                            uint32_t adsr_disabled = disabled & ((1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) |
+                                (1 << 12) | (1 << 13) | (1 << 14) | (1 << 15));
+                            if (is_ins_adsr_data_empty(voice_table[chan]) && !adsr_disabled) {
                                 force_macro_keyon = TRUE;
                             }
                         }
 
-                        // use translation_table[column] = { offset, mask, shift}
-                        if (!p[0])
-                            fmpar_table[chan].attckM = d->fm.attckM;
+                        for (unsigned bit = 0; bit < 28; bit++) {
+                            if (disabled & (1 << bit))
+                                continue;
 
-                        if (!p[1])
-                            fmpar_table[chan].decM = d->fm.decM;
-
-                        if (!p[2])
-                            fmpar_table[chan].sustnM = d->fm.sustnM;
-
-                        if (!p[3])
-                            fmpar_table[chan].relM = d->fm.relM;
-
-                        if (!p[4])
-                            fmpar_table[chan].wformM = d->fm.wformM;
-
-                        if (!p[6])
-                            fmpar_table[chan].kslM = d->fm.kslM;
-
-                        if (!p[7])
-                            fmpar_table[chan].multipM = d->fm.multipM;
-
-                        if (!p[8])
-                            fmpar_table[chan].tremM = d->fm.tremM;
-
-                        if (!p[9])
-                            fmpar_table[chan].vibrM = d->fm.vibrM;
-
-                        if (!p[10])
-                            fmpar_table[chan].ksrM = d->fm.ksrM;
-
-                        if (!p[11])
-                            fmpar_table[chan].sustM = d->fm.sustM;
-
-                        if (!p[12])
-                            fmpar_table[chan].attckC = d->fm.attckC;
-
-                        if (!p[13])
-                            fmpar_table[chan].decC = d->fm.decC;
-
-                        if (!p[14])
-                            fmpar_table[chan].sustnC = d->fm.sustnC;
-
-                        if (!p[15])
-                            fmpar_table[chan].relC = d->fm.relC;
-
-                        if (!p[16])
-                            fmpar_table[chan].wformC = d->fm.wformC;
-
-                        if (!p[18])
-                            fmpar_table[chan].kslC = d->fm.kslC;
-
-                        if (!p[19])
-                            fmpar_table[chan].multipC = d->fm.multipC;
-
-                        if (!p[20])
-                            fmpar_table[chan].tremC = d->fm.tremC;
-
-                        if (!p[21])
-                            fmpar_table[chan].vibrC = d->fm.vibrC;
-
-                        if (!p[22])
-                            fmpar_table[chan].ksrC = d->fm.ksrC;
-
-                        if (!p[23])
-                            fmpar_table[chan].sustC = d->fm.sustC;
-
-                        if (!p[24])
-                            fmpar_table[chan].connect = d->fm.connect;
-
-                        if (!p[25])
-                            fmpar_table[chan].feedb = d->fm.feedb;
-
-                        if (!p[27] && !pan_lock[chan])
-                            panning_table[chan] = d->panning;
-
-                        if (!p[5])
-                            set_ins_volume(63 - d->fm.volM, BYTE_NULL, chan);
-
-                        if (!p[17])
-                            set_ins_volume(BYTE_NULL, 63 - d->fm.volC, chan);
+                            switch (bit) {
+                            case 0: fmpar_table[chan].attckM = d->fm.attckM; break;
+                            case 1: fmpar_table[chan].decM = d->fm.decM; break;
+                            case 2: fmpar_table[chan].sustnM = d->fm.sustnM; break;
+                            case 3: fmpar_table[chan].relM = d->fm.relM; break;
+                            case 4: fmpar_table[chan].wformM = d->fm.wformM; break;
+                            case 5: set_ins_volume(63 - d->fm.volM, BYTE_NULL, chan); break;
+                            case 6: fmpar_table[chan].kslM = d->fm.kslM; break;
+                            case 7: fmpar_table[chan].multipM = d->fm.multipM; break;
+                            case 8: fmpar_table[chan].tremM = d->fm.tremM; break;
+                            case 9: fmpar_table[chan].vibrM = d->fm.vibrM; break;
+                            case 10: fmpar_table[chan].ksrM = d->fm.ksrM; break;
+                            case 11: fmpar_table[chan].sustM = d->fm.sustM; break;
+                            case 12: fmpar_table[chan].attckC = d->fm.attckC; break;
+                            case 13: fmpar_table[chan].decC = d->fm.decC; break;
+                            case 14: fmpar_table[chan].sustnC = d->fm.sustnC; break;
+                            case 15: fmpar_table[chan].relC = d->fm.relC; break;
+                            case 16: fmpar_table[chan].wformC = d->fm.wformC; break;
+                            case 17: set_ins_volume(BYTE_NULL, 63 - d->fm.volC, chan); break;
+                            case 18: fmpar_table[chan].kslC = d->fm.kslC; break;
+                            case 19: fmpar_table[chan].multipC = d->fm.multipC; break;
+                            case 20: fmpar_table[chan].tremC = d->fm.tremC; break;
+                            case 21: fmpar_table[chan].vibrC = d->fm.vibrC; break;
+                            case 22: fmpar_table[chan].ksrC = d->fm.ksrC; break;
+                            case 23: fmpar_table[chan].sustC = d->fm.sustC; break;
+                            case 24: fmpar_table[chan].connect = d->fm.connect; break;
+                            case 25: fmpar_table[chan].feedb = d->fm.feedb; break;
+                            case 27: if (!pan_lock[chan]) panning_table[chan] = d->panning; break;
+                            }
+                        }
 
                         update_modulator_adsrw(chan);
                         update_carrier_adsrw(chan);
                         update_fmpar(chan);
 
-                        // TODO: check is those flags are really set by the editor
+                        // TODO: check if those flags are really set by the editor
                         uint8_t macro_flags = d->fm.data[10];
 
                         if (force_macro_keyon || (macro_flags & 0x80)) { // MACRO_NOTE_RETRIG_FLAG
@@ -3261,7 +3221,7 @@ static void macro_poll_proc()
 
                         int16_t freq_slide = INT16LE(d->freq_slide);
 
-                        if (!p[26]) {
+                        if (!(disabled & (1 << 26))) {
                             if (freq_slide > 0) {
                                 portamento_up(chan, freq_slide, nFreq(12*8+1));
                             } else if (freq_slide < 0) {
@@ -3818,7 +3778,7 @@ static int a2t_read_instruments(char *src)
 {
     int instsize = (ffver < 9 ? 13 : 14);
     int dstsize = (ffver < 9 ? 250 * 13 : 255 * 14) +
-                  (ffver > 11 ? 129 + 1024 + 3: 0);
+                  (ffver > 11 ? 129 + 1024 + 3 : 0);
     char *dst = (char *)calloc(dstsize, 1);
 
     a2t_depack(src, len[0], dst);
@@ -3831,8 +3791,8 @@ static int a2t_read_instruments(char *src)
     if (ffver >= 12 && ffver <= 14) {
         memcpy(&songdata->ins_4op_flags, dst, sizeof(songdata->ins_4op_flags));
         dst += sizeof(songdata->ins_4op_flags);
-        memcpy(&songdata->reserved_data, dst, sizeof(songdata->reserved_data));
-        dst += sizeof(songdata->reserved_data);
+        //memcpy(&songdata->reserved_data, dst, sizeof(songdata->reserved_data));
+        dst += sizeof(1024/*songdata->reserved_data*/);
     }
 
     for (int i = 0; i < (ffver < 9 ? 250 : 255); i++) {
@@ -3841,7 +3801,7 @@ static int a2t_read_instruments(char *src)
 
 #if 0
     FILE *f = fopen("0_inst.dmp", "wb");
-    fwrite(songdata->instr_data, 1, sizeof(songdata->instr_data), f);
+    fwrite(dst, 1, dstsize, f);
     fclose(f);
 #endif
 
@@ -3901,11 +3861,17 @@ static int a2t_read_disabled_fmregs(char *src)
 {
     if (ffver < 11) return 0;
 
-    a2t_depack(src, len[3], songdata->dis_fmreg_col);
+    bool (*dis_fmregs)[255][28] = calloc(255, 28);
+
+    a2t_depack(src, len[3], *dis_fmregs);
+
+    disabled_fmregs_allocate(255, *dis_fmregs);
+
+    free(dis_fmregs);
 
 #if 0
     FILE *f = fopen("3_fm_disregs.dmp", "wb");
-    fwrite(songdata->dis_fmreg_col, 1, sizeof(songdata->dis_fmreg_col), f);
+    fwrite(*dis_fmregs, 1, sizeof(*dis_fmregs), f);
     fclose(f);
 #endif
 
@@ -4368,6 +4334,7 @@ typedef struct {
     uint8_t flag_4op;              // A2M_SONGDATA_V10
     uint8_t lock_flags[20];        // A2M_SONGDATA_V10
     char pattern_names[128][43];   // A2M_SONGDATA_V11
+    // disabled fm macro columns in the editor
     int8_t dis_fmreg_col[255][28]; // A2M_SONGDATA_V11
     struct {
         uint8_t num_4op;
@@ -4444,17 +4411,18 @@ static int a2m_read_songdata(char *src)
 
         // v11
         memcpy(songdata->pattern_names, data->pattern_names, 128 * 43);
-        memcpy(songdata->dis_fmreg_col, data->dis_fmreg_col, 255 * 28);
+        disabled_fmregs_allocate(255, data->dis_fmreg_col);
 
         // v12-13
         songdata->ins_4op_flags.num_4op = data->ins_4op_flags.num_4op;
         memcpy(songdata->ins_4op_flags.idx_4op, data->ins_4op_flags.idx_4op, 128);
-        memcpy(songdata->reserved_data, data->reserved_data, 1024);
+        // NOTE: not used anywhere
+        //memcpy(songdata->reserved_data, data->reserved_data, 1024);
 
         // v14
+        // NOTE: not used anywhere
         songdata->bpm_data.rows_per_beat = data->bpm_data.rows_per_beat;
-        songdata->bpm_data.tempo_finetune = // Note: not used anywhere
-            INT16LE(data->bpm_data.tempo_finetune);
+        songdata->bpm_data.tempo_finetune = INT16LE(data->bpm_data.tempo_finetune);
 
         free(data);
     }
