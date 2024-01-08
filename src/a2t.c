@@ -152,7 +152,7 @@ typedef struct {
     uint16_t        macro_speedup;
     uint8_t         flag_4op;
     uint8_t         lock_flags[20];
-    char            pattern_names[128][43];  // array[0..$7f] of String[42];
+    //char            pattern_names[128][43];  // array[0..$7f] of String[42];
     struct {
         uint8_t		num_4op;
         uint8_t		idx_4op[128];
@@ -4265,6 +4265,7 @@ static void a2t_import(char *tune)
     printf("A2T version: %d\n", header->ffver);
     printf("Number of patterns: %d\n", header->npatt);
     printf("Rows per pattern: %d\n", songdata->patt_len);
+    printf("Voices per pattern: %d\n", songdata->nm_tracks);
     printf("Tempo: %d\n", header->tempo);
     printf("Speed: %d\n", header->speed);
     printf("Volume scaling: %d\n", volume_scaling);
@@ -4410,7 +4411,8 @@ static int a2m_read_songdata(char *src)
         memcpy(songdata->lock_flags, data->lock_flags, sizeof(data->lock_flags));
 
         // v11
-        memcpy(songdata->pattern_names, data->pattern_names, 128 * 43);
+        // NOTE: not used anywhere
+        //memcpy(songdata->pattern_names, data->pattern_names, 128 * 43);
         disabled_fmregs_allocate(255, data->dis_fmreg_col);
 
         // v12-13
@@ -4483,6 +4485,7 @@ static void a2m_import(char *tune)
     printf("A2M version: %d\n", header->ffver);
     printf("Number of patterns: %d\n", header->npatt);
     printf("Rows per pattern: %d\n", songdata->patt_len);
+    printf("Voices per pattern: %d\n", songdata->nm_tracks);
     printf("Tempo: %d\n", songdata->tempo);
     printf("Speed: %d\n", songdata->speed);
     printf("Volume scaling: %d\n", volume_scaling);
