@@ -463,9 +463,6 @@ tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
 uint8_t voice_table[20];		// array[1..20] of Byte;
 uint16_t freq_table[20];		// array[1..20] of Word;
 uint16_t zero_fq_table[20];		// array[1..20] of Word;
-/*struct {
-    uint8_t def, val;
-}*/
 tEFFECT_TABLE effect_table[2][20];	// array[1..20] of Word;
 uint8_t fslide_table[2][20];		// array[1..20] of Byte;
 tEFFECT_TABLE glfsld_table[2][20];	// array[1..20] of Word;
@@ -491,9 +488,7 @@ struct {
     uint8_t volM, volC;
 } tremor_table[2][20];		// array[1..20] of Record pos: Integer; volume: Word; end;
 uint8_t panning_table[20];	// array[1..20] of Byte;
-struct {
-    uint8_t def, val;
-} last_effect[2][20];	// array[1..20] of Byte;
+tEFFECT_TABLE last_effect[2][20];	// array[1..20] of Byte;
 uint8_t volslide_type[20];	// array[1..20] of Byte;
 uint8_t notedel_table[20];	// array[1..20] of Byte;
 uint8_t notecut_table[20];	// array[1..20] of Byte;
@@ -542,6 +537,7 @@ tFMREG_TABLE *fmreg_table[255] = { 0 };
 tVIBRATO_TABLE *vibrato_table[255] = { 0 };
 tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
 
+// (size_t n, tFMREG_TABLE rt[n])
 static void fmreg_table_allocate(tFMREG_TABLE *rt)
 {
     for (int i = 0; i < 255; i++) {
@@ -639,26 +635,10 @@ static bool patterns_alloc(int number/*, int rows */)
     return TRUE;
 }
 
-static void copy_event(tADTRACK2_EVENT *event, int pattern, int chan, int row)
-{
-    // If outside of allocated patterns, return zero event
-    // This may happen if the order contains a void pattern that serves as a 'pause'
-    // at the end of the tune
-    if (ASSERT_PATTERN(pattern)) {
-        //printf("ERROR: copy_event(%08x, %d, %d, %02x)\n", event, pattern, chan, row);
-        memset(event, 0, sizeof(tADTRACK2_EVENT));
-        return;
-    }
-
-    memcpy(event, &patterns[pattern]->ch[chan].row[row].ev, sizeof(tADTRACK2_EVENT));
-}
-
 static tADTRACK2_EVENT get_event(int p, int chan, int row)
 {
-    tADTRACK2_EVENT event = { 0 };
-
     // return structs by value
-    return ASSERT_PATTERN(p) ? event : patterns[p]->ch[chan].row[row].ev;
+    return ASSERT_PATTERN(p) ? (tADTRACK2_EVENT){ 0 } : patterns[p]->ch[chan].row[row].ev;
 }
 
 // Copy from buffer to an allocated pattern
@@ -2192,7 +2172,6 @@ static void play_line()
 
     for (int chan = 0; chan < songdata->nm_tracks; chan++) {
         // Do a full copy of the event, because we modify event->note in before_process_note()
-        //copy_event(event, current_pattern, chan, current_line);
         *event = get_event(current_pattern, chan, current_line);
 
         // save effect_table into last_effect

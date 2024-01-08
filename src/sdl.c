@@ -102,7 +102,23 @@ void show_info()
             printf(" %c%02x%s", def < 48 ? effects[def] : '?', val, i < 19 ? "|" : "\n");
         }
     }
-        for (int j = 0; j < 2; j++) {
+    for (int j = 0; j < 2; j++) {
+        printf("LEF%d: ", j + 1);
+        for (int i = 0; i < 20; i++) {
+            uint8_t def = last_effect[j][i].def;
+            uint8_t val = last_effect[j][i].val;
+
+            if (def & 0x90) { // ef_fix2
+                val |= ((def - 0x90 - 36) << 4); // def - ef_Extended2 - ef_fix2
+                def = 36;
+            } else {
+                def &= 0x3f;
+            }
+
+            printf(" %c%02x%s", def < 48 ? effects[def] : '?', val, i < 19 ? "|" : "\n");
+        }
+    }
+    for (int j = 0; j < 2; j++) {
         printf("GLF%d: ", j + 1);
         for (int i = 0; i < 20; i++) {
             uint8_t def = glfsld_table[j][i].def;
@@ -162,7 +178,7 @@ int main(int argc, char *argv[])
 
     while (!kbhit()) {
         show_info();
-        rewind_console(7);
+        rewind_console(9);
         SDL_Delay(10);
     }
 
