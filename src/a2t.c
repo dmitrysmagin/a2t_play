@@ -549,21 +549,18 @@ static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
     }
 }
 
-static void arpvib_tables_allocate(tARPVIB_TABLE *mt)
+static void arpvib_tables_allocate(size_t n, tARPVIB_TABLE mt[n])
 {
-    for (int i = 0; i < 255; i++) {
-        tVIBRATO_TABLE *vibrato = &(mt + i)->vibrato;
-        tARPEGGIO_TABLE *arpeggio = &(mt + i)->arpeggio;
-
-        if (vibrato->length) {
+    for (unsigned int i = 0; i < n; i++) {
+        if (mt[i].vibrato.length) {
             vibrato_table[i] = calloc(sizeof(tVIBRATO_TABLE), 1);
-            memcpy(vibrato_table[i], vibrato, sizeof(tVIBRATO_TABLE));
-            //printf("Allocating vibrato table entry %d, length: %d\n", i + 1, vibrato->length);
+            assert(vibrato_table[i]);
+            *vibrato_table[i] = mt[i].vibrato; // copy struct
         }
-        if (arpeggio->length) {
+        if (mt[i].arpeggio.length) {
             arpeggio_table[i] = calloc(sizeof(tARPEGGIO_TABLE), 1);
-            memcpy(arpeggio_table[i], arpeggio, sizeof(tARPEGGIO_TABLE));
-            //printf("Allocating arpeggio table entry %d, length: %d\n", i + 1, arpeggio->length);
+            assert(arpeggio_table[i]);
+            *arpeggio_table[i] = mt[i].arpeggio; // copy struct
         }
     }
 }
@@ -3887,7 +3884,7 @@ static int a2t_read_arpvibtable(char *src)
     tARPVIB_TABLE *arpvib_table = (tARPVIB_TABLE *)calloc(255, sizeof(tARPVIB_TABLE));
     a2t_depack(src, len[2], arpvib_table);
 
-    arpvib_tables_allocate(arpvib_table);
+    arpvib_tables_allocate(255, arpvib_table);
 
     free(arpvib_table);
 
@@ -4430,7 +4427,7 @@ static int a2m_read_songdata(char *src)
         fmreg_table_allocate(255, data->fmreg_table);
 
         // Allocate arpeggio/vibrato macro tables
-        arpvib_tables_allocate(data->arpvib_table);
+        arpvib_tables_allocate(255, data->arpvib_table);
 
         memcpy(songdata->pattern_order, data->pattern_order, 128);
 
