@@ -27,58 +27,10 @@
 #include "opl3.h"
 #include "a2t.h"
 
-#ifndef C_ASSERT
-#define C_ASSERT(e) typedef char __C_ASSERT__[(e) ? 1 : -1]
-#endif
-
-#ifndef bool
-typedef signed char bool;
-#endif
-
-#ifndef FALSE
-#define FALSE 0
-#define TRUE !FALSE
-#endif
-
-#define INT16LE(A) (int16_t)((A[0]) | (A[1] << 8))
-#define UINT16LE(A) (uint16_t)((A[0]) | (A[1] << 8))
-#define INT32LE(A) (int32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
-#define UINT32LE(A) (uint32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
-
 #define keyoff_flag			0x80
 #define fixed_note_flag		0x90
 //#define pattern_loop_flag	0xe0
 //#define pattern_break_flag	0xf0
-
-typedef struct {
-    union {
-        struct {
-            uint8_t multipM: 4, ksrM: 1, sustM: 1, vibrM: 1, tremM : 1;
-            uint8_t multipC: 4, ksrC: 1, sustC: 1, vibrC: 1, tremC : 1;
-            uint8_t volM: 6, kslM: 2;
-            uint8_t volC: 6, kslC: 2;
-            uint8_t decM: 4, attckM: 4;
-            uint8_t decC: 4, attckC: 4;
-            uint8_t relM: 4, sustnM: 4;
-            uint8_t relC: 4, sustnC: 4;
-            uint8_t wformM: 3, : 5;
-            uint8_t wformC: 3, : 5;
-            uint8_t connect: 1, feedb: 3, : 4; // panning is not used here
-        };
-        uint8_t data[11];
-    };
-} tFM_INST_DATA;
-
-C_ASSERT(sizeof(tFM_INST_DATA) == 11);
-
-typedef struct {
-    tFM_INST_DATA fm;
-    uint8_t panning;
-    int8_t  fine_tune;
-    uint8_t perc_voice;
-} tINSTR_DATA;
-
-C_ASSERT(sizeof(tINSTR_DATA) == 14);
 
 typedef struct { // extend tINSTR_DATA
     tFM_INST_DATA fm;
@@ -90,50 +42,6 @@ typedef struct { // extend tINSTR_DATA
 } tINSTR_DATA_EXT;
 
 C_ASSERT(sizeof(tINSTR_DATA_EXT) == 16);
-
-typedef struct {
-    uint8_t length;
-    uint8_t speed;
-    uint8_t loop_begin;
-    uint8_t loop_length;
-    uint8_t keyoff_pos;
-    uint8_t data[255]; // array[1..255] of Byte;
-} tARPEGGIO_TABLE;
-
-typedef struct {
-    uint8_t length;
-    uint8_t speed;
-    uint8_t delay;
-    uint8_t loop_begin;
-    uint8_t loop_length;
-    uint8_t keyoff_pos;
-    int8_t data[255]; // array[1..255] of Shortint;
-} tVIBRATO_TABLE;
-
-typedef struct {
-    tFM_INST_DATA fm;
-    uint8_t freq_slide[2]; // int16_t
-    uint8_t panning;
-    uint8_t duration;
-} tREGISTER_TABLE_DEF;
-
-typedef struct {
-    uint8_t length;
-    uint8_t loop_begin;
-    uint8_t loop_length;
-    uint8_t keyoff_pos;
-    uint8_t arpeggio_table;
-    uint8_t vibrato_table;
-    tREGISTER_TABLE_DEF data[255];
-} tFMREG_TABLE;
-
-typedef struct {
-    tARPEGGIO_TABLE arpeggio;
-    tVIBRATO_TABLE vibrato;
-} tARPVIB_TABLE;
-
-C_ASSERT(sizeof(tFMREG_TABLE) == 3831);
-C_ASSERT(sizeof(tARPVIB_TABLE) == 521);
 
 // NOTE: doesn't map to a2m anymore!
 typedef struct {
@@ -167,27 +75,6 @@ typedef struct {
 typedef enum {
     isPlaying = 0, isPaused, isStopped
 } tPLAY_STATUS;
-
-typedef struct {
-    uint8_t note;
-    uint8_t instr_def;
-    struct {
-        uint8_t def;
-        uint8_t val;
-    } eff[2];
-} tADTRACK2_EVENT;
-
-C_ASSERT(sizeof(tADTRACK2_EVENT) == 6);
-
-typedef struct {
-    struct {
-        struct {
-            tADTRACK2_EVENT ev;
-        } row[256];
-    } ch[20];
-} tPATTERN_DATA;
-
-C_ASSERT(sizeof(tPATTERN_DATA) == 20 * 256 * 6);
 
 const uint8_t _panning[3] = {0x30, 0x10, 0x20};
 
@@ -224,127 +111,6 @@ const uint16_t _chpm_c[20] = {
 };
 
 uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
-
-#define ef_Arpeggio            0
-#define ef_FSlideUp            1
-#define ef_FSlideDown          2
-#define ef_TonePortamento      3
-#define ef_Vibrato             4
-#define ef_TPortamVolSlide     5
-#define ef_VibratoVolSlide     6
-#define ef_FSlideUpFine        7
-#define ef_FSlideDownFine      8
-#define ef_SetModulatorVol     9
-#define ef_VolSlide            10
-#define ef_PositionJump        11
-#define ef_SetInsVolume        12
-#define ef_PatternBreak        13
-#define ef_SetTempo            14
-#define ef_SetSpeed            15
-#define ef_TPortamVSlideFine   16
-#define ef_VibratoVSlideFine   17
-#define ef_SetCarrierVol       18
-#define ef_SetWaveform         19
-#define ef_VolSlideFine        20
-#define ef_RetrigNote          21
-#define ef_Tremolo             22
-#define ef_Tremor              23
-#define ef_ArpggVSlide         24
-#define ef_ArpggVSlideFine     25
-#define ef_MultiRetrigNote     26
-#define ef_FSlideUpVSlide      27
-#define ef_FSlideDownVSlide    28
-#define ef_FSlUpFineVSlide     29
-#define ef_FSlDownFineVSlide   30
-#define ef_FSlUpVSlF           31
-#define ef_FSlDownVSlF         32
-#define ef_FSlUpFineVSlF       33
-#define ef_FSlDownFineVSlF     34
-#define ef_Extended            35
-#define ef_Extended2           36
-#define ef_SetGlobalVolume     37
-#define ef_SwapArpeggio        38
-#define ef_SwapVibrato         39
-#define ef_ForceInsVolume      40
-#define ef_Extended3           41
-#define ef_ExtraFineArpeggio   42
-#define ef_ExtraFineVibrato    43
-#define ef_ExtraFineTremolo    44
-#define ef_SetCustomSpeedTab   45
-#define ef_GlobalFSlideUp      46
-#define ef_GlobalFSlideDown    47
-#define ef_ex_SetTremDepth     0
-#define ef_ex_SetVibDepth      1
-#define ef_ex_SetAttckRateM    2
-#define ef_ex_SetDecayRateM    3
-#define ef_ex_SetSustnLevelM   4
-#define ef_ex_SetRelRateM      5
-#define ef_ex_SetAttckRateC    6
-#define ef_ex_SetDecayRateC    7
-#define ef_ex_SetSustnLevelC   8
-#define ef_ex_SetRelRateC      9
-#define ef_ex_SetFeedback      10
-#define ef_ex_SetPanningPos    11
-#define ef_ex_PatternLoop      12
-#define ef_ex_PatternLoopRec   13
-#define ef_ex_ExtendedCmd      14
-#define ef_ex_cmd_MKOffLoopDi  0
-#define ef_ex_cmd_MKOffLoopEn  1
-#define ef_ex_cmd_TPortaFKdis  2
-#define ef_ex_cmd_TPortaFKenb  3
-#define ef_ex_cmd_RestartEnv   4
-#define ef_ex_cmd_4opVlockOff  5
-#define ef_ex_cmd_4opVlockOn   6
-#define ef_ex_cmd_ForceBpmSld  7
-#define ef_ex_ExtendedCmd2     15
-#define ef_ex_cmd2_RSS         0
-#define ef_ex_cmd2_ResetVol    1
-#define ef_ex_cmd2_LockVol     2
-#define ef_ex_cmd2_UnlockVol   3
-#define ef_ex_cmd2_LockVP      4
-#define ef_ex_cmd2_UnlockVP    5
-#define ef_ex_cmd2_VSlide_mod  6
-#define ef_ex_cmd2_VSlide_car  7
-#define ef_ex_cmd2_VSlide_def  8
-#define ef_ex_cmd2_LockPan     9
-#define ef_ex_cmd2_UnlockPan   10
-#define ef_ex_cmd2_VibrOff     11
-#define ef_ex_cmd2_TremOff     12
-#define ef_ex_cmd2_FVib_FGFS   13
-#define ef_ex_cmd2_FTrm_XFGFS  14
-#define ef_ex_cmd2_NoRestart   15
-#define ef_ex2_PatDelayFrame   0
-#define ef_ex2_PatDelayRow     1
-#define ef_ex2_NoteDelay       2
-#define ef_ex2_NoteCut         3
-#define ef_ex2_FineTuneUp      4
-#define ef_ex2_FineTuneDown    5
-#define ef_ex2_GlVolSlideUp    6
-#define ef_ex2_GlVolSlideDn    7
-#define ef_ex2_GlVolSlideUpF   8
-#define ef_ex2_GlVolSlideDnF   9
-#define ef_ex2_GlVolSldUpXF    10
-#define ef_ex2_GlVolSldDnXF    11
-#define ef_ex2_VolSlideUpXF    12
-#define ef_ex2_VolSlideDnXF    13
-#define ef_ex2_FreqSlideUpXF   14
-#define ef_ex2_FreqSlideDnXF   15
-#define ef_ex3_SetConnection   0
-#define ef_ex3_SetMultipM      1
-#define ef_ex3_SetKslM         2
-#define ef_ex3_SetTremoloM     3
-#define ef_ex3_SetVibratoM     4
-#define ef_ex3_SetKsrM         5
-#define ef_ex3_SetSustainM     6
-#define ef_ex3_SetMultipC      7
-#define ef_ex3_SetKslC         8
-#define ef_ex3_SetTremoloC     9
-#define ef_ex3_SetVibratoC     10
-#define ef_ex3_SetKsrC         11
-#define ef_ex3_SetSustainC     12
-
-#define ef_fix1 0x80
-#define ef_fix2 0x90
 
 #define EFGR_ARPVOLSLIDE 1
 #define EFGR_FSLIDEVOLSLIDE 2
@@ -460,27 +226,13 @@ uint16_t zero_fq_table[20];		// array[1..20] of Word;
 tEFFECT_TABLE effect_table[2][20];	// array[1..20] of Word;
 uint8_t fslide_table[2][20];		// array[1..20] of Byte;
 tEFFECT_TABLE glfsld_table[2][20];	// array[1..20] of Word;
-struct {
-    uint16_t freq;
-    uint8_t speed;
-} porta_table[2][20];	// array[1..20] of Record freq: Word; speed: Byte; end;
+tPORTA_TABLE porta_table[2][20];	// array[1..20] of Record freq: Word; speed: Byte; end;
 bool portaFK_table[20]; // array[1..20] of Boolean;;
-struct {
-    uint8_t state, note, add1, add2;
-} arpgg_table[2][20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
-struct {
-    uint8_t pos, dir, speed, depth;
-    bool fine;
-} vibr_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
-struct {
-    uint8_t pos, dir, speed, depth;
-    bool fine;
-} trem_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
+tARPGG_TABLE arpgg_table[2][20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
+tVIBRTREM_TABLE vibr_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
+tVIBRTREM_TABLE trem_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
 uint8_t retrig_table[2][20];	// array[1..20] of Byte;
-struct {
-    int8_t pos;
-    uint8_t volM, volC;
-} tremor_table[2][20];		// array[1..20] of Record pos: Integer; volume: Word; end;
+tTREMOR_TABLE tremor_table[2][20];		// array[1..20] of Record pos: Integer; volume: Word; end;
 uint8_t panning_table[20];	// array[1..20] of Byte;
 tEFFECT_TABLE last_effect[2][20];	// array[1..20] of Byte;
 uint8_t volslide_type[20];	// array[1..20] of Byte;
@@ -537,7 +289,7 @@ static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
 {
     for (unsigned int i = 0; i < n; i++) {
         if (rt[i].length) {
-            fmreg_table[i] = calloc(sizeof(tFMREG_TABLE), 1);
+            fmreg_table[i] = calloc(1, sizeof(tFMREG_TABLE));
             assert(fmreg_table[i]);
             *fmreg_table[i] = rt[i]; // copy struct
         }
@@ -560,12 +312,12 @@ static void arpvib_tables_allocate(size_t n, tARPVIB_TABLE mt[n])
 {
     for (unsigned int i = 0; i < n; i++) {
         if (mt[i].vibrato.length) {
-            vibrato_table[i] = calloc(sizeof(tVIBRATO_TABLE), 1);
+            vibrato_table[i] = calloc(1, sizeof(tVIBRATO_TABLE));
             assert(vibrato_table[i]);
             *vibrato_table[i] = mt[i].vibrato; // copy struct
         }
         if (mt[i].arpeggio.length) {
-            arpeggio_table[i] = calloc(sizeof(tARPEGGIO_TABLE), 1);
+            arpeggio_table[i] = calloc(1, sizeof(tARPEGGIO_TABLE));
             assert(arpeggio_table[i]);
             *arpeggio_table[i] = mt[i].arpeggio; // copy struct
         }
@@ -2828,12 +2580,8 @@ static void update_effects()
 
 static void update_fine_effects(int slot, int chan)
 {
-    uint8_t def, val;
-
-    //def = event_table[chan].eff[slot].def;
-    //val = event_table[chan].eff[slot].val;
-    def = effect_table[slot][chan].def;
-    val = effect_table[slot][chan].val;
+    uint8_t def = effect_table[slot][chan].def;
+    uint8_t val = effect_table[slot][chan].val;
 
     switch (def) {
     case ef_ArpggVSlideFine:
@@ -3606,26 +3354,6 @@ void a2t_play(char *tune) // start_playing()
 int ffver = 1;
 int len[21];
 
-typedef struct {
-    char id[15];	// '_a2tiny_module_'
-    uint8_t crc[4]; // uint32_t
-    uint8_t ffver;
-    uint8_t npatt;
-    uint8_t tempo;
-    uint8_t speed;
-} A2T_HEADER;
-
-C_ASSERT(sizeof(A2T_HEADER) == 23);
-
-typedef struct {
-    char id[10];	// '_a2module_'
-    uint8_t crc[4]; // uint32_t
-    uint8_t ffver;
-    uint8_t npatt;
-} A2M_HEADER;
-
-C_ASSERT(sizeof(A2M_HEADER) == 16);
-
 char *a2t_load(char *name)
 {
     FILE *fh;
@@ -3670,59 +3398,6 @@ static inline void a2t_depack(void *src, int srcsize, void *dst)
         break;
     }
 }
-
-/* Data for importing A2T format */
-typedef struct {
-    uint8_t len[6][2]; // uint16_t
-} A2T_VARHEADER_V1234;
-
-typedef struct {
-    uint8_t common_flag;
-    uint8_t len[10][2]; // uint16_t
-} A2T_VARHEADER_V5678;
-
-typedef struct {
-    uint8_t common_flag;
-    uint8_t patt_len[2]; // uint16_t
-    uint8_t nm_tracks;
-    uint8_t macro_speedup[2]; // uint16_t
-    uint8_t len[20][4]; // uint32_t
-} A2T_VARHEADER_V9;
-
-typedef struct {
-    uint8_t common_flag;
-    uint8_t patt_len[2]; // uint16_t
-    uint8_t nm_tracks;
-    uint8_t macro_speedup[2]; // uint16_t
-    uint8_t flag_4op;
-    uint8_t lock_flags[20];
-    uint8_t len[20][4]; // uint32_t
-} A2T_VARHEADER_V10;
-
-typedef struct {
-    uint8_t common_flag;
-    uint8_t patt_len[2]; // uint16_t
-    uint8_t nm_tracks;
-    uint8_t macro_speedup[2]; // uint16_t
-    uint8_t flag_4op;
-    uint8_t lock_flags[20];
-    uint8_t len[21][4]; // uint32_t
-} A2T_VARHEADER_V11;
-
-typedef union {
-    A2T_VARHEADER_V1234 v1234;
-    A2T_VARHEADER_V5678 v5678;
-    A2T_VARHEADER_V9    v9;
-    A2T_VARHEADER_V10   v10;
-    A2T_VARHEADER_V11   v11;
-} A2T_VARHEADER;
-
-C_ASSERT(sizeof(A2T_VARHEADER_V1234) == 12);
-C_ASSERT(sizeof(A2T_VARHEADER_V5678) == 21);
-C_ASSERT(sizeof(A2T_VARHEADER_V9) == 86);
-C_ASSERT(sizeof(A2T_VARHEADER_V10) == 107);
-C_ASSERT(sizeof(A2T_VARHEADER_V11) == 111);
-C_ASSERT(sizeof(A2T_VARHEADER) == 111);
 
 // read the variable part of the header
 static int a2t_read_varheader(char *blockptr)
@@ -3893,72 +3568,6 @@ static int a2t_read_order(char *src)
 
     return len[i];
 }
-
-// only for importing v 1,2,3,4,5,6,7,8
-typedef struct {
-    uint8_t note;
-    uint8_t instr_def;
-    uint8_t effect_def;
-    uint8_t effect;
-} tADTRACK2_EVENT_V1234;
-
-// for importing v 1,2,3,4 patterns
-typedef struct {
-    struct {
-        struct {
-            tADTRACK2_EVENT_V1234 ev;
-        } ch[9];
-    } row[64];
-} tPATTERN_DATA_V1234;
-
-// for importing v 5,6,7,8 patterns
-typedef struct {
-    struct {
-        struct {
-            tADTRACK2_EVENT_V1234 ev;
-        } row[64];
-    } ch[18];
-} tPATTERN_DATA_V5678;
-
-C_ASSERT(sizeof(tADTRACK2_EVENT_V1234) == 4);
-C_ASSERT(sizeof(tPATTERN_DATA_V1234) == 2304);
-C_ASSERT(sizeof(tPATTERN_DATA_V5678) == 4608);
-
-// Old v1234 effects
-enum {
-    fx_Arpeggio          = 0x00,
-    fx_FSlideUp          = 0x01,
-    fx_FSlideDown        = 0x02,
-    fx_FSlideUpFine      = 0x03,
-    fx_FSlideDownFine    = 0x04,
-    fx_TonePortamento    = 0x05,
-    fx_TPortamVolSlide   = 0x06,
-    fx_Vibrato           = 0x07,
-    fx_VibratoVolSlide   = 0x08,
-    fx_SetOpIntensity    = 0x09,
-    fx_SetInsVolume      = 0x0a,
-    fx_PatternBreak      = 0x0b,
-    fx_PatternJump       = 0x0c,
-    fx_SetTempo          = 0x0d,
-    fx_SetTimer          = 0x0e,
-    fx_Extended          = 0x0f,
-    fx_ex_DefAMdepth     = 0x00,
-    fx_ex_DefVibDepth    = 0x01,
-    fx_ex_DefWaveform    = 0x02,
-    fx_ex_ManSlideUp     = 0x03,
-    fx_ex_ManSlideDown   = 0x04,
-    fx_ex_VSlideUp       = 0x05,
-    fx_ex_VSlideDown     = 0x06,
-    fx_ex_VSlideUpFine   = 0x07,
-    fx_ex_VSlideDownFine = 0x08,
-    fx_ex_RetrigNote     = 0x09,
-    fx_ex_SetAttckRate   = 0x0a,
-    fx_ex_SetDecayRate   = 0x0b,
-    fx_ex_SetSustnLevel  = 0x0c,
-    fx_ex_SetReleaseRate = 0x0d,
-    fx_ex_SetFeedback    = 0x0e,
-    fx_ex_ExtendedCmd    = 0x0f
-};
 
 // For importing from a2m v1234
 bool adsr_carrier[9];
@@ -4305,51 +3914,6 @@ static int a2m_read_varheader(char *blockptr, int npatt)
 
     return 0;
 }
-
-/* Data for importing A2M format */
-typedef struct {
-    char songname[43];
-    char composer[43];
-    char instr_names[250][33];
-    uint8_t instr_data[250][13];
-    uint8_t pattern_order[128];
-    uint8_t tempo;
-    uint8_t speed;
-    uint8_t common_flag; // A2M_SONGDATA_V5678
-} A2M_SONGDATA_V1234;
-
-typedef struct {
-    char songname[43];
-    char composer[43];
-    char instr_names[255][43];
-    tINSTR_DATA instr_data[255];
-    tFMREG_TABLE fmreg_table[255];
-    tARPVIB_TABLE arpvib_table[255];
-    uint8_t pattern_order[128];
-    uint8_t tempo;
-    uint8_t speed;
-    uint8_t common_flag;
-    uint8_t patt_len[2];           // uint16_t
-    uint8_t nm_tracks;
-    uint8_t macro_speedup[2];      // uint16_t
-    uint8_t flag_4op;              // A2M_SONGDATA_V10
-    uint8_t lock_flags[20];        // A2M_SONGDATA_V10
-    char pattern_names[128][43];   // A2M_SONGDATA_V11
-    // disabled fm macro columns in the editor
-    int8_t dis_fmreg_col[255][28]; // A2M_SONGDATA_V11
-    struct {
-        uint8_t num_4op;
-        uint8_t idx_4op[128];
-    } ins_4op_flags;             // A2M_SONGDATA_V12_13
-    uint8_t reserved_data[1024]; // A2M_SONGDATA_V12_13
-    struct {
-        uint8_t rows_per_beat;
-        int8_t tempo_finetune[2]; // int16_t
-    } bpm_data;                   // A2M_SONGDATA_V14
-} A2M_SONGDATA_V9_14;
-
-C_ASSERT(sizeof(A2M_SONGDATA_V1234) == 11717);
-C_ASSERT(sizeof(A2M_SONGDATA_V9_14) == 1138338);
 
 static int a2m_read_songdata(char *src)
 {
