@@ -240,24 +240,6 @@ uint8_t notedel_table[20];	// array[1..20] of Byte;
 uint8_t notecut_table[20];	// array[1..20] of Byte;
 int8_t ftune_table[20];		// array[1..20] of Shortint;
 bool keyoff_loop[20];		// array[1..20] of Boolean;
-
-typedef struct {
-    uint16_t fmreg_pos,
-         arpg_pos,
-         vib_pos;
-    uint8_t  fmreg_count,
-         fmreg_duration,
-         arpg_count,
-         vib_count,
-         vib_delay,
-         fmreg_ins, // fmreg_table
-         arpg_table,
-         vib_table,
-         arpg_note;
-    bool vib_paused;
-    uint16_t vib_freq;
-} tCH_MACRO_TABLE;
-
 tCH_MACRO_TABLE macro_table[20];// array[1..20] of tCH_MACRO_TABLE;
 
 uint8_t loopbck_table[20];	// array[1..20] of Byte;
@@ -969,7 +951,7 @@ void set_overall_volume(unsigned char level)
 // FIXME: check ins
 static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 {
-    macro_table[chan].fmreg_count = 1;
+    //macro_table[chan].fmreg_count = 1; // NOTE: not used, merge with duration?
     macro_table[chan].fmreg_pos = 0;
     macro_table[chan].fmreg_duration = 0;
     macro_table[chan].fmreg_ins = ins; // todo: check against fmreg_table[ins - 1]->length
@@ -2852,7 +2834,7 @@ static void macro_poll_proc()
             if (mt->fmreg_duration > 1) {
                 mt->fmreg_duration--;
             } else {
-                mt->fmreg_count = 1;
+                //mt->fmreg_count = 1;
                 if (mt->fmreg_pos <= rt->length) {
                     if ((rt->loop_begin != 0) && (rt->loop_length != 0)) {
                         if (mt->fmreg_pos == rt->loop_begin + (rt->loop_length-1)) {

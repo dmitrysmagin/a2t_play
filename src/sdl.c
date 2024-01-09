@@ -109,6 +109,14 @@ void show_info()
     show_eff("EFF", effect_table);
     show_eff("LEF", last_effect);
     show_eff("GLF", glfsld_table);
+    printf("FMRG: ");
+    for (int i = 0; i < 20; i++) {
+        printf("%02x%02x%s", macro_table[i].fmreg_pos & 0xff, macro_table[i].fmreg_duration, i < 19 ? "|" : "\n");
+    }
+    printf("VIBM: ");
+    for (int i = 0; i < 20; i++) {
+        printf("%02x%02x%s", macro_table[i].vib_pos & 0xff, macro_table[i].vib_count, i < 19 ? "|" : "\n");
+    }
 }
 
 #undef main
@@ -153,7 +161,7 @@ int main(int argc, char *argv[])
 
     while (!kbhit()) {
         show_info();
-        rewind_console(9);
+        rewind_console(11);
         SDL_Delay(10);
     }
 

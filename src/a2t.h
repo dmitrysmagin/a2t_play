@@ -469,10 +469,28 @@ typedef struct {
     uint8_t def, val;
 } tEFFECT_TABLE;
 
+typedef struct {
+    uint16_t fmreg_pos,
+         arpg_pos,
+         vib_pos;
+    uint8_t  //fmreg_count,
+         fmreg_duration,
+         arpg_count,
+         vib_count,
+         vib_delay,
+         fmreg_ins, // fmreg_table
+         arpg_table,
+         vib_table,
+         arpg_note;
+    bool vib_paused;
+    uint16_t vib_freq;
+} tCH_MACRO_TABLE;
+
 extern uint8_t voice_table[20];
 extern uint16_t freq_table[20];
 extern tEFFECT_TABLE effect_table[2][20];
 extern tEFFECT_TABLE last_effect[2][20];
 extern tEFFECT_TABLE glfsld_table[2][20];
+extern tCH_MACRO_TABLE macro_table[20];
 
 #endif // _A2T_H_
