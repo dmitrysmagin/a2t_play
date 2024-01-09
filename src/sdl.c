@@ -73,10 +73,30 @@ void rewind_console(int lines)
     #endif
 }
 
-void show_info()
+void show_eff(char *name, tEFFECT_TABLE table[2][20])
 {
     static char effects[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><";
 
+    for (int j = 0; j < 2; j++) {
+        printf("%s%d: ", name, j + 1);
+        for (int i = 0; i < 20; i++) {
+            uint8_t def = table[j][i].def;
+            uint8_t val = table[j][i].val;
+
+            if (def & 0x90) { // ef_fix2
+                val |= ((def - 0x90 - 36) << 4); // def - ef_Extended2 - ef_fix2
+                def = 36;
+            } else {
+                def &= 0x3f;
+            }
+
+            printf(" %c%02x%s", def < 48 ? effects[def] : '?', val, i < 19 ? "|" : "\n");
+        }
+    }
+}
+
+void show_info()
+{
     printf("Order %03d, Pattern %03d, Row %03d\n", current_order, current_pattern, current_line);
     printf("VOIC: ");
     for (int i = 0; i < 20; i++) {
@@ -86,54 +106,9 @@ void show_info()
     for (int i = 0; i < 20; i++) {
         printf("%04x%s", freq_table[i], i < 19 ? "|" : "\n");
     }
-    for (int j = 0; j < 2; j++) {
-        printf("EFF%d: ", j + 1);
-        for (int i = 0; i < 20; i++) {
-            uint8_t def = effect_table[j][i].def;
-            uint8_t val = effect_table[j][i].val;
-
-            if (def & 0x90) { // ef_fix2
-                val |= ((def - 0x90 - 36) << 4); // def - ef_Extended2 - ef_fix2
-                def = 36;
-            } else {
-                def &= 0x3f;
-            }
-
-            printf(" %c%02x%s", def < 48 ? effects[def] : '?', val, i < 19 ? "|" : "\n");
-        }
-    }
-    for (int j = 0; j < 2; j++) {
-        printf("LEF%d: ", j + 1);
-        for (int i = 0; i < 20; i++) {
-            uint8_t def = last_effect[j][i].def;
-            uint8_t val = last_effect[j][i].val;
-
-            if (def & 0x90) { // ef_fix2
-                val |= ((def - 0x90 - 36) << 4); // def - ef_Extended2 - ef_fix2
-                def = 36;
-            } else {
-                def &= 0x3f;
-            }
-
-            printf(" %c%02x%s", def < 48 ? effects[def] : '?', val, i < 19 ? "|" : "\n");
-        }
-    }
-    for (int j = 0; j < 2; j++) {
-        printf("GLF%d: ", j + 1);
-        for (int i = 0; i < 20; i++) {
-            uint8_t def = glfsld_table[j][i].def;
-            uint8_t val = glfsld_table[j][i].val;
-
-            if (def & 0x90) { // ef_fix2
-                val |= ((def - 0x90 - 36) << 4); // def - ef_Extended2 - ef_fix2
-                def = 36;
-            } else {
-                def &= 0x3f;
-            }
-
-            printf(" %c%02x%s", def < 45 ? effects[def] : '?', val, i < 19 ? "|" : "\n");
-        }
-    }
+    show_eff("EFF", effect_table);
+    show_eff("LEF", last_effect);
+    show_eff("GLF", glfsld_table);
 }
 
 #undef main
