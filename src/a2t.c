@@ -31,46 +31,6 @@
 //#define pattern_loop_flag	0xe0
 //#define pattern_break_flag	0xf0
 
-typedef struct { // extend tINSTR_DATA
-    tFM_INST_DATA fm;
-    uint8_t panning;
-    int8_t  fine_tune;
-    uint8_t perc_voice;
-    uint8_t vibrato;
-    uint8_t arpeggio;
-} tINSTR_DATA_EXT;
-
-C_ASSERT(sizeof(tINSTR_DATA_EXT) == 16);
-
-// NOTE: doesn't map to a2m anymore!
-typedef struct {
-    char            songname[43];        // pascal String[42];
-    char            composer[43];        // pascal String[42];
-    char            instr_names[255][43];// array[1..255] of String[42];
-    tINSTR_DATA     instr_data[255];     // array[1..255] of tADTRACK2_INS;
-    uint8_t         instr_arpeggio[255]; // todo: include into tINSTR_DATA_EXT
-    uint8_t         instr_vibrato[255];  // todo: include into tINSTR_DATA_EXT
-    uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
-    uint8_t         tempo;
-    uint8_t         speed;
-    uint8_t         common_flag;
-    uint16_t        patt_len;
-    uint8_t         nm_tracks;
-    uint16_t        macro_speedup;
-    uint8_t         flag_4op;
-    uint8_t         lock_flags[20];
-    //char            pattern_names[128][43];  // array[0..$7f] of String[42];
-    /*struct {
-        uint8_t		num_4op;
-        uint8_t		idx_4op[128];
-    } ins_4op_flags;*/
-    //uint8_t			reserved_data[1024];
-    /*struct {
-        uint8_t		rows_per_beat;
-        int16_t		tempo_finetune;
-    } bpm_data;*/
-} tFIXED_SONGDATA;
-
 typedef enum {
     isPlaying = 0, isPaused, isStopped
 } tPLAY_STATUS;
@@ -254,10 +214,48 @@ bool volume_scaling, percussion_mode;
 uint8_t last_order;
 bool reset_chan[20];	// array[1..20] of Boolean;
 
+typedef struct { // extend tINSTR_DATA
+    /*tFM_INST_DATA fm;
+    uint8_t panning;
+    int8_t  fine_tune;
+    uint8_t perc_voice;*/
+    tINSTR_DATA instr_data;
+    uint8_t vibrato;
+    uint8_t arpeggio;
+} tINSTR_DATA_EXT;
+
+C_ASSERT(sizeof(tINSTR_DATA_EXT) == 16);
+
+// NOTE: doesn't map to a2m anymore!
+typedef struct {
+    char            songname[43];        // pascal String[42];
+    char            composer[43];        // pascal String[42];
+    char            instr_names[255][43];// array[1..255] of String[42];
+    uint8_t         instr_arpeggio[255]; // todo: include into tINSTR_DATA_EXT
+    uint8_t         instr_vibrato[255];  // todo: include into tINSTR_DATA_EXT
+    uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
+    uint8_t         tempo;
+    uint8_t         speed;
+    uint8_t         common_flag;
+    uint16_t        patt_len;
+    uint8_t         nm_tracks;
+    uint16_t        macro_speedup;
+    uint8_t         flag_4op;
+    uint8_t         lock_flags[20];
+} tFIXED_SONGDATA;
+
 // This would be later moved to class or struct
 tFIXED_SONGDATA _songdata, *songdata = &_songdata;
 
 // Helpers for macro tables =======================================================================
+
+tINSTR_DATA_EXT instruments[255] = { };
+
+static void instruments_allocate(size_t number)
+{
+    // TODO: perhaps use tINSTR_DATA_EXT **instruments;
+    memset(instruments, 0, sizeof(instruments));
+}
 
 // fmreg/arpeggio/vibrato macro tables
 tFMREG_TABLE *fmreg_table[255] = { 0 };
@@ -421,6 +419,7 @@ static void memory_usage()
     printf("Memory usage:\n");
     printf("\tSongdata: %d bytes\n", sizeof(tFIXED_SONGDATA));
     printf("\tPatterns * %d: %d bytes\n", npatterns, npatterns * sizeof(tPATTERN_DATA));
+    printf("\tInstruments * 255: %d bytes\n", sizeof(tINSTR_DATA_EXT[255]));
     printf("\tFmreg * %d: %d bytes\n", nfmregs, nfmregs * sizeof(tFMREG_TABLE));
     printf("\tVibrato * %d: %d bytes\n", nvib, nvib * sizeof(tVIBRATO_TABLE));
     printf("\tArpeggio * %d: %d bytes\n", narp, narp * sizeof(tARPEGGIO_TABLE));
@@ -539,17 +538,18 @@ static void change_freq(int chan, uint16_t freq)
 
 static inline int8_t get_instr_fine_tune(uint8_t ins)
 {
-    return ins ? songdata->instr_data[ins - 1].fine_tune : 0;
+    return ins ? instruments[ins - 1].instr_data.fine_tune : 0;
 }
 
 static inline tINSTR_DATA *get_instr_data_by_ch(int chan)
 {
-    return &songdata->instr_data[voice_table[chan] - 1];
+    uint8_t ins = voice_table[chan];
+    return ins ? &instruments[ins - 1].instr_data : NULL;
 }
 
 static inline tINSTR_DATA *get_instr_data(uint8_t ins)
 {
-    return &songdata->instr_data[ins - 1];
+    return ins ? &instruments[ins - 1].instr_data : NULL;
 }
 
 static bool is_chan_adsr_data_empty(int chan)
@@ -3468,10 +3468,12 @@ static int a2t_read_instruments(char *src)
         dst += sizeof(tRESERVED);
     }
 
+    // TODO: Calculate the real number of used instruments
+    instruments_allocate(instnum);
+
     if (ffver < 9) {
         tINSTR_DATA_V1_8 *instr_data = (tINSTR_DATA_V1_8 *)dst;
 
-        // TODO: instruments_allocate(calc_non_void_instruments);
         for (int i = 0; i < 250; i++) {
             instrument_import_v1_8(i + 1, &instr_data[i]);
         }
@@ -3932,7 +3934,9 @@ static int a2m_read_songdata(char *src)
         memcpy(songdata->songname, data->songname, 43);
         memcpy(songdata->composer, data->composer, 43);
 
-        // TODO: instruments_allocate(calc_non_void_instruments);
+        // TODO: Calculate the real number of used instruments
+        instruments_allocate(250);
+
         for (int i = 0; i < 250; i++) {
             memcpy(songdata->instr_names[i], data->instr_names[i] + 1, 32);
             instrument_import_v1_8(i + 1, &data->instr_data[i]);
@@ -3955,7 +3959,9 @@ static int a2m_read_songdata(char *src)
         memcpy(songdata->songname, data->songname, 43);
         memcpy(songdata->composer, data->composer, 43);
 
-        // TODO: instruments_allocate(calc_non_void_instruments);
+        // TODO: Calculate the real number of used instruments
+        instruments_allocate(255);
+
         for (int i = 0; i < 255; i++) {
             memcpy(songdata->instr_names[i], data->instr_names[i] + 1, 42);
             instrument_import(i + 1, &data->instr_data[i]);
