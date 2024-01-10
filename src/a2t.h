@@ -400,17 +400,37 @@ enum {
 
 /* Data for importing A2M format */
 typedef struct {
+    tFM_INST_DATA fm;
+    uint8_t panning;
+    int8_t  fine_tune;
+} tINSTR_DATA_V1_8;
+
+C_ASSERT(sizeof(tINSTR_DATA_V1_8) == 13);
+
+typedef struct {
     char songname[43];
     char composer[43];
     char instr_names[250][33];
-    uint8_t instr_data[250][13];
+    tINSTR_DATA_V1_8 instr_data[250];
     uint8_t pattern_order[128];
     uint8_t tempo;
     uint8_t speed;
     uint8_t common_flag; // A2M_SONGDATA_V5678
-} A2M_SONGDATA_V1234;
+} A2M_SONGDATA_V1_8;
 
-C_ASSERT(sizeof(A2M_SONGDATA_V1234) == 11717);
+C_ASSERT(sizeof(A2M_SONGDATA_V1_8) == 11717);
+
+typedef struct {
+    uint8_t num_4op;
+    uint8_t idx_4op[128];
+} tINS_4OP_FLAGS;
+
+typedef uint8_t tRESERVED[1024];
+
+typedef struct {
+    uint8_t rows_per_beat;
+    int8_t tempo_finetune[2]; // int16_t
+} tBPM_DATA;
 
 typedef struct {
     char songname[43];
@@ -429,17 +449,10 @@ typedef struct {
     uint8_t flag_4op;              // A2M_SONGDATA_V10
     uint8_t lock_flags[20];        // A2M_SONGDATA_V10
     char pattern_names[128][43];   // A2M_SONGDATA_V11
-    // disabled fm macro columns in the editor
     int8_t dis_fmreg_col[255][28]; // A2M_SONGDATA_V11
-    struct {
-        uint8_t num_4op;
-        uint8_t idx_4op[128];
-    } ins_4op_flags;             // A2M_SONGDATA_V12_13
-    uint8_t reserved_data[1024]; // A2M_SONGDATA_V12_13
-    struct {
-        uint8_t rows_per_beat;
-        int8_t tempo_finetune[2]; // int16_t
-    } bpm_data;                   // A2M_SONGDATA_V14
+    tINS_4OP_FLAGS ins_4op_flags;  // A2M_SONGDATA_V12_13
+    tRESERVED reserved_data;       // A2M_SONGDATA_V12_13
+    tBPM_DATA bpm_data;            // A2M_SONGDATA_V14
 } A2M_SONGDATA_V9_14;
 
 C_ASSERT(sizeof(A2M_SONGDATA_V9_14) == 1138338);

@@ -61,15 +61,15 @@ typedef struct {
     uint8_t         flag_4op;
     uint8_t         lock_flags[20];
     //char            pattern_names[128][43];  // array[0..$7f] of String[42];
-    struct {
+    /*struct {
         uint8_t		num_4op;
         uint8_t		idx_4op[128];
-    } ins_4op_flags;
+    } ins_4op_flags;*/
     //uint8_t			reserved_data[1024];
-    struct {
+    /*struct {
         uint8_t		rows_per_beat;
         int16_t		tempo_finetune;
-    } bpm_data;
+    } bpm_data;*/
 } tFIXED_SONGDATA;
 
 typedef enum {
@@ -3433,23 +3433,23 @@ static int a2t_read_varheader(char *blockptr)
 
 static int a2t_read_instruments(char *src)
 {
-    int instsize = (ffver < 9 ? 13 : 14);
-    int dstsize = (ffver < 9 ? 250 * 13 : 255 * 14) +
-                  (ffver > 11 ? 129 + 1024 + 3 : 0);
+    int instsize = (ffver < 9 ? sizeof(tINSTR_DATA_V1_8) : sizeof(tINSTR_DATA));
+    int dstsize = (ffver < 9 ? 250 * instsize : 255 * instsize) +
+                  (ffver > 11 ?  sizeof(tBPM_DATA) + sizeof(tINS_4OP_FLAGS) + sizeof(tRESERVED) : 0);
     char *dst = (char *)calloc(dstsize, 1);
 
     a2t_depack(src, len[0], dst);
 
     if (ffver == 14) {
-        memcpy(&songdata->bpm_data, dst, sizeof(songdata->bpm_data));
-        dst += sizeof(songdata->bpm_data);
+        //memcpy(&songdata->bpm_data, dst, sizeof(songdata->bpm_data));
+        dst += sizeof(tBPM_DATA);
     }
 
     if (ffver >= 12 && ffver <= 14) {
-        memcpy(&songdata->ins_4op_flags, dst, sizeof(songdata->ins_4op_flags));
-        dst += sizeof(songdata->ins_4op_flags);
+        //memcpy(&songdata->ins_4op_flags, dst, sizeof(songdata->ins_4op_flags));
+        dst += sizeof(tINS_4OP_FLAGS);
         //memcpy(&songdata->reserved_data, dst, sizeof(songdata->reserved_data));
-        dst += sizeof(1024/*songdata->reserved_data*/);
+        dst += sizeof(tRESERVED);
     }
 
     for (int i = 0; i < (ffver < 9 ? 250 : 255); i++) {
@@ -3899,16 +3899,20 @@ static int a2m_read_varheader(char *blockptr, int npatt)
 
 static int a2m_read_songdata(char *src)
 {
-    if (ffver < 9) {		// 1,2,3,4,5,6,7,8
-        A2M_SONGDATA_V1234 *data = malloc(sizeof(*data));
+    if (ffver < 9) {		// 1 - 8
+        A2M_SONGDATA_V1_8 *data = malloc(sizeof(*data));
         a2t_depack(src, len[0], data);
 
         memcpy(songdata->songname, data->songname, 43);
         memcpy(songdata->composer, data->composer, 43);
 
+        // TODO: instruments_allocate(calc_non_void_instruments);
         for (int i = 0; i < 250; i++) {
             memcpy(songdata->instr_names[i], data->instr_names[i], 33);
-            memcpy(&songdata->instr_data[i], data->instr_data[i], 13);
+            songdata->instr_data[i].fm = data->instr_data[i].fm; // copy struct
+            songdata->instr_data[i].panning = data->instr_data[i].panning;
+            songdata->instr_data[i].fine_tune = data->instr_data[i].fine_tune;
+            //memcpy(&songdata->instr_data[i], &data->instr_data[i], 13);
         }
 
         memcpy(songdata->pattern_order, data->pattern_order, 128);
@@ -3916,7 +3920,7 @@ static int a2m_read_songdata(char *src)
         songdata->tempo = data->tempo;
         songdata->speed = data->speed;
 
-        if (ffver > 4) { // 5,6,7,8
+        if (ffver > 4) { // 5 - 8
             songdata->common_flag = data->common_flag;
         }
 
@@ -3928,9 +3932,11 @@ static int a2m_read_songdata(char *src)
         memcpy(songdata->songname, data->songname, 43);
         memcpy(songdata->composer, data->composer, 43);
 
+        // TODO: instruments_allocate(calc_non_void_instruments);
         for (int i = 0; i < 255; i++) {
             memcpy(songdata->instr_names[i], data->instr_names[i], 43);
-            memcpy(&songdata->instr_data[i], &data->instr_data[i], 14);
+            songdata->instr_data[i] = data->instr_data[i]; // copy struct
+            //memcpy(&songdata->instr_data[i], &data->instr_data[i], 14);
 
             // Instrument arpegio/vibrato references
             songdata->instr_arpeggio[i] = data->fmreg_table[i].arpeggio_table;
@@ -3962,15 +3968,15 @@ static int a2m_read_songdata(char *src)
         disabled_fmregs_allocate(255, data->dis_fmreg_col);
 
         // v12-13
-        songdata->ins_4op_flags.num_4op = data->ins_4op_flags.num_4op;
-        memcpy(songdata->ins_4op_flags.idx_4op, data->ins_4op_flags.idx_4op, 128);
         // NOTE: not used anywhere
+        //songdata->ins_4op_flags.num_4op = data->ins_4op_flags.num_4op;
+        //memcpy(songdata->ins_4op_flags.idx_4op, data->ins_4op_flags.idx_4op, 128);
         //memcpy(songdata->reserved_data, data->reserved_data, 1024);
 
         // v14
         // NOTE: not used anywhere
-        songdata->bpm_data.rows_per_beat = data->bpm_data.rows_per_beat;
-        songdata->bpm_data.tempo_finetune = INT16LE(data->bpm_data.tempo_finetune);
+        //songdata->bpm_data.rows_per_beat = data->bpm_data.rows_per_beat;
+        //songdata->bpm_data.tempo_finetune = INT16LE(data->bpm_data.tempo_finetune);
 
         free(data);
     }
