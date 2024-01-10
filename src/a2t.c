@@ -11,7 +11,6 @@
         * Each pattern always has 256 rows, but usually less is used, need to reduce memory usage
     - Rework tFIXED_SONGDATA:
         * Make instr_data an array of pointers
-        * Rework direct access to songdata->instr_data with get_instr_data(ins) // 1 - based
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -619,9 +618,7 @@ static void change_frequency(int chan, uint16_t freq)
 
 static inline uint16_t _macro_speedup()
 {
-    if (!macro_speedup) return 1;
-
-    return macro_speedup;
+    return macro_speedup ? macro_speedup : 1;
 }
 
 static void set_clock_rate(uint8_t clock_rate)
@@ -3431,6 +3428,24 @@ static int a2t_read_varheader(char *blockptr)
     return 0;
 }
 
+static void instrument_import_v1_8(int ins, tINSTR_DATA_V1_8 *instr_s)
+{
+    tINSTR_DATA *instr_d = get_instr_data(ins);
+    assert(instr_d);
+
+    instr_d->fm = instr_s->fm; // copy struct
+    instr_d->panning = instr_s->panning;
+    instr_d->fine_tune = instr_s->fine_tune;
+}
+
+static void instrument_import(int ins, tINSTR_DATA *instr_s)
+{
+    tINSTR_DATA *instr_d = get_instr_data(ins);
+    assert(instr_d);
+
+    *instr_d = *instr_s; // copy struct
+}
+
 static int a2t_read_instruments(char *src)
 {
     int instnum = (ffver < 9 ? 250 : 255);
@@ -3454,19 +3469,17 @@ static int a2t_read_instruments(char *src)
     }
 
     if (ffver < 9) {
-        tINSTR_DATA_V1_8 (*instr_data)[instnum] = (tINSTR_DATA_V1_8 (*)[instnum])dst;
+        tINSTR_DATA_V1_8 *instr_data = (tINSTR_DATA_V1_8 *)dst;
 
         // TODO: instruments_allocate(calc_non_void_instruments);
         for (int i = 0; i < 250; i++) {
-            songdata->instr_data[i].fm = (*instr_data)[i].fm; // copy struct
-            songdata->instr_data[i].panning = (*instr_data)[i].panning;
-            songdata->instr_data[i].fine_tune = (*instr_data)[i].fine_tune;
+            instrument_import_v1_8(i + 1, &instr_data[i]);
         }
     } else {
-        tINSTR_DATA (*instr_data)[instnum] = (tINSTR_DATA (*)[instnum])dst;
+        tINSTR_DATA *instr_data = (tINSTR_DATA *)dst;
 
         for (int i = 0; i < instnum; i++) {
-            songdata->instr_data[i] = (*instr_data)[i];
+            instrument_import(i + 1, &instr_data[i]);
         }
     }
 
@@ -3921,10 +3934,8 @@ static int a2m_read_songdata(char *src)
 
         // TODO: instruments_allocate(calc_non_void_instruments);
         for (int i = 0; i < 250; i++) {
-            memcpy(songdata->instr_names[i], data->instr_names[i], 33);
-            songdata->instr_data[i].fm = data->instr_data[i].fm; // copy struct
-            songdata->instr_data[i].panning = data->instr_data[i].panning;
-            songdata->instr_data[i].fine_tune = data->instr_data[i].fine_tune;
+            memcpy(songdata->instr_names[i], data->instr_names[i] + 1, 32);
+            instrument_import_v1_8(i + 1, &data->instr_data[i]);
         }
 
         memcpy(songdata->pattern_order, data->pattern_order, 128);
@@ -3946,8 +3957,8 @@ static int a2m_read_songdata(char *src)
 
         // TODO: instruments_allocate(calc_non_void_instruments);
         for (int i = 0; i < 255; i++) {
-            memcpy(songdata->instr_names[i], data->instr_names[i], 43);
-            songdata->instr_data[i] = data->instr_data[i]; // copy struct
+            memcpy(songdata->instr_names[i], data->instr_names[i] + 1, 42);
+            instrument_import(i + 1, &data->instr_data[i]);
 
             // Instrument arpegio/vibrato references
             songdata->instr_arpeggio[i] = data->fmreg_table[i].arpeggio_table;
