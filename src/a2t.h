@@ -486,7 +486,7 @@ typedef struct {
     uint16_t fmreg_pos,
          arpg_pos,
          vib_pos;
-    uint8_t  //fmreg_count,
+    uint8_t
          fmreg_duration,
          arpg_count,
          vib_count,

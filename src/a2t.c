@@ -231,8 +231,6 @@ typedef struct {
     char            songname[43];        // pascal String[42];
     char            composer[43];        // pascal String[42];
     char            instr_names[255][43];// array[1..255] of String[42];
-    uint8_t         instr_arpeggio[255]; // todo: include into tINSTR_DATA_EXT
-    uint8_t         instr_vibrato[255];  // todo: include into tINSTR_DATA_EXT
     uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
     uint8_t         tempo;
     uint8_t         speed;
@@ -948,16 +946,16 @@ void set_overall_volume(unsigned char level)
 // FIXME: check ins
 static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 {
-    //macro_table[chan].fmreg_count = 1; // NOTE: not used, merge with duration?
+    uint8_t arp_table = instruments[ins - 1].arpeggio;
     macro_table[chan].fmreg_pos = 0;
     macro_table[chan].fmreg_duration = 0;
     macro_table[chan].fmreg_ins = ins; // todo: check against fmreg_table[ins - 1]->length
     macro_table[chan].arpg_count = 1;
     macro_table[chan].arpg_pos = 0;
-    macro_table[chan].arpg_table = songdata->instr_arpeggio[ins - 1];
+    macro_table[chan].arpg_table = arp_table;
     macro_table[chan].arpg_note = note;
 
-    uint8_t vib_table = songdata->instr_vibrato[ins - 1];
+    uint8_t vib_table = instruments[ins - 1].vibrato;
     macro_table[chan].vib_count = 1;
     macro_table[chan].vib_paused = FALSE;
     macro_table[chan].vib_pos = 0;
@@ -2831,7 +2829,6 @@ static void macro_poll_proc()
             if (mt->fmreg_duration > 1) {
                 mt->fmreg_duration--;
             } else {
-                //mt->fmreg_count = 1;
                 if (mt->fmreg_pos <= rt->length) {
                     if ((rt->loop_begin != 0) && (rt->loop_length != 0)) {
                         if (mt->fmreg_pos == rt->loop_begin + (rt->loop_length-1)) {
@@ -3508,8 +3505,8 @@ static int a2t_read_fmregtable(char *src)
 
     for (int i = 0; i < 255; i++) {
         // Instrument arpegio/vibrato references
-        songdata->instr_arpeggio[i] = data[i].arpeggio_table;
-        songdata->instr_vibrato[i] = data[i].vibrato_table;
+        instruments[i].arpeggio = data[i].arpeggio_table;
+        instruments[i].vibrato = data[i].vibrato_table;
     }
 
     free(data);
@@ -3967,8 +3964,8 @@ static int a2m_read_songdata(char *src)
             instrument_import(i + 1, &data->instr_data[i]);
 
             // Instrument arpegio/vibrato references
-            songdata->instr_arpeggio[i] = data->fmreg_table[i].arpeggio_table;
-            songdata->instr_vibrato[i] = data->fmreg_table[i].vibrato_table;
+            instruments[i].arpeggio = data->fmreg_table[i].arpeggio_table;
+            instruments[i].vibrato = data->fmreg_table[i].vibrato_table;
         }
 
         // Allocate fmreg macro tables
