@@ -3433,8 +3433,9 @@ static int a2t_read_varheader(char *blockptr)
 
 static int a2t_read_instruments(char *src)
 {
+    int instnum = (ffver < 9 ? 250 : 255);
     int instsize = (ffver < 9 ? sizeof(tINSTR_DATA_V1_8) : sizeof(tINSTR_DATA));
-    int dstsize = (ffver < 9 ? 250 * instsize : 255 * instsize) +
+    int dstsize = (instnum * instsize) +
                   (ffver > 11 ?  sizeof(tBPM_DATA) + sizeof(tINS_4OP_FLAGS) + sizeof(tRESERVED) : 0);
     char *dst = (char *)calloc(dstsize, 1);
 
@@ -3452,8 +3453,21 @@ static int a2t_read_instruments(char *src)
         dst += sizeof(tRESERVED);
     }
 
-    for (int i = 0; i < (ffver < 9 ? 250 : 255); i++) {
-        memcpy(&songdata->instr_data[i], dst + i * instsize, instsize);
+    if (ffver < 9) {
+        tINSTR_DATA_V1_8 (*instr_data)[instnum] = (tINSTR_DATA_V1_8 (*)[instnum])dst;
+
+        // TODO: instruments_allocate(calc_non_void_instruments);
+        for (int i = 0; i < 250; i++) {
+            songdata->instr_data[i].fm = (*instr_data)[i].fm; // copy struct
+            songdata->instr_data[i].panning = (*instr_data)[i].panning;
+            songdata->instr_data[i].fine_tune = (*instr_data)[i].fine_tune;
+        }
+    } else {
+        tINSTR_DATA (*instr_data)[instnum] = (tINSTR_DATA (*)[instnum])dst;
+
+        for (int i = 0; i < instnum; i++) {
+            songdata->instr_data[i] = (*instr_data)[i];
+        }
     }
 
 #if 0
@@ -3714,8 +3728,7 @@ static int a2_read_patterns(char *src, int s)
     switch (ffver) {
     case 1 ... 4:	// [4][16][64][9][4]
         {
-        tPATTERN_DATA_V1234 *old =
-            (tPATTERN_DATA_V1234 *)malloc(sizeof(*old) * 16);
+        tPATTERN_DATA_V1234 *old = calloc(16, sizeof(*old));
 
         memset(adsr_carrier, FALSE, sizeof(adsr_carrier));
 
@@ -3912,7 +3925,6 @@ static int a2m_read_songdata(char *src)
             songdata->instr_data[i].fm = data->instr_data[i].fm; // copy struct
             songdata->instr_data[i].panning = data->instr_data[i].panning;
             songdata->instr_data[i].fine_tune = data->instr_data[i].fine_tune;
-            //memcpy(&songdata->instr_data[i], &data->instr_data[i], 13);
         }
 
         memcpy(songdata->pattern_order, data->pattern_order, 128);
@@ -3936,7 +3948,6 @@ static int a2m_read_songdata(char *src)
         for (int i = 0; i < 255; i++) {
             memcpy(songdata->instr_names[i], data->instr_names[i], 43);
             songdata->instr_data[i] = data->instr_data[i]; // copy struct
-            //memcpy(&songdata->instr_data[i], &data->instr_data[i], 14);
 
             // Instrument arpegio/vibrato references
             songdata->instr_arpeggio[i] = data->fmreg_table[i].arpeggio_table;
