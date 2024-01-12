@@ -331,40 +331,36 @@ static tFMREG_TABLE *get_fmreg_table(uint8_t fmreg_ins)
 {
     return fmreg_ins && fmreg_table[fmreg_ins - 1] ? fmreg_table[fmreg_ins - 1] : NULL;
 }
+
 // Helpers for patterns ===========================================================================
-/*
-#define MAX_PATTERNS    128
-#define ASSERT_PATTERN(PATTERN) (PATTERN < 0 || PATTERN >= (patterns_allocated < MAX_PATTERNS ? patterns_allocated : MAX_PATTERNS))
-int patterns_allocated = 0;
-tPATTERN_DATA *patterns[MAX_PATTERNS] = { 0 };
-*/
+
 typedef struct {
     int patterns, rows, channels;
+    size_t size;
     tADTRACK2_EVENT *events;
 } tEVENTS_INFO;
 
 tEVENTS_INFO _eventsinfo = { 0 }, *eventsinfo = &_eventsinfo;
-
 
 // event = pattern * (channels * rows) + ch * rows + row
 static tADTRACK2_EVENT *get_event_p(int pattern, int channel, int row)
 {
     return (
         pattern < eventsinfo->patterns
-            ? &eventsinfo->events[pattern * eventsinfo->channels * eventsinfo->rows
-                + channel * eventsinfo->rows + row]
+            ? &eventsinfo->events[
+                pattern * eventsinfo->channels * eventsinfo->rows +
+                channel * eventsinfo->rows + row]
             : &(tADTRACK2_EVENT){ 0 }
     );
 }
 
 static void patterns_free()
 {
-    /*for (int i = 0; i < MAX_PATTERNS; i++) {
-        if (patterns[i]) {
-            free(patterns[i]);
-            patterns[i] = NULL;
-        }
-    }*/
+    if (eventsinfo->events && eventsinfo->size) {
+        free(eventsinfo->events);
+        eventsinfo->events = NULL;
+        eventsinfo->size = 0;
+    }
 }
 
 static void patterns_allocate(int patterns, int channels, int rows)
@@ -375,46 +371,21 @@ static void patterns_allocate(int patterns, int channels, int rows)
         rows = 256;
     }*/
 
-    if (eventsinfo->events) {
-        free(eventsinfo->events);
-        eventsinfo->events = NULL;
-    }
+    patterns_free();
 
-    eventsinfo->events = calloc(1, patterns * channels * rows * sizeof(tADTRACK2_EVENT));
+    size_t size = patterns * channels * rows * sizeof(tADTRACK2_EVENT);
+
+    eventsinfo->events = calloc(1, size);
     assert(eventsinfo->events);
 
     eventsinfo->patterns = patterns;
     eventsinfo->channels = channels;
     eventsinfo->rows = rows;
-}
-
-// TODO: allocate exactly as much rows as needed
-static bool patterns_alloc(int number, int channels, int rows)
-{
-    patterns_allocate(number, channels, rows);
-    return TRUE;
-
-    /*patterns_free();
-
-    patterns_allocated = number;
-
-    for (int i = 0; i < patterns_allocated; i++) {
-        patterns[i] = calloc(1, sizeof(tPATTERN_DATA));
-    }
-
-    return TRUE;*/
-}
-
-static tADTRACK2_EVENT get_event(int p, int chan, int row)
-{
-    tADTRACK2_EVENT ev = *get_event_p(p, chan, row);
-    return ev;
-    // return structs by value
-    //return ASSERT_PATTERN(p) ? (tADTRACK2_EVENT){ 0 } : patterns[p]->ch[chan].row[row].ev;
+    eventsinfo->size = size;
 }
 
 // Copy from buffer to an allocated pattern
-static void copy_to_pattern(int pattern, tPATTERN_DATA *old)
+static void import_pattern(int pattern, tPATTERN_DATA *old)
 {
     if (pattern >= eventsinfo->patterns)
         return;
@@ -424,47 +395,27 @@ static void copy_to_pattern(int pattern, tPATTERN_DATA *old)
             tADTRACK2_EVENT *dst = get_event_p(pattern, ch, r);
             *dst = old->ch[ch].row[r].ev;
         }
-    /*
-        if (ASSERT_PATTERN(pattern)) {
-        printf("ERROR: copy_to_pattern(%d, %08x)\n", pattern, old);
-        return;
-    }
-
-    tPATTERN_DATA *dst = patterns[pattern];
-
-    memcpy(dst, old, sizeof(*old));*/
 }
 
 // Copy from old event v1-8 to v9-14 to an allocated pattern
-static void copy_to_event(int pattern, int chan, int row, tADTRACK2_EVENT_V1234 *old)
+static void import_event_v1_8(int pattern, int chan, int row, tADTRACK2_EVENT_V1234 *src)
 {
     if (pattern >= eventsinfo->patterns)
         return;
 
     tADTRACK2_EVENT *dst = get_event_p(pattern, chan, row);
 
-    dst->note = old->note;
-    dst->instr_def = old->instr_def;
-    dst->eff[0].def = old->effect_def;
-    dst->eff[0].val = old->effect;
-
-    /*
-    if (ASSERT_PATTERN(pattern)) {
-        printf("ERROR: copy_to_event(%d, %d, %02x, %08x)\n", pattern, chan, row, old);
-        return;
-    }
-
-    tADTRACK2_EVENT *ev = &patterns[pattern]->ch[chan].row[row].ev;
-
-    memcpy(ev, old, 4);
-    */
+    dst->note = src->note;
+    dst->instr_def = src->instr_def;
+    dst->eff[0].def = src->effect_def;
+    dst->eff[0].val = src->effect;
 }
 
 static void memory_usage()
 {
     // Calc patterns
-    int patterns_allocated = eventsinfo->patterns;
-    int patterns_size = eventsinfo->patterns * eventsinfo->channels * eventsinfo->rows * sizeof(tADTRACK2_EVENT);
+    int oldsize = eventsinfo->patterns * sizeof(tPATTERN_DATA);
+
     // Count fmreg/vib/arp macros
     int nfmregs = 0, nvib = 0, narp = 0;
     for (int i = 0; i < 255; i++) {
@@ -475,8 +426,8 @@ static void memory_usage()
 
     printf("Memory usage:\n");
     printf("\tSongdata: %d bytes\n", sizeof(tFIXED_SONGDATA));
-    printf("\tPatterns * %d: %d bytes\n", patterns_allocated, patterns_allocated * sizeof(tPATTERN_DATA));
-    printf("\tPatterns * %d: %d bytes\n", eventsinfo->patterns, patterns_size);
+    printf("\tPatterns * %d: %d bytes (old)\n", eventsinfo->patterns, oldsize);
+    printf("\tPatterns * %d: %d bytes\n", eventsinfo->patterns, eventsinfo->size);
     printf("\tInstruments * 255: %d bytes\n", sizeof(tINSTR_DATA_EXT[255]));
     printf("\tFmreg * %d: %d bytes\n", nfmregs, nfmregs * sizeof(tFMREG_TABLE));
     printf("\tVibrato * %d: %d bytes\n", nvib, nvib * sizeof(tVIBRATO_TABLE));
@@ -1963,7 +1914,7 @@ static void play_line()
 
     for (int chan = 0; chan < songdata->nm_tracks; chan++) {
         // Do a full copy of the event, because we modify event->note in before_process_note()
-        *event = get_event(current_pattern, chan, current_line);
+        *event = *get_event_p(current_pattern, chan, current_line);
 
         // save effect_table into last_effect
         for (int slot = 0; slot < 2; slot++) {
@@ -3815,7 +3766,7 @@ static int a2_read_patterns(char *src, int s)
                 for (int r = 0; r < 64; r++) // row
                 for (int c = 0; c < 9; c++) { // channel
                     convert_v1234_event(&old[p].row[r].ch[c].ev, c);
-                    copy_to_event(i * 16 + p, c, r, &old[p].row[r].ch[c].ev);
+                    import_event_v1_8(i * 16 + p, c, r, &old[p].row[r].ch[c].ev);
                 }
             }
 
@@ -3841,7 +3792,7 @@ static int a2_read_patterns(char *src, int s)
                 for (int c = 0; c < 18; c++) // channel
                 for (int r = 0; r < 64; r++) { // row
                     // pattern_event_copy?
-                    copy_to_event(i * 8 + p, c, r, &old[p].ch[c].row[r].ev);
+                    import_event_v1_8(i * 8 + p, c, r, &old[p].ch[c].row[r].ev);
                 }
             }
 
@@ -3865,7 +3816,7 @@ static int a2_read_patterns(char *src, int s)
                 if (i * 8 + p >= eventsinfo->patterns)
                         break;
 
-                copy_to_pattern(i * 8 + p, old + p);
+                import_pattern(i * 8 + p, old + p);
             }
         }
 
@@ -3894,8 +3845,6 @@ static void a2t_import(char *tune)
 
     if(strncmp(header->id, "_A2tiny_module_", 15))
         return;
-
-    patterns_alloc(header->npatt, 20, 256);
 
     init_songdata();
 
@@ -3934,6 +3883,9 @@ static void a2t_import(char *tune)
 
     // Read pattern_order
     blockptr += a2t_read_order(blockptr);
+
+    // Allocate patterns
+    patterns_allocate(header->npatt, songdata->nm_tracks, songdata->patt_len);
 
     // Read patterns
     a2t_read_patterns(blockptr);
@@ -4101,8 +4053,6 @@ static void a2m_import(char *tune)
 
     memset(songdata, 0, sizeof(*songdata));
 
-    patterns_alloc(header->npatt, 20, 256);
-
     memset(len, 0, sizeof(len));
 
     ffver = header->ffver;
@@ -4115,6 +4065,9 @@ static void a2m_import(char *tune)
 
     // Read songdata
     blockptr += a2m_read_songdata(blockptr);
+
+    // Allocate patterns
+    patterns_allocate(header->npatt, songdata->nm_tracks, songdata->patt_len);
 
     // Read patterns
     a2m_read_patterns(blockptr);
