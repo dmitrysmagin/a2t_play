@@ -384,33 +384,6 @@ static void patterns_allocate(int patterns, int channels, int rows)
     eventsinfo->size = size;
 }
 
-// Copy from buffer to an allocated pattern
-static void import_pattern(int pattern, tPATTERN_DATA *old)
-{
-    if (pattern >= eventsinfo->patterns)
-        return;
-
-    for (int ch = 0; ch < eventsinfo->channels; ch++)
-        for (int r = 0; r < eventsinfo->rows; r++) {
-            tADTRACK2_EVENT *dst = get_event_p(pattern, ch, r);
-            *dst = old->ch[ch].row[r].ev;
-        }
-}
-
-// Copy from old event v1-8 to v9-14 to an allocated pattern
-static void import_event_v1_8(int pattern, int chan, int row, tADTRACK2_EVENT_V1234 *src)
-{
-    if (pattern >= eventsinfo->patterns)
-        return;
-
-    tADTRACK2_EVENT *dst = get_event_p(pattern, chan, row);
-
-    dst->note = src->note;
-    dst->instr_def = src->instr_def;
-    dst->eff[0].def = src->effect_def;
-    dst->eff[0].val = src->effect;
-}
-
 static void memory_usage()
 {
     // Calc patterns
@@ -3765,8 +3738,15 @@ static int a2_read_patterns(char *src, int s)
                         break;
                 for (int r = 0; r < 64; r++) // row
                 for (int c = 0; c < 9; c++) { // channel
-                    convert_v1234_event(&old[p].row[r].ch[c].ev, c);
-                    import_event_v1_8(i * 16 + p, c, r, &old[p].row[r].ch[c].ev);
+                    tADTRACK2_EVENT_V1234 *src = &old[p].row[r].ch[c].ev;
+                    tADTRACK2_EVENT *dst = get_event_p(i * 16 + p, c, r);
+
+                    convert_v1234_event(src, c);
+
+                    dst->note = src->note;
+                    dst->instr_def = src->instr_def;
+                    dst->eff[0].def = src->effect_def;
+                    dst->eff[0].val = src->effect;
                 }
             }
 
@@ -3778,8 +3758,7 @@ static int a2_read_patterns(char *src, int s)
         }
     case 5 ... 8:	// [8][8][18][64][4]
         {
-        tPATTERN_DATA_V5678 *old =
-            (tPATTERN_DATA_V5678 *)malloc(sizeof(*old) * 8);
+        tPATTERN_DATA_V5678 *old = calloc(8, sizeof(*old));
 
         for (int i = 0; i < 8; i++) {
             if (!len[i+s]) continue;
@@ -3791,8 +3770,13 @@ static int a2_read_patterns(char *src, int s)
                     break;
                 for (int c = 0; c < 18; c++) // channel
                 for (int r = 0; r < 64; r++) { // row
-                    // pattern_event_copy?
-                    import_event_v1_8(i * 8 + p, c, r, &old[p].ch[c].row[r].ev);
+                    tADTRACK2_EVENT_V1234 *src = &old[p].ch[c].row[r].ev;
+                    tADTRACK2_EVENT *dst = get_event_p(i * 8 + p, c, r);
+
+                    dst->note = src->note;
+                    dst->instr_def = src->instr_def;
+                    dst->eff[0].def = src->effect_def;
+                    dst->eff[0].val = src->effect;
                 }
             }
 
@@ -3804,7 +3788,7 @@ static int a2_read_patterns(char *src, int s)
         }
     case 9 ... 14:	// [16][8][20][256][6]
         {
-        tPATTERN_DATA *old = (tPATTERN_DATA *)calloc(sizeof(*old) * 8, 1);
+        tPATTERN_DATA *old = calloc(8, sizeof(*old));
 
         // 16 groups of 8 patterns
         for (int i = 0; i < 16; i++) {
@@ -3816,7 +3800,12 @@ static int a2_read_patterns(char *src, int s)
                 if (i * 8 + p >= eventsinfo->patterns)
                         break;
 
-                import_pattern(i * 8 + p, old + p);
+                for (int c = 0; c < eventsinfo->channels; c++) // channel
+                for (int r = 0; r < eventsinfo->rows; r++) { // row
+                    tADTRACK2_EVENT *dst = get_event_p(i * 8 + p, c, r);
+                    tADTRACK2_EVENT *src = &old[p].ch[c].row[r].ev;
+                    *dst = *src; // copy struct
+                }
             }
         }
 
