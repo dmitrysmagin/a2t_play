@@ -5,12 +5,7 @@
 
     In order to get into Adplug:
     - Reduce the memory used for a tune
-    - Rework tPATTERN_DATA:
-        * It has channel-row-event structure that doesn't allow expanding without events regrouping
-        * Better use row-channel-event to allow dynamic expanding of patterns
-        * Each pattern always has 256 rows, but usually less is used, need to reduce memory usage
-    - Rework tFIXED_SONGDATA:
-        * Make instr_data an array of pointers
+
 */
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,7 +30,7 @@ typedef enum {
     isPlaying = 0, isPaused, isStopped
 } tPLAY_STATUS;
 
-const uint8_t _panning[3] = {0x30, 0x10, 0x20};
+const uint8_t _panning[3] = { 0x30, 0x10, 0x20 };
 
 const uint8_t _instr[12] = {
     0x20, 0x20, 0x40, 0x40, 0x60, 0x60, 0x80, 0x80, 0xe0, 0xe0, 0xc0, 0xbd
@@ -222,7 +217,7 @@ typedef struct {
 
 C_ASSERT(sizeof(tINSTR_DATA_EXT) == 16);
 
-// NOTE: doesn't map to a2m anymore!
+// NOTE: doesn't map to a2m songdata structure anymore!
 typedef struct {
     char            songname[43];        // pascal String[42];
     char            composer[43];        // pascal String[42];
@@ -241,15 +236,37 @@ typedef struct {
 // This would be later moved to class or struct
 tFIXED_SONGDATA _songdata, *songdata = &_songdata;
 
-// Helpers for macro tables =======================================================================
+// Helpers for instruments ========================================================================
 
 tINSTR_DATA_EXT instruments[255] = { };
 
 static void instruments_allocate(size_t number)
 {
+    /*if (editor_mode) {
+        number = 255; // Allocate max possible
+    }*/
+
     // TODO: perhaps use tINSTR_DATA_EXT **instruments;
     memset(instruments, 0, sizeof(instruments));
 }
+
+static inline int8_t get_instr_fine_tune(uint8_t ins)
+{
+    return ins ? instruments[ins - 1].instr_data.fine_tune : 0;
+}
+
+static inline tINSTR_DATA *get_instr_data_by_ch(int chan)
+{
+    uint8_t ins = voice_table[chan];
+    return ins ? &instruments[ins - 1].instr_data : NULL;
+}
+
+static inline tINSTR_DATA *get_instr_data(uint8_t ins)
+{
+    return ins ? &instruments[ins - 1].instr_data : NULL;
+}
+
+// Helpers for macro tables =======================================================================
 
 // fmreg/arpeggio/vibrato macro tables
 tFMREG_TABLE *fmreg_table[255] = { 0 };
@@ -516,22 +533,6 @@ static void change_freq(int chan, uint16_t freq)
     if (is_4op_chan(chan) && is_4op_chan_lo(chan)) {
         freq_table[chan - 1] = freq_table[chan];
     }
-}
-
-static inline int8_t get_instr_fine_tune(uint8_t ins)
-{
-    return ins ? instruments[ins - 1].instr_data.fine_tune : 0;
-}
-
-static inline tINSTR_DATA *get_instr_data_by_ch(int chan)
-{
-    uint8_t ins = voice_table[chan];
-    return ins ? &instruments[ins - 1].instr_data : NULL;
-}
-
-static inline tINSTR_DATA *get_instr_data(uint8_t ins)
-{
-    return ins ? &instruments[ins - 1].instr_data : NULL;
 }
 
 static bool is_chan_adsr_data_empty(int chan)
