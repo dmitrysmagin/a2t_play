@@ -1777,25 +1777,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     }
 }
 
-static void before_process_note(tADTRACK2_EVENT *event, int chan)
-{
-    if (event->note == BYTE_NULL) { // Key off
-        event->note = event_table[chan].note | keyoff_flag;
-    } else if ((event->note >= fixed_note_flag + 1) /*&& (event->note <= fixed_note_flag + 12*8+1)*/) {
-        event->note -= fixed_note_flag;
-    }
-
-    if (event->note || event->instr_def ||
-        (event->eff[0].def | event->eff[0].val) ||
-        (event->eff[1].def | event->eff[1].val))
-    {
-        event_table[chan].eff[0].def = event->eff[0].def;
-        event_table[chan].eff[0].val = event->eff[0].val;
-        event_table[chan].eff[1].def = event->eff[1].def;
-        event_table[chan].eff[1].val = event->eff[1].val;
-    }
-}
-
 static bool no_swap_and_restart(tADTRACK2_EVENT *event)
 {
     // [!xx/@xx] swap arp/swap vib + [zff] no force restart
@@ -1889,7 +1870,7 @@ static void play_line()
     }
 
     for (int chan = 0; chan < songdata->nm_tracks; chan++) {
-        // Do a full copy of the event, because we modify event->note in before_process_note()
+        // Do a full copy of the event, because we modify event->note
         *event = *get_event_p(current_pattern, chan, current_line);
 
         // save effect_table into last_effect
@@ -1909,7 +1890,12 @@ static void play_line()
 
         ftune_table[chan] = 0;
 
-        before_process_note(event, chan);
+        // Fixup event->note
+        if (event->note == BYTE_NULL) { // Key off
+            event->note = event_table[chan].note | keyoff_flag;
+        } else if ((event->note >= fixed_note_flag + 1) /*&& (event->note <= fixed_note_flag + 12*8+1)*/) {
+            event->note -= fixed_note_flag;
+        }
 
         if (event->instr_def) {
             if (is_data_empty(get_instr_data(event->instr_def), sizeof(tINSTR_DATA))) {
