@@ -277,6 +277,7 @@ tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
 // use VLA feature
 static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
 {
+    // Note: for editor_mode allocate max entries possible
     for (unsigned int i = 0; i < n; i++) {
         if (rt[i].length) {
             fmreg_table[i] = calloc(1, sizeof(tFMREG_TABLE));
@@ -300,6 +301,7 @@ static void disabled_fmregs_allocate(size_t n, bool dis_fmregs[n][28])
 
 static void arpvib_tables_allocate(size_t n, tARPVIB_TABLE mt[n])
 {
+    // Note: for editor_mode allocate max entries possible
     for (unsigned int i = 0; i < n; i++) {
         if (mt[i].vibrato.length) {
             vibrato_table[i] = calloc(1, sizeof(tVIBRATO_TABLE));
@@ -314,7 +316,7 @@ static void arpvib_tables_allocate(size_t n, tARPVIB_TABLE mt[n])
     }
 }
 
-static uint8_t get_arpeggio_length(uint8_t arp_table)
+static inline uint8_t get_arpeggio_length(uint8_t arp_table)
 {
     return arp_table && arpeggio_table[arp_table - 1] ? arpeggio_table[arp_table - 1]->length : 0;
 }
@@ -324,12 +326,12 @@ static tARPEGGIO_TABLE *get_arpeggio_table(uint8_t arp_table)
     return arp_table && arpeggio_table[arp_table - 1] ? arpeggio_table[arp_table - 1] : NULL;
 }
 
-static uint8_t get_vibrato_length(uint8_t vib_table)
+static inline uint8_t get_vibrato_length(uint8_t vib_table)
 {
     return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1]->length : 0;
 }
 
-static uint8_t get_vibrato_delay(uint8_t vib_table)
+static inline uint8_t get_vibrato_delay(uint8_t vib_table)
 {
     return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1]->delay : 0;
 }
@@ -339,7 +341,7 @@ static tVIBRATO_TABLE *get_vibrato_table(uint8_t vib_table)
     return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1] : NULL;
 }
 
-static uint8_t get_fmreg_length(uint8_t fmreg_ins)
+static inline uint8_t get_fmreg_length(uint8_t fmreg_ins)
 {
     return fmreg_ins && fmreg_table[fmreg_ins - 1] ? fmreg_table[fmreg_ins - 1]->length : 0;
 }
@@ -1901,8 +1903,10 @@ static void play_line()
                 effect_table[slot][chan].val = glfsld_table[slot][chan].val;
             } else {
                 effect_table[slot][chan].def = 0;
+                effect_table[slot][chan].val = 0;
             }
         }
+
         ftune_table[chan] = 0;
 
         before_process_note(event, chan);

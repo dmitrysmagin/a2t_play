@@ -1,5 +1,5 @@
 mmori.a2m - ef_GlobalFSlideUp/ef_GlobalFSlideDown
-badapple.a2m - macro-vib
+badapple.a2m - macro-vib, some missing notes (volume?)
 crisis.a2m - 4op, macro-fm, macro-arp
 fank5.a2m - 4op, macro-fm, macro-vib
 
