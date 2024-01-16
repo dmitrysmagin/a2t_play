@@ -5,6 +5,7 @@
 
     In order to get into Adplug:
     - Reduce the memory used for a tune
+    - Get rid of ef_fix2
     - Rework tADTRACK2_EVENT event_table:
         * Effects: resolve common code with effect_table
         * Note/instr: Perhaps use last_note/last_inst_def instead
@@ -1082,13 +1083,13 @@ static inline bool is_4op_chan_lo(int chan)
     return _4op_lo[chan];
 }
 
-static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, bool restart_adsr)
+static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, bool restart_adsr/*, bool force_no_restart*/)
 {
     uint16_t freq;
 
     if ((note == 0) && (ftune_table[chan] == 0)) return;
 
-    if ((note == 0) || (note > 12*8+1)) { // If NOT (note in [1..12*8+1])
+    if (!note_in_range(note)) {
         freq = freq_table[chan];
     } else {
         freq = nFreq(note - 1) + get_instr_fine_tune(ins);
@@ -1116,10 +1117,15 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
         }
 
         if (restart_macro) {
-            if (!(((event_table[chan].eff[0].def == ef_Extended) &&
-                  (event_table[chan].eff[0].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) ||
-                  ((event_table[chan].eff[1].def == ef_Extended) &&
-                  (event_table[chan].eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)))) {
+            // TODO: better use effect_table here
+            // Check if no ZFF - force no restart
+            bool force_no_restart = (
+                    ((event_table[chan].eff[0].def == ef_Extended) &&
+                     (event_table[chan].eff[0].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) ||
+                    ((event_table[chan].eff[1].def == ef_Extended) &&
+                     (event_table[chan].eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart))
+                );
+            if (!force_no_restart) {
                 init_macro_table(chan, note, ins, freq);
             } else {
                 macro_table[chan].arpg_note = note;
@@ -1168,13 +1174,9 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     uint8_t def = event->eff[slot].def;
     uint8_t val = event->eff[slot].val;
 
-    // Use previous effect value if needed
-    if (!val && def && def == event_table[chan].eff[slot].def)
-        val = event_table[chan].eff[slot].val;
-
-    // eff not used here
-    event_table[chan].eff[slot].def = def;
-    event_table[chan].eff[slot].val = val;
+    // 
+    effect_table[slot][chan].def = def;
+    effect_table[slot][chan].val = val;
 
     if ((def != ef_Vibrato) &&
         (def != ef_ExtraFineVibrato) &&
@@ -1310,9 +1312,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             } else {
                 effect_table[slot][chan].def = 0;
                 effect_table[slot][chan].val = 0;
-                // Check if this really needed
-                //event_table[chan].eff[slot].def = 0;
-                //event_table[chan].eff[slot].val = 0;
             }
         }
         break;
@@ -1833,16 +1832,6 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
 {
     bool tporta_flag = is_eff_porta(event);
 
-    for (int slot = 0; slot < 2; slot++) {
-        if (event->eff[slot].def | event->eff[slot].val) {
-            event_table[chan].eff[slot].def = event->eff[slot].def;
-            event_table[chan].eff[slot].val = event->eff[slot].val;
-        } else if (glfsld_table[slot][chan].def == 0 && glfsld_table[slot][chan].val == 0) {
-            effect_table[slot][chan].def = 0;
-            effect_table[slot][chan].val = 0;
-        }
-    }
-
     // Treat Tone Portamento based effects vs. note Key-Off's
     if (event->note & keyoff_flag) {
         key_off(chan);
@@ -1906,6 +1895,16 @@ static void play_line()
             event->note -= fixed_note_flag;
         }
 
+        if (event->note || event->instr_def ||
+            (event->eff[0].def | event->eff[0].val) ||
+            (event->eff[1].def | event->eff[1].val))
+        {
+            event_table[chan].eff[0].def = event->eff[0].def;
+            event_table[chan].eff[0].val = event->eff[0].val;
+            event_table[chan].eff[1].def = event->eff[1].def;
+            event_table[chan].eff[1].val = event->eff[1].val;
+        }
+
         if (event->instr_def) {
             if (is_data_empty(get_instr_data(event->instr_def), sizeof(tINSTR_DATA))) {
                 release_sustaining_sound(chan);
@@ -1913,8 +1912,32 @@ static void play_line()
             set_ins_data(event->instr_def, chan);
         }
 
+        for (int slot = 0; slot < 2; slot++) {
+            uint8_t def = event->eff[slot].def;
+            uint8_t val = event->eff[slot].val;
+
+            // Use previous effect value if needed
+            if (!val && def && def == event_table[chan].eff[slot].def)
+                val = event_table[chan].eff[slot].val;
+
+            // eff not used here
+            event_table[chan].eff[slot].def = def;
+            event_table[chan].eff[slot].val = val;
+        }
+
+        // set effect_table here
         process_effects(event, 0, chan);
         process_effects(event, 1, chan);
+
+        for (int slot = 0; slot < 2; slot++) {
+            if (event->eff[slot].def | event->eff[slot].val) {
+                event_table[chan].eff[slot].def = event->eff[slot].def;
+                event_table[chan].eff[slot].val = event->eff[slot].val;
+            } else if (glfsld_table[slot][chan].def == 0 && glfsld_table[slot][chan].val == 0) {
+                effect_table[slot][chan].def = 0;
+                effect_table[slot][chan].val = 0;
+            }
+        }
 
         new_process_note(event, chan);
 
