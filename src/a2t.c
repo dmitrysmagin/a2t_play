@@ -432,6 +432,11 @@ static void memory_usage()
 }
 // End of patterns helpers ========================================================================
 
+static inline bool note_in_range(uint8_t note)
+{
+    return ((note & 0x7f) > 0) && ((note & 0x7f) < 12 * 8 + 1);
+}
+
 int ticks, tickD, tickXF;
 
 #define FreqStart   0x156
@@ -1279,7 +1284,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             break;
         }
 
-        if (((event->note & 0x7f) >= 1) && ((event->note & 0x7f) <= 12 * 8 + 1)) {
+        if (note_in_range(event->note)) {
             arpgg_table[slot][chan].state = 0;
             arpgg_table[slot][chan].note = event->note & 0x7f;
             if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
@@ -1287,9 +1292,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 arpgg_table[slot][chan].add2 = val & 0x0f;
             }
         } else {
-            if ((event->note == 0) &&
-                (((event_table[chan].note & 0x7f) >= 1) &&
-                (event_table[chan].note & 0x7f) <= 12 * 8 + 1)) {
+            if (!event->note && note_in_range(event_table[chan].note)) {
 
                 // This never occurs most probably
                 if ((def != ef_Arpeggio) &&
@@ -1337,7 +1340,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_TonePortamento:
         update_effect_table(slot, chan, EFGR_TONEPORTAMENTO, def, val);
 
-        if ((event->note >= 1) && (event->note <= 12 * 8 + 1)) {
+        if (note_in_range(event->note)) {
             porta_table[slot][chan].speed = val;
             porta_table[slot][chan].freq = nFreq(event->note - 1) +
                 get_instr_fine_tune(event_table[chan].instr_def);
