@@ -505,5 +505,6 @@ extern tEFFECT_TABLE effect_table[2][20];
 extern tEFFECT_TABLE last_effect[2][20];
 extern tEFFECT_TABLE glfsld_table[2][20];
 extern tCH_MACRO_TABLE macro_table[20];
+extern tADTRACK2_EVENT event_table[20];
 
 #endif // _A2T_H_

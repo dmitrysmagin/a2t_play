@@ -73,6 +73,33 @@ void rewind_console(int lines)
     #endif
 }
 
+void show_event(tADTRACK2_EVENT table[20])
+{
+    static char effects[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><";
+
+    printf("EVT0: ");
+    for (int i = 0; i < 20; i++) {
+        uint8_t note = table[i].note;
+        uint8_t inst = table[i].instr_def;
+
+        printf("%02x%02x%s", note, inst, i < 19 ? "|" : "\n");
+    }
+    printf("EVT1: ");
+    for (int i = 0; i < 20; i++) {
+        uint8_t def0 = table[i].eff[0].def;
+        uint8_t val0 = table[i].eff[0].val;
+
+        printf(" %c%02x%s", effects[def0], val0, i < 19 ? "|" : "\n");
+    }
+    printf("EVT2: ");
+    for (int i = 0; i < 20; i++) {
+        uint8_t def1 = table[i].eff[1].def;
+        uint8_t val1 = table[i].eff[1].val;
+
+        printf(" %c%02x%s", effects[def1], val1, i < 19 ? "|" : "\n");
+    }
+}
+
 void show_eff(char *name, tEFFECT_TABLE table[2][20])
 {
     static char effects[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><";
@@ -108,7 +135,8 @@ void show_info()
     }
     show_eff("EFF", effect_table);
     show_eff("LEF", last_effect);
-    show_eff("GLF", glfsld_table);
+    //show_eff("GLF", glfsld_table);
+    show_event(event_table);
     printf("FMRG: ");
     for (int i = 0; i < 20; i++) {
         printf("%02x%02x%s", macro_table[i].fmreg_pos & 0xff, macro_table[i].fmreg_duration, i < 19 ? "|" : "\n");
@@ -161,7 +189,7 @@ int main(int argc, char *argv[])
 
     while (!kbhit()) {
         show_info();
-        rewind_console(11);
+        rewind_console(12);
         SDL_Delay(10);
     }
 

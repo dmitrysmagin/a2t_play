@@ -5,6 +5,9 @@
 
     In order to get into Adplug:
     - Reduce the memory used for a tune
+    - Rework tADTRACK2_EVENT event_table:
+        * Effects: resolve common code with effect_table
+        * Note/instr: Perhaps use last_note/last_inst_def instead
 
 */
 #include <stdio.h>
@@ -173,6 +176,8 @@ bool peak_lock[20];			// array[1..20] of Boolean;
 bool pan_lock[20];			// array[1..20] of Boolean;
 uint8_t modulator_vol[20];		// array[1..20] of Byte;
 uint8_t carrier_vol[20];		// array[1..20] of Byte;
+// note/instr_def work like last_note/last_instr_def
+// effects work like effect_table
 tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
 uint8_t voice_table[20];		// array[1..20] of Byte;
 uint16_t freq_table[20];		// array[1..20] of Word;
@@ -1162,6 +1167,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     if (!val && def && def == event_table[chan].eff[slot].def)
         val = event_table[chan].eff[slot].val;
 
+    // eff not used here
     event_table[chan].eff[slot].def = def;
     event_table[chan].eff[slot].val = val;
 
