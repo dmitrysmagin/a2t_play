@@ -3,7 +3,7 @@ badapple.a2m - macro-vib, some missing notes (volume?)
 crisis.a2m - 4op, macro-fm, macro-arp
 fank5.a2m - 4op, macro-fm, macro-vib
 
-fm63b_rv.a2m - 4op, macro-fm
+fm63b_rv.a2m - 4op, macro-fm, swap-vibrato command (@00)
 fm63b_rv.a2t - instrument #0B has fm macro which is not present in fm63b_rv.a2m
 
 tunes/encore/amegas.a2t - completely wrong 1st inst
