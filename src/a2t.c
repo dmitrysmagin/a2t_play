@@ -1089,7 +1089,7 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
 
     if ((note == 0) && (ftune_table[chan] == 0)) return;
 
-    if (!note_in_range(note)) {
+    if ((note & 0x80) || !note_in_range(note)) {
         freq = freq_table[chan];
     } else {
         freq = nFreq(note - 1) + get_instr_fine_tune(ins);
