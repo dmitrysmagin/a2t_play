@@ -255,7 +255,6 @@ C_ASSERT(sizeof(tPATTERN_DATA) == 20 * 256 * 6);
 #define ef_ex3_SetKsrC         11
 #define ef_ex3_SetSustainC     12
 
-#define ef_fix1 0x80
 #define ef_fix2 0x90
 
 

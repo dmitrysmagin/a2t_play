@@ -1217,11 +1217,15 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             case ef_GlobalFSlideUp:
                 eff = ef_FSlideUp;
 
+                // >xx + ZFE
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
                     eff = ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF;
+                    // note: val remains 8-bit
+                    // if eliminate ef_fix2, upper 4 bits will be lost
                 }
 
+                 // >xx + ZFD
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
                     eff = ef_FSlideUpFine;
@@ -1233,11 +1237,14 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             case ef_GlobalFSlideDown:
                 eff = ef_FSlideDown;
 
+                 // <xx + ZFE
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
                     eff = ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF;
+                    // note: val remains 8-bit
                 }
 
+                 // <xx + ZFD
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
                     eff = ef_FSlideDownFine;
@@ -1272,7 +1279,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_ArpggVSlideFine:
         switch (def) {
         case ef_Arpeggio:
-            effect_table[slot][chan].def = ef_Arpeggio + ef_fix1;
+            effect_table[slot][chan].def = ef_Arpeggio;
             effect_table[slot][chan].val = val;
             break;
         case ef_ExtraFineArpeggio:
@@ -1297,15 +1304,14 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             if (!event->note && note_in_range(event_table[chan].note)) {
 
                 // This never occurs most probably
-                if ((def != ef_Arpeggio) &&
+                /*if ((def != ef_Arpeggio) &&
                     (def != ef_ExtraFineArpeggio) &&
                     (def != ef_ArpggVSlide) &&
                     (def != ef_ArpggVSlideFine))
-                    arpgg_table[slot][chan].state = 0;
+                    arpgg_table[slot][chan].state = 0;*/
 
                 arpgg_table[slot][chan].note = event_table[chan].note & 0x7f;
-                if ((def == ef_Arpeggio) ||
-                    (def == ef_ExtraFineArpeggio)) {
+                if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
                     arpgg_table[slot][chan].add1 = val / 16;
                     arpgg_table[slot][chan].add2 = val % 16;
                 }
@@ -2376,7 +2382,10 @@ static void update_effects_slot(int slot, int chan)
     uint8_t val  = effect_table[slot][chan].val;
 
     switch (def) {
-    case ef_Arpeggio + ef_fix1:
+    case ef_Arpeggio:
+        if (!val)
+            break;
+
         arpeggio(slot, chan);
         break;
 
