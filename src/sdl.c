@@ -110,8 +110,8 @@ void show_eff(char *name, tEFFECT_TABLE table[2][20])
             uint8_t def = table[j][i].def;
             uint8_t val = table[j][i].val;
 
-            if (def > 0x90) { // ef_fix2
-                val |= ((def - 0x90 - 36) << 4); // def - ef_Extended2 - ef_fix2
+            if (def & ef_fix2) {
+                val |= ((def - ef_fix2 - 36) << 4); // def - ef_Extended2 - ef_fix2
                 def = 36;
             } else {
                 def &= 0x3f;
