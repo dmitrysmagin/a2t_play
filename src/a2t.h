@@ -185,6 +185,9 @@ C_ASSERT(sizeof(tPATTERN_DATA) == 20 * 256 * 6);
 #define ef_SetCustomSpeedTab   45
 #define ef_GlobalFSlideUp      46
 #define ef_GlobalFSlideDown    47
+#define ef_GlobalFreqSlideUpXF 48 // ef_fix2 replacement for >xx + ZFE
+#define ef_GlobalFreqSlideDnXF 49 // ef_fix2 replacement for <xx + ZFE
+
 #define ef_ex_SetTremDepth     0
 #define ef_ex_SetVibDepth      1
 #define ef_ex_SetAttckRateM    2
@@ -254,9 +257,6 @@ C_ASSERT(sizeof(tPATTERN_DATA) == 20 * 256 * 6);
 #define ef_ex3_SetVibratoC     10
 #define ef_ex3_SetKsrC         11
 #define ef_ex3_SetSustainC     12
-
-#define ef_fix2 0x90
-
 
 /* Data for importing A2T format */
 typedef struct {

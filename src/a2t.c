@@ -5,7 +5,6 @@
 
     In order to get into Adplug:
     - Reduce the memory used for a tune
-    - Get rid of ef_fix2
     - Rework tADTRACK2_EVENT event_table:
         * Effects: resolve common code with effect_table
         * Note/instr: Perhaps use last_note/last_inst_def instead
@@ -412,7 +411,7 @@ static void patterns_allocate(int patterns, int channels, int rows)
 static void memory_usage()
 {
     // Calc patterns
-    int oldsize = eventsinfo->patterns * sizeof(tPATTERN_DATA);
+    //int oldsize = eventsinfo->patterns * sizeof(tPATTERN_DATA);
 
     // Count fmreg/vib/arp macros
     int nfmregs = 0, nvib = 0, narp = 0;
@@ -424,7 +423,7 @@ static void memory_usage()
 
     printf("Memory usage:\n");
     printf("\tSongdata: %d bytes\n", sizeof(tFIXED_SONGDATA));
-    printf("\tPatterns * %d: %d bytes (old)\n", eventsinfo->patterns, oldsize);
+    //printf("\tPatterns * %d: %d bytes (old)\n", eventsinfo->patterns, oldsize);
     printf("\tPatterns * %d: %d bytes\n", eventsinfo->patterns, eventsinfo->size);
     printf("\tInstruments * 255: %d bytes\n", sizeof(tINSTR_DATA_EXT[255]));
     printf("\tFmreg * %d: %d bytes\n", nfmregs, nfmregs * sizeof(tFMREG_TABLE));
@@ -941,7 +940,6 @@ void set_overall_volume(unsigned char level)
     set_global_volume();
 }
 
-// FIXME: check ins
 static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 {
     uint8_t arp_table = instruments[ins - 1].arpeggio;
@@ -1174,7 +1172,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     uint8_t def = event->eff[slot].def;
     uint8_t val = event->eff[slot].val;
 
-    // 
+    // Note: this might be dropped because effect_table stores effects
+    // that might be continued with x00
     effect_table[slot][chan].def = def;
     effect_table[slot][chan].val = val;
 
@@ -1220,9 +1219,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 // >xx + ZFE
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
-                    eff = ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF;
-                    // note: val remains 8-bit
-                    // if eliminate ef_fix2, upper 4 bits will be lost
+                    eff = ef_GlobalFreqSlideUpXF;
                 }
 
                  // >xx + ZFD
@@ -1240,8 +1237,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                  // <xx + ZFE
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
-                    eff = ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF;
-                    // note: val remains 8-bit
+                    eff = ef_GlobalFreqSlideDnXF;
                 }
 
                  // <xx + ZFD
@@ -1289,7 +1285,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         case ef_ArpggVSlide:
         case ef_ArpggVSlideFine:
             update_effect_table(slot, chan, EFGR_ARPVOLSLIDE, def, val);
-
             break;
         }
 
@@ -1685,14 +1680,14 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             break;
 
         case ef_ex2_NoteDelay:
-            effect_table[slot][chan].def = ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay;
-            effect_table[slot][chan].val = val & 0xf;
+            effect_table[slot][chan].def = ef_Extended2;
+            effect_table[slot][chan].val = val;
             notedel_table[chan] = val % 16;
             break;
 
         case ef_ex2_NoteCut:
-            effect_table[slot][chan].def = ef_Extended2 + ef_fix2 + ef_ex2_NoteCut;
-            effect_table[slot][chan].val = val & 0xf;
+            effect_table[slot][chan].def = ef_Extended2;
+            effect_table[slot][chan].val = val;
             notecut_table[chan] = val % 16;
             break;
 
@@ -1714,8 +1709,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         case ef_ex2_VolSlideDnXF:
         case ef_ex2_FreqSlideUpXF:
         case ef_ex2_FreqSlideDnXF:
-            effect_table[slot][chan].def = ef_Extended2 + ef_fix2 + (val >> 4);
-            effect_table[slot][chan].val = val & 0x0f;
+            effect_table[slot][chan].def = ef_Extended2;
+            effect_table[slot][chan].val = val;
             break;
         }
         break;
@@ -1818,19 +1813,22 @@ static bool is_eff_porta(tADTRACK2_EVENT *event)
     return is_p0 || is_p1;
 }
 
-// Note: commenting out fixes fank5.a2m - porta after delay note
 static bool no_porta_or_delay(int chan)
 {
-    int eff0 = effect_table[0][chan].def;
+    uint8_t eff0 = effect_table[0][chan].def;
+    uint8_t val0 = effect_table[0][chan].val;
     bool is_p0 = (eff0 == ef_TonePortamento) ||
                 (eff0 == ef_TPortamVolSlide) ||
                 (eff0 == ef_TPortamVSlideFine) ||
-                (eff0 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay);
-    int eff1 = effect_table[1][chan].def;
+                (eff0 == ef_Extended2 && val0 / 16 == ef_ex2_NoteDelay);
+
+    uint8_t eff1 = effect_table[1][chan].def;
+    uint8_t val1 = effect_table[1][chan].val;
     bool is_p1 = (eff1 == ef_TonePortamento) ||
                 (eff1 == ef_TPortamVolSlide) ||
                 (eff1 == ef_TPortamVSlideFine) ||
-                (eff1 == ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay);
+                (eff1 == ef_Extended2 && val1 / 16 == ef_ex2_NoteDelay);
+
     return !is_p0 && !is_p1;
 }
 
@@ -2535,30 +2533,27 @@ static void update_effects_slot(int slot, int chan)
         }
         break;
 
-    case ef_Extended2 + ef_fix2 + ef_ex2_NoteDelay:
-        if (notedel_table[chan] == 0) {
-            notedel_table[chan] = BYTE_NULL;
-            output_note(event_table[chan].note,	event_table[chan].instr_def, chan, TRUE, TRUE);
-        } else if (notedel_table[chan] != BYTE_NULL) {
-            notedel_table[chan]--;
+    case ef_Extended2:
+        switch (val / 16) {
+        case ef_ex2_NoteDelay:
+            if (notedel_table[chan] == 0) {
+                notedel_table[chan] = BYTE_NULL;
+                output_note(event_table[chan].note,	event_table[chan].instr_def, chan, TRUE, TRUE);
+            } else if (notedel_table[chan] != BYTE_NULL) {
+                notedel_table[chan]--;
+            }
+            break;
+        case ef_ex2_NoteCut:
+            if (notecut_table[chan] == 0) {
+                notecut_table[chan] = BYTE_NULL;
+                key_off(chan);
+            } else if (notecut_table[chan] != BYTE_NULL) {
+                notecut_table[chan]--;
+            }
+            break;
+        case ef_ex2_GlVolSlideUp: global_volume_slide(val & 0xf, BYTE_NULL); break;
+        case ef_ex2_GlVolSlideDn: global_volume_slide(BYTE_NULL, val & 0xf); break;
         }
-        break;
-
-    case ef_Extended2 + ef_fix2 + ef_ex2_NoteCut:
-        if (notecut_table[chan] == 0) {
-            notecut_table[chan] = BYTE_NULL;
-            key_off(chan);
-        } else if (notecut_table[chan] != BYTE_NULL) {
-            notecut_table[chan]--;
-        }
-        break;
-
-    case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUp:
-        global_volume_slide(val % 16, BYTE_NULL);
-        break;
-
-    case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDn:
-        global_volume_slide(BYTE_NULL, val % 16);
         break;
     }
 }
@@ -2644,11 +2639,11 @@ static void update_fine_effects(int slot, int chan)
         volume_slide(chan, val / 16, val % 16);
         break;
 
-    case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideUpF:
-        global_volume_slide(val, BYTE_NULL);
-        break;
-    case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSlideDnF:
-        global_volume_slide(BYTE_NULL, val);
+    case ef_Extended2:
+        switch(val / 16) {
+        case ef_ex2_GlVolSlideUpF: global_volume_slide(val & 0xf, BYTE_NULL); break;
+        case ef_ex2_GlVolSlideDnF: global_volume_slide(BYTE_NULL, val & 0xf); break;
+        }
         break;
     }
 }
@@ -2659,12 +2654,19 @@ static void update_extra_fine_effects_slot(int slot, int chan)
     uint8_t val = effect_table[slot][chan].val;
 
     switch (def) {
-    case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldUpXF:  global_volume_slide(val, BYTE_NULL); break;
-    case ef_Extended2 + ef_fix2 + ef_ex2_GlVolSldDnXF:  global_volume_slide(BYTE_NULL, val); break;
-    case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideUpXF:  volume_slide(chan, val, 0); break;
-    case ef_Extended2 + ef_fix2 + ef_ex2_VolSlideDnXF:  volume_slide(chan, 0, val); break;
-    case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideUpXF: portamento_up(chan, val, nFreq(12*8+1)); break;
-    case ef_Extended2 + ef_fix2 + ef_ex2_FreqSlideDnXF: portamento_down(chan, val, nFreq(0)); break;
+    case ef_Extended2:
+        switch(val / 16) {
+        case ef_ex2_GlVolSldUpXF:  global_volume_slide(val & 0xf, BYTE_NULL); break;
+        case ef_ex2_GlVolSldDnXF:  global_volume_slide(BYTE_NULL, val & 0xf); break;
+        case ef_ex2_VolSlideUpXF:  volume_slide(chan, val & 0xf, 0); break;
+        case ef_ex2_VolSlideDnXF:  volume_slide(chan, 0, val & 0xf); break;
+        case ef_ex2_FreqSlideUpXF: portamento_up(chan, val & 0xf, nFreq(12*8+1)); break;
+        case ef_ex2_FreqSlideDnXF: portamento_down(chan, val & 0xf, nFreq(0)); break;
+        }
+        break;
+
+    case ef_GlobalFreqSlideUpXF: portamento_up(chan, val, nFreq(12*8+1)); break;
+    case ef_GlobalFreqSlideDnXF: portamento_down(chan, val, nFreq(0)); break;
 
     case ef_ExtraFineArpeggio:
         arpeggio(slot, chan);
