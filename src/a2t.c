@@ -533,12 +533,13 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 static void change_freq(int chan, uint16_t freq)
 {
     if (is_4op_chan(chan) && is_4op_chan_hi(chan)) {
-        freq_table[chan + 1] = freq_table[chan];
+        //freq_table[chan + 1] = freq_table[chan];
         chan++;
     }
 
     freq_table[chan] &= ~0x1fff;
     freq_table[chan] |= (freq & 0x1fff);
+
     opl3out(0xa0 + _chan_n[chan], freq_table[chan] & 0xFF);
     opl3out(0xb0 + _chan_n[chan], (freq_table[chan] >> 8) & 0xFF);
 
@@ -592,17 +593,12 @@ static void change_frequency(int chan, uint16_t freq)
     change_freq(chan, freq);
 
     if (is_4op_chan(chan)) {
-        if (is_4op_chan_hi(chan)) {
-            macro_table[chan + 1].vib_count = 1;
-            macro_table[chan + 1].vib_pos = 0;
-            macro_table[chan + 1].vib_freq = freq;
-            macro_table[chan + 1].vib_paused = FALSE;
-        } else {
-            macro_table[chan - 1].vib_count = 1;
-            macro_table[chan - 1].vib_pos = 0;
-            macro_table[chan - 1].vib_freq = freq;
-            macro_table[chan - 1].vib_paused = FALSE;
-        }
+        int i = is_4op_chan_hi(chan) ? 1 : -1;
+
+        macro_table[chan + i].vib_count = 1;
+        macro_table[chan + i].vib_pos = 0;
+        macro_table[chan + i].vib_freq = freq;
+        macro_table[chan + i].vib_paused = FALSE;
     }
 
     macro_table[chan].vib_count = 1;
@@ -670,11 +666,9 @@ void update_playback_speed(int speed_shift)
 
 static void key_on(int chan)
 {
-    if (is_4op_chan(chan) && is_4op_chan_hi(chan)) {
-        opl3out(0xb0 + _chan_n[chan + 1], 0);
-    } else {
-        opl3out(0xb0 + _chan_n[chan], 0);
-    }
+    int i = is_4op_chan(chan) && is_4op_chan_hi(chan) ? 1 : 0;
+
+    opl3out(0xb0 + _chan_n[chan + i], 0);
 }
 
 static void key_off(int chan)
@@ -1605,21 +1599,17 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             case ef_ex_cmd_4opVlockOff:
                 if (is_4op_chan(chan)) {
                     vol4op_lock[chan] = FALSE;
-                    if (is_4op_chan_hi(chan)) {
-                        vol4op_lock[chan + 1] = FALSE;
-                    } else {
-                        vol4op_lock[chan - 1] = FALSE;
-                    }
+                    int i = is_4op_chan_hi(chan) ? 1 : -1;
+
+                    vol4op_lock[chan + i] = FALSE;
                 }
                 break;
             case ef_ex_cmd_4opVlockOn:
                 if (is_4op_chan(chan)) {
                     vol4op_lock[chan] = TRUE;
-                    if (is_4op_chan_hi(chan)) {
-                        vol4op_lock[chan + 1] = TRUE;
-                    } else {
-                        vol4op_lock[chan - 1] = TRUE;
-                    }
+                    int i = is_4op_chan_hi(chan) ? 1 : -1;
+
+                    vol4op_lock[chan + i] = TRUE;
                 }
                 break;
             }
