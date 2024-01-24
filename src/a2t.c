@@ -1090,7 +1090,7 @@ static inline bool is_4op_chan(int chan) // 0..19
 
 static inline bool is_4op_chan_hi(int chan)
 {
-    bool _4op_hi[20] = {
+    static bool _4op_hi[20] = {
         TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE,					// 0, 2, 4
         TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE	// 9, 10, 13
     };
@@ -1100,7 +1100,7 @@ static inline bool is_4op_chan_hi(int chan)
 
 static inline bool is_4op_chan_lo(int chan)
 {
-    bool _4op_lo[20] = {
+    static bool _4op_lo[20] = {
         FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE,					// 1, 3, 5
         FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE	// 10, 12, 14
     };
