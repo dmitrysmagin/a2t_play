@@ -67,8 +67,6 @@ const uint16_t _chpm_c[20] = {
     0x103,0x10c,0x104,0x10d,0x105,0x013,BYTE_NULL,BYTE_NULL,BYTE_NULL,BYTE_NULL
 };
 
-uint16_t _chan_n[20], _chan_m[20], _chan_c[20];
-
 #define EFGR_ARPVOLSLIDE 1
 #define EFGR_FSLIDEVOLSLIDE 2
 #define EFGR_TONEPORTAMENTO 3
@@ -437,6 +435,21 @@ static inline bool note_in_range(uint8_t note)
     return ((note & 0x7f) > 0) && ((note & 0x7f) < 12 * 8 + 1);
 }
 
+static inline uint16_t r_chan_n(int chan)
+{
+    return percussion_mode ? _chpm_n[chan] : _chmm_n[chan];
+}
+
+static inline uint16_t r_chan_m(int chan)
+{
+    return percussion_mode ? _chpm_m[chan] : _chmm_m[chan];
+}
+
+static inline uint16_t r_chan_c(int chan)
+{
+    return percussion_mode ? _chpm_c[chan] : _chmm_c[chan];
+}
+
 int ticks, tickD, tickXF;
 
 #define FreqStart   0x156
@@ -540,8 +553,10 @@ static void change_freq(int chan, uint16_t freq)
     freq_table[chan] &= ~0x1fff;
     freq_table[chan] |= (freq & 0x1fff);
 
-    opl3out(0xa0 + _chan_n[chan], freq_table[chan] & 0xFF);
-    opl3out(0xb0 + _chan_n[chan], (freq_table[chan] >> 8) & 0xFF);
+    uint16_t n = r_chan_n(chan);
+
+    opl3out(0xa0 + n, freq_table[chan] & 0xFF);
+    opl3out(0xb0 + n, (freq_table[chan] >> 8) & 0xFF);
 
     if (is_4op_chan(chan) && is_4op_chan_lo(chan)) {
         freq_table[chan - 1] = freq_table[chan];
@@ -668,7 +683,7 @@ static void key_on(int chan)
 {
     int i = is_4op_chan(chan) && is_4op_chan_hi(chan) ? 1 : 0;
 
-    opl3out(0xb0 + _chan_n[chan + i], 0);
+    opl3out(0xb0 + r_chan_n(chan + i), 0);
 }
 
 static void key_off(int chan)
@@ -680,8 +695,11 @@ static void key_off(int chan)
 
 static void release_sustaining_sound(int chan)
 {
-    opl3out(_instr[2] + _chan_m[chan], 63);
-    opl3out(_instr[3] + _chan_c[chan], 63);
+    uint16_t m = r_chan_m(chan);
+    uint16_t c = r_chan_c(chan);
+
+    opl3out(_instr[2] + m, 63);
+    opl3out(_instr[3] + c, 63);
 
     // clear adsrw_mod and adsrw_car
     for (int i = 4; i <= 9; i++) {
@@ -689,10 +707,10 @@ static void release_sustaining_sound(int chan)
     }
 
     key_on(chan);
-    opl3out(_instr[4] + _chan_m[chan], BYTE_NULL);
-    opl3out(_instr[5] + _chan_c[chan], BYTE_NULL);
-    opl3out(_instr[6] + _chan_m[chan], BYTE_NULL);
-    opl3out(_instr[7] + _chan_c[chan], BYTE_NULL);
+    opl3out(_instr[4] + m, BYTE_NULL);
+    opl3out(_instr[5] + c, BYTE_NULL);
+    opl3out(_instr[6] + m, BYTE_NULL);
+    opl3out(_instr[7] + c, BYTE_NULL);
 
     key_off(chan);
     event_table[chan].instr_def = 0;
@@ -775,9 +793,13 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
             carrier = 63;
     }
 
+    uint16_t m = r_chan_m(chan);
+    uint16_t c = r_chan_c(chan);
+
     // Note: fmpar[].volM/volC has pure unscaled volume,
     // modulator_vol/carrier_vol have scaled but without overall_volume
     if (modulator != BYTE_NULL) {
+        uint8_t regm;
         bool is_perc_chan = instr->fm.connect ||
                             (percussion_mode && (chan >= 16 && chan <= 19)); // in [17..20]
 
@@ -788,27 +810,27 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
                 modulator = scale_volume(instr->fm.volM, modulator);
 
             modulator = scale_volume(modulator, 63 - global_volume);
-
-            opl3out(_instr[2] + _chan_m[chan],
-                scale_volume(modulator, 63 - overall_volume) + (fmpar_table[chan].kslM << 6));
+            regm = scale_volume(modulator, 63 - overall_volume) + (fmpar_table[chan].kslM << 6);
         } else {
-            opl3out(_instr[2] + _chan_m[chan], modulator + (fmpar_table[chan].kslM << 6));
+            regm = modulator + (fmpar_table[chan].kslM << 6);
         }
 
+        opl3out(_instr[2] + m, regm);
         modulator_vol[chan] = 63 - modulator;
     }
 
     if (carrier != BYTE_NULL) {
+        uint8_t regc;
+
         fmpar_table[chan].volC = carrier;
 
         if (volume_scaling)
             carrier = scale_volume(instr->fm.volC, carrier);
 
         carrier = scale_volume(carrier, 63 - global_volume);
+        regc = scale_volume(carrier, 63 - overall_volume) + (fmpar_table[chan].kslC << 6);
 
-        opl3out(_instr[3] + _chan_c[chan],
-            scale_volume(carrier, 63 - overall_volume) + (fmpar_table[chan].kslC << 6));
-
+        opl3out(_instr[3] + c, regc);
         carrier_vol[chan] = 63 - carrier;
     }
 }
@@ -825,27 +847,32 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
             carrier = 63;
     }
 
+    uint16_t m = r_chan_m(chan);
+    uint16_t c = r_chan_c(chan);
+
     if (modulator != BYTE_NULL) {
+        uint8_t regm;
         fmpar_table[chan].volM = modulator;
 
         modulator = scale_volume(instr->fm.volM, modulator);
         modulator = scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
 
-        opl3out(_instr[02] + _chan_m[chan],
-            scale_volume(modulator, 63 - overall_volume) + (fmpar_table[chan].kslM << 6));
+        regm = scale_volume(modulator, 63 - overall_volume) + (fmpar_table[chan].kslM << 6);
 
+        opl3out(_instr[02] + m, regm);
         modulator_vol[chan] = 63 - modulator;
     }
 
     if (carrier != BYTE_NULL) {
+        uint8_t regc;
         fmpar_table[chan].volC = carrier;
 
         carrier = scale_volume(instr->fm.volC, carrier);
         carrier = scale_volume(carrier, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
 
-        opl3out(_instr[03] + _chan_c[chan],
-                scale_volume(carrier, 63 - overall_volume) + (fmpar_table[chan].kslC << 6));
+        regc = scale_volume(carrier, 63 - overall_volume) + (fmpar_table[chan].kslC << 6);
 
+        opl3out(_instr[03] + c, regc);
         carrier_vol[chan] = 63 - carrier;
     }
 }
@@ -966,17 +993,21 @@ static void set_ins_data(uint8_t ins, int chan)
                                   ? i->panning
                                   : songdata->lock_flags[chan] & 3;
 
-        opl3out(_instr[0] + _chan_m[chan], i->fm.data[0]);
-        opl3out(_instr[1] + _chan_c[chan], i->fm.data[1]);
-        opl3out(_instr[2] + _chan_m[chan], (i->fm.data[2] & 0xc0) + 63);
-        opl3out(_instr[3] + _chan_c[chan], (i->fm.data[3] & 0xc0) + 63);
-        opl3out(_instr[4] + _chan_m[chan], i->fm.data[4]);
-        opl3out(_instr[5] + _chan_c[chan], i->fm.data[5]);
-        opl3out(_instr[6] + _chan_m[chan], i->fm.data[6]);
-        opl3out(_instr[7] + _chan_c[chan], i->fm.data[7]);
-        opl3out(_instr[8] + _chan_m[chan], i->fm.data[8]);
-        opl3out(_instr[9] + _chan_c[chan], i->fm.data[9]);
-        opl3out(_instr[10] + _chan_n[chan], i->fm.data[10] | _panning[panning_table[chan]]);
+        uint16_t m = r_chan_m(chan);
+        uint16_t c = r_chan_c(chan);
+        uint16_t n = r_chan_n(chan);
+
+        opl3out(_instr[0] + m, i->fm.data[0]);
+        opl3out(_instr[1] + c, i->fm.data[1]);
+        opl3out(_instr[2] + m, (i->fm.data[2] & 0xc0) + 63);
+        opl3out(_instr[3] + c, (i->fm.data[3] & 0xc0) + 63);
+        opl3out(_instr[4] + m, i->fm.data[4]);
+        opl3out(_instr[5] + c, i->fm.data[5]);
+        opl3out(_instr[6] + m, i->fm.data[6]);
+        opl3out(_instr[7] + c, i->fm.data[7]);
+        opl3out(_instr[8] + m, i->fm.data[8]);
+        opl3out(_instr[9] + c, i->fm.data[9]);
+        opl3out(_instr[10] + n, i->fm.data[10] | _panning[panning_table[chan]]);
 
         for (int r = 0; r < 11; r++) {
             fmpar_table[chan].data[r] = i->fm.data[r];
@@ -1009,28 +1040,30 @@ static void set_ins_data(uint8_t ins, int chan)
 static void update_modulator_adsrw(int chan)
 {
     tFM_INST_DATA *fmpar = &fmpar_table[chan];
+    uint16_t m = r_chan_m(chan);
 
-    opl3out(_instr[4] + _chan_m[chan], fmpar->data[4]);
-    opl3out(_instr[6] + _chan_m[chan], fmpar->data[6]);
-    opl3out(_instr[8] + _chan_m[chan], fmpar->data[8]);
+    opl3out(_instr[4] + m, fmpar->data[4]);
+    opl3out(_instr[6] + m, fmpar->data[6]);
+    opl3out(_instr[8] + m, fmpar->data[8]);
 }
 
 static void update_carrier_adsrw(int chan)
 {
     tFM_INST_DATA *fmpar = &fmpar_table[chan];
+    uint16_t c = r_chan_c(chan);
 
-    opl3out(_instr[5] + _chan_c[chan], fmpar->data[5]);
-    opl3out(_instr[7] + _chan_c[chan], fmpar->data[7]);
-    opl3out(_instr[9] + _chan_c[chan], fmpar->data[9]);
+    opl3out(_instr[5] + c, fmpar->data[5]);
+    opl3out(_instr[7] + c, fmpar->data[7]);
+    opl3out(_instr[9] + c, fmpar->data[9]);
 }
 
 static void update_fmpar(int chan)
 {
     tFM_INST_DATA *fmpar = &fmpar_table[chan];
 
-    opl3out(_instr[0] + _chan_m[chan], fmpar->data[0]);
-    opl3out(_instr[1] + _chan_c[chan], fmpar->data[1]);
-    opl3out(_instr[10] + _chan_n[chan], fmpar->data[10] | _panning[panning_table[chan]]);
+    opl3out(_instr[0] + r_chan_m(chan), fmpar->data[0]);
+    opl3out(_instr[1] + r_chan_c(chan), fmpar->data[1]);
+    opl3out(_instr[10] + r_chan_n(chan), fmpar->data[10] | _panning[panning_table[chan]]);
 
     set_ins_volume(fmpar->volM, fmpar->volC, chan);
 }
@@ -3194,7 +3227,7 @@ static void init_player()
     opl2out(0x01, 0);
 
     for (int i = 0; i < 18; i++)
-        opl2out(0xb0 + _chan_n[i], 0);
+        opl2out(0xb0 + r_chan_n(i), 0);
 
     for (int i = 0x80; i <= 0x8d; i++)
         opl2out(i, BYTE_NULL);
@@ -3217,16 +3250,6 @@ static void init_player()
     opl2out(_instr[11], misc_register);
 
     init_buffers();
-
-    if (!percussion_mode) {
-        memcpy(_chan_n, _chmm_n, sizeof(_chan_n));
-        memcpy(_chan_m, _chmm_m, sizeof(_chan_m));
-        memcpy(_chan_c, _chmm_c, sizeof(_chan_c));
-    } else {
-        memcpy(_chan_n, _chpm_n, sizeof(_chan_n));
-        memcpy(_chan_m, _chpm_m, sizeof(_chan_m));
-        memcpy(_chan_c, _chpm_c, sizeof(_chan_c));
-    }
 
     current_tremolo_depth = tremolo_depth;
     current_vibrato_depth = vibrato_depth;
