@@ -405,7 +405,7 @@ static inline bool note_in_range(uint8_t note)
     return ((note & 0x7f) > 0) && ((note & 0x7f) < 12 * 8 + 1);
 }
 
-static inline uint16_t r_chan_n(int chan)
+static inline uint16_t regoffs_n(int chan)
 {
     static const uint16_t _ch_n[2][20] = {
         {  // mm
@@ -420,7 +420,7 @@ static inline uint16_t r_chan_n(int chan)
     return _ch_n[!!percussion_mode][chan];
 }
 
-static inline uint16_t r_chan_m(int chan)
+static inline uint16_t regoffs_m(int chan)
 {
     static const uint16_t _ch_m[2][20] = {
         {  // mm
@@ -435,7 +435,7 @@ static inline uint16_t r_chan_m(int chan)
     return _ch_m[!!percussion_mode][chan];
 }
 
-static inline uint16_t r_chan_c(int chan)
+static inline uint16_t regoffs_c(int chan)
 {
     static const uint16_t _ch_c[2][20] = {
         {
@@ -553,7 +553,7 @@ static void change_freq(int chan, uint16_t freq)
     freq_table[chan] &= ~0x1fff;
     freq_table[chan] |= (freq & 0x1fff);
 
-    uint16_t n = r_chan_n(chan);
+    uint16_t n = regoffs_n(chan);
 
     opl3out(0xa0 + n, freq_table[chan] & 0xFF);
     opl3out(0xb0 + n, (freq_table[chan] >> 8) & 0xFF);
@@ -683,7 +683,7 @@ static void key_on(int chan)
 {
     int i = is_4op_chan(chan) && is_4op_chan_hi(chan) ? 1 : 0;
 
-    opl3out(0xb0 + r_chan_n(chan + i), 0);
+    opl3out(0xb0 + regoffs_n(chan + i), 0);
 }
 
 static void key_off(int chan)
@@ -695,8 +695,8 @@ static void key_off(int chan)
 
 static void release_sustaining_sound(int chan)
 {
-    uint16_t m = r_chan_m(chan);
-    uint16_t c = r_chan_c(chan);
+    uint16_t m = regoffs_m(chan);
+    uint16_t c = regoffs_c(chan);
 
     opl3out(0x40 + m, 63);
     opl3out(0x40 + c, 63);
@@ -793,8 +793,8 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
             carrier = 63;
     }
 
-    uint16_t m = r_chan_m(chan);
-    uint16_t c = r_chan_c(chan);
+    uint16_t m = regoffs_m(chan);
+    uint16_t c = regoffs_c(chan);
 
     // Note: fmpar[].volM/volC has pure unscaled volume,
     // modulator_vol/carrier_vol have scaled but without overall_volume
@@ -847,8 +847,8 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
             carrier = 63;
     }
 
-    uint16_t m = r_chan_m(chan);
-    uint16_t c = r_chan_c(chan);
+    uint16_t m = regoffs_m(chan);
+    uint16_t c = regoffs_c(chan);
 
     if (modulator != BYTE_NULL) {
         uint8_t regm;
@@ -993,9 +993,9 @@ static void set_ins_data(uint8_t ins, int chan)
                                   ? i->panning
                                   : songdata->lock_flags[chan] & 3;
 
-        uint16_t m = r_chan_m(chan);
-        uint16_t c = r_chan_c(chan);
-        uint16_t n = r_chan_n(chan);
+        uint16_t m = regoffs_m(chan);
+        uint16_t c = regoffs_c(chan);
+        uint16_t n = regoffs_n(chan);
 
         opl3out(0x20 + m, i->fm.data[0]);
         opl3out(0x20 + c, i->fm.data[1]);
@@ -1040,7 +1040,7 @@ static void set_ins_data(uint8_t ins, int chan)
 static void update_modulator_adsrw(int chan)
 {
     tFM_INST_DATA *fmpar = &fmpar_table[chan];
-    uint16_t m = r_chan_m(chan);
+    uint16_t m = regoffs_m(chan);
 
     opl3out(0x60 + m, fmpar->data[4]);
     opl3out(0x80 + m, fmpar->data[6]);
@@ -1050,7 +1050,7 @@ static void update_modulator_adsrw(int chan)
 static void update_carrier_adsrw(int chan)
 {
     tFM_INST_DATA *fmpar = &fmpar_table[chan];
-    uint16_t c = r_chan_c(chan);
+    uint16_t c = regoffs_c(chan);
 
     opl3out(0x60 + c, fmpar->data[5]);
     opl3out(0x80 + c, fmpar->data[7]);
@@ -1061,9 +1061,9 @@ static void update_fmpar(int chan)
 {
     tFM_INST_DATA *fmpar = &fmpar_table[chan];
 
-    opl3out(0x20 + r_chan_m(chan), fmpar->data[0]);
-    opl3out(0x20 + r_chan_c(chan), fmpar->data[1]);
-    opl3out(0xc0 + r_chan_n(chan), fmpar->data[10] | _panning[panning_table[chan]]);
+    opl3out(0x20 + regoffs_m(chan), fmpar->data[0]);
+    opl3out(0x20 + regoffs_c(chan), fmpar->data[1]);
+    opl3out(0xc0 + regoffs_n(chan), fmpar->data[10] | _panning[panning_table[chan]]);
 
     set_ins_volume(fmpar->volM, fmpar->volC, chan);
 }
@@ -3227,7 +3227,7 @@ static void init_player()
     opl2out(0x01, 0);
 
     for (int i = 0; i < 18; i++)
-        opl2out(0xb0 + r_chan_n(i), 0);
+        opl2out(0xb0 + regoffs_n(i), 0);
 
     for (int i = 0x80; i <= 0x8d; i++)
         opl2out(i, BYTE_NULL);
