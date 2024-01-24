@@ -35,10 +35,6 @@ typedef enum {
 
 const uint8_t _panning[3] = { 0x30, 0x10, 0x20 };
 
-const uint8_t _instr[12] = {
-    0x20, 0x20, 0x40, 0x40, 0x60, 0x60, 0x80, 0x80, 0xe0, 0xe0, 0xc0, 0xbd
-};
-
 #define BYTE_NULL (uint8_t)(0xFFFFFFFF)
 
 const uint16_t _chmm_n[20] = {
@@ -698,8 +694,8 @@ static void release_sustaining_sound(int chan)
     uint16_t m = r_chan_m(chan);
     uint16_t c = r_chan_c(chan);
 
-    opl3out(_instr[2] + m, 63);
-    opl3out(_instr[3] + c, 63);
+    opl3out(0x40 + m, 63);
+    opl3out(0x40 + c, 63);
 
     // clear adsrw_mod and adsrw_car
     for (int i = 4; i <= 9; i++) {
@@ -707,10 +703,10 @@ static void release_sustaining_sound(int chan)
     }
 
     key_on(chan);
-    opl3out(_instr[4] + m, BYTE_NULL);
-    opl3out(_instr[5] + c, BYTE_NULL);
-    opl3out(_instr[6] + m, BYTE_NULL);
-    opl3out(_instr[7] + c, BYTE_NULL);
+    opl3out(0x60 + m, BYTE_NULL);
+    opl3out(0x60 + c, BYTE_NULL);
+    opl3out(0x80 + m, BYTE_NULL);
+    opl3out(0x80 + c, BYTE_NULL);
 
     key_off(chan);
     event_table[chan].instr_def = 0;
@@ -815,7 +811,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
             regm = modulator + (fmpar_table[chan].kslM << 6);
         }
 
-        opl3out(_instr[2] + m, regm);
+        opl3out(0x40 + m, regm);
         modulator_vol[chan] = 63 - modulator;
     }
 
@@ -830,7 +826,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
         carrier = scale_volume(carrier, 63 - global_volume);
         regc = scale_volume(carrier, 63 - overall_volume) + (fmpar_table[chan].kslC << 6);
 
-        opl3out(_instr[3] + c, regc);
+        opl3out(0x40 + c, regc);
         carrier_vol[chan] = 63 - carrier;
     }
 }
@@ -859,7 +855,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 
         regm = scale_volume(modulator, 63 - overall_volume) + (fmpar_table[chan].kslM << 6);
 
-        opl3out(_instr[02] + m, regm);
+        opl3out(0x40 + m, regm);
         modulator_vol[chan] = 63 - modulator;
     }
 
@@ -872,7 +868,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 
         regc = scale_volume(carrier, 63 - overall_volume) + (fmpar_table[chan].kslC << 6);
 
-        opl3out(_instr[03] + c, regc);
+        opl3out(0x40 + c, regc);
         carrier_vol[chan] = 63 - carrier;
     }
 }
@@ -997,17 +993,17 @@ static void set_ins_data(uint8_t ins, int chan)
         uint16_t c = r_chan_c(chan);
         uint16_t n = r_chan_n(chan);
 
-        opl3out(_instr[0] + m, i->fm.data[0]);
-        opl3out(_instr[1] + c, i->fm.data[1]);
-        opl3out(_instr[2] + m, (i->fm.data[2] & 0xc0) + 63);
-        opl3out(_instr[3] + c, (i->fm.data[3] & 0xc0) + 63);
-        opl3out(_instr[4] + m, i->fm.data[4]);
-        opl3out(_instr[5] + c, i->fm.data[5]);
-        opl3out(_instr[6] + m, i->fm.data[6]);
-        opl3out(_instr[7] + c, i->fm.data[7]);
-        opl3out(_instr[8] + m, i->fm.data[8]);
-        opl3out(_instr[9] + c, i->fm.data[9]);
-        opl3out(_instr[10] + n, i->fm.data[10] | _panning[panning_table[chan]]);
+        opl3out(0x20 + m, i->fm.data[0]);
+        opl3out(0x20 + c, i->fm.data[1]);
+        opl3out(0x40 + m, (i->fm.data[2] & 0xc0) + 63);
+        opl3out(0x40 + c, (i->fm.data[3] & 0xc0) + 63);
+        opl3out(0x60 + m, i->fm.data[4]);
+        opl3out(0x60 + c, i->fm.data[5]);
+        opl3out(0x80 + m, i->fm.data[6]);
+        opl3out(0x80 + c, i->fm.data[7]);
+        opl3out(0xe0 + m, i->fm.data[8]);
+        opl3out(0xe0 + c, i->fm.data[9]);
+        opl3out(0xc0 + n, i->fm.data[10] | _panning[panning_table[chan]]);
 
         for (int r = 0; r < 11; r++) {
             fmpar_table[chan].data[r] = i->fm.data[r];
@@ -1042,9 +1038,9 @@ static void update_modulator_adsrw(int chan)
     tFM_INST_DATA *fmpar = &fmpar_table[chan];
     uint16_t m = r_chan_m(chan);
 
-    opl3out(_instr[4] + m, fmpar->data[4]);
-    opl3out(_instr[6] + m, fmpar->data[6]);
-    opl3out(_instr[8] + m, fmpar->data[8]);
+    opl3out(0x60 + m, fmpar->data[4]);
+    opl3out(0x80 + m, fmpar->data[6]);
+    opl3out(0xe0 + m, fmpar->data[8]);
 }
 
 static void update_carrier_adsrw(int chan)
@@ -1052,18 +1048,18 @@ static void update_carrier_adsrw(int chan)
     tFM_INST_DATA *fmpar = &fmpar_table[chan];
     uint16_t c = r_chan_c(chan);
 
-    opl3out(_instr[5] + c, fmpar->data[5]);
-    opl3out(_instr[7] + c, fmpar->data[7]);
-    opl3out(_instr[9] + c, fmpar->data[9]);
+    opl3out(0x60 + c, fmpar->data[5]);
+    opl3out(0x80 + c, fmpar->data[7]);
+    opl3out(0xe0 + c, fmpar->data[9]);
 }
 
 static void update_fmpar(int chan)
 {
     tFM_INST_DATA *fmpar = &fmpar_table[chan];
 
-    opl3out(_instr[0] + r_chan_m(chan), fmpar->data[0]);
-    opl3out(_instr[1] + r_chan_c(chan), fmpar->data[1]);
-    opl3out(_instr[10] + r_chan_n(chan), fmpar->data[10] | _panning[panning_table[chan]]);
+    opl3out(0x20 + r_chan_m(chan), fmpar->data[0]);
+    opl3out(0x20 + r_chan_c(chan), fmpar->data[1]);
+    opl3out(0xc0 + r_chan_n(chan), fmpar->data[10] | _panning[panning_table[chan]]);
 
     set_ins_volume(fmpar->volM, fmpar->volC, chan);
 }
@@ -1527,12 +1523,12 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         case ef_ex_SetTremDepth:
             switch (val % 16) {
             case 0:
-                opl3out(_instr[11], misc_register & 0x7f);
+                opl3out(0xbd, misc_register & 0x7f);
                 current_tremolo_depth = 0;
                 break;
 
             case 1:
-                opl3out(_instr[11], misc_register | 0x80);
+                opl3out(0xbd, misc_register | 0x80);
                 current_tremolo_depth = 1;
                 break;
             }
@@ -1540,12 +1536,12 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         case ef_ex_SetVibDepth:
             switch (val % 16) {
             case 0:
-                opl3out(_instr[11], misc_register & 0xbf);
+                opl3out(0xbd, misc_register & 0xbf);
                 current_vibrato_depth = 0;
                 break;
 
             case 1:
-                opl3out(_instr[11], misc_register | 0x40);
+                opl3out(0xbd, misc_register | 0x40);
                 current_vibrato_depth = 1;
                 break;
             }
@@ -3247,7 +3243,7 @@ static void init_player()
 
     key_off(16);
     key_off(17);
-    opl2out(_instr[11], misc_register);
+    opl2out(0xbd, misc_register);
 
     init_buffers();
 
@@ -3285,7 +3281,7 @@ void a2t_stop()
     for (int i = 0; i < 20; i++)
         release_sustaining_sound(i);
 
-    opl2out(_instr[11], 0);
+    opl2out(0xbd, 0);
     opl3exp(0x0004);
     opl3exp(0x0005);
     lockvol = FALSE;
