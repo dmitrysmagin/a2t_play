@@ -236,6 +236,9 @@ static inline tINSTR_DATA *get_instr_data_by_ch(int chan)
 
 static inline tINSTR_DATA *get_instr_data(uint8_t ins)
 {
+    // TODO: check for max instrument and return zeroins if beyond
+    //static tINSTR_DATA zeroins = { {.data = {0}}, 0, 0, 0};
+
     return ins ? &instruments[ins - 1].instr_data : NULL;
 }
 
@@ -985,8 +988,16 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 
 static void set_ins_data(uint8_t ins, int chan)
 {
+    static tINSTR_DATA zeroins = { {.data = {0}}, 0, 0, 0};
+
+    if (ins == 0) return;
+
     tINSTR_DATA *i = get_instr_data(ins);
-    uint8_t old_ins;
+    i = i ? i : &zeroins;
+
+    if (is_data_empty(i, sizeof(tINSTR_DATA))) {
+        release_sustaining_sound(chan);
+    }
 
     if ((ins != event_table[chan].instr_def) || reset_chan[chan]) {
         panning_table[chan] = !pan_lock[chan]
@@ -1024,13 +1035,13 @@ static void set_ins_data(uint8_t ins, int chan)
         }
 
         uint8_t note = event_table[chan].note & 0x7f;
-        note = (note > 0 && note <= 12 * 8 + 1) ? note : 0;
+        note = note_in_range(note) ? note : 0;
 
         init_macro_table(chan, note, ins, freq_table[chan]);
     }
 
     voice_table[chan] = ins;
-    old_ins = event_table[chan].instr_def;
+    uint8_t old_ins = event_table[chan].instr_def;
     event_table[chan].instr_def = ins;
 
     if (!volume_lock[chan] || (ins != old_ins))
@@ -1142,13 +1153,12 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
         }
 
         if (restart_macro) {
-            // TODO: better use effect_table here
             // Check if no ZFF - force no restart
             bool force_no_restart = (
-                    ((event_table[chan].eff[0].def == ef_Extended) &&
-                     (event_table[chan].eff[0].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) ||
-                    ((event_table[chan].eff[1].def == ef_Extended) &&
-                     (event_table[chan].eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart))
+                    ((effect_table[0][chan].def == ef_Extended) &&
+                     (effect_table[0][chan].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) ||
+                    ((effect_table[1][chan].def == ef_Extended) &&
+                     (effect_table[1][chan].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart))
                 );
             if (!force_no_restart) {
                 init_macro_table(chan, note, ins, freq);
@@ -1895,9 +1905,6 @@ static void play_line()
     }
 
     for (int chan = 0; chan < songdata->nm_tracks; chan++) {
-        // Do a full copy of the event, because we modify event->note
-        *event = *get_event_p(current_pattern, chan, current_line);
-
         // save effect_table into last_effect
         for (int slot = 0; slot < 2; slot++) {
             if (effect_table[slot][chan].def | effect_table[slot][chan].val) {
@@ -1915,48 +1922,30 @@ static void play_line()
 
         ftune_table[chan] = 0;
 
+        // Do a full copy of the event, because we modify event->note
+        *event = *get_event_p(current_pattern, chan, current_line);
+
         // Fixup event->note
-        if (event->note == BYTE_NULL) { // Key off
+        if (event->note == 0xff) { // Key off
             event->note = event_table[chan].note | keyoff_flag;
         } else if ((event->note >= fixed_note_flag + 1) /*&& (event->note <= fixed_note_flag + 12*8+1)*/) {
             event->note -= fixed_note_flag;
         }
 
-        if (event->note || event->instr_def ||
-            (event->eff[0].def | event->eff[0].val) ||
-            (event->eff[1].def | event->eff[1].val))
-        {
-            event_table[chan].eff[0].def = event->eff[0].def;
-            event_table[chan].eff[0].val = event->eff[0].val;
-            event_table[chan].eff[1].def = event->eff[1].def;
-            event_table[chan].eff[1].val = event->eff[1].val;
-        }
-
-        if (event->instr_def) {
-            if (is_data_empty(get_instr_data(event->instr_def), sizeof(tINSTR_DATA))) {
-                release_sustaining_sound(chan);
-            }
-            set_ins_data(event->instr_def, chan);
-        }
-
         for (int slot = 0; slot < 2; slot++) {
-            uint8_t def = event->eff[slot].def;
-            uint8_t val = event->eff[slot].val;
-
-            // Use previous effect value if needed
-            if (!val && def && def == event_table[chan].eff[slot].def)
-                val = event_table[chan].eff[slot].val;
-
-            // eff not used here
-            event_table[chan].eff[slot].def = def;
-            event_table[chan].eff[slot].val = val;
+            event_table[chan].eff[slot].def = event->eff[slot].def;
+            event_table[chan].eff[slot].val = event->eff[slot].val;
         }
+
+        // alters event_table[].instr_def
+        set_ins_data(event->instr_def, chan);
 
         // set effect_table here
         process_effects(event, 0, chan);
         process_effects(event, 1, chan);
 
-        for (int slot = 0; slot < 2; slot++) {
+        // TODO: is that needed here?
+        /*for (int slot = 0; slot < 2; slot++) {
             if (event->eff[slot].def | event->eff[slot].val) {
                 event_table[chan].eff[slot].def = event->eff[slot].def;
                 event_table[chan].eff[slot].val = event->eff[slot].val;
@@ -1964,8 +1953,9 @@ static void play_line()
                 effect_table[slot][chan].def = 0;
                 effect_table[slot][chan].val = 0;
             }
-        }
+        }*/
 
+        // alters event_table[].note
         new_process_note(event, chan);
 
         check_swap_arp_vibr(event, 0, chan);
@@ -2077,11 +2067,8 @@ static void portamento_up(int chan, uint16_t slide, uint16_t limit)
     if ((freq_table[chan] & 0x1fff) == 0) return;
 
     freq = calc_freq_shift_up(freq_table[chan] & 0x1fff, slide);
-    if (freq <= limit) {
-        change_frequency(chan, freq);
-    } else {
-        change_frequency(chan, limit);
-    }
+
+    change_frequency(chan, freq <= limit ? freq : limit);
 }
 
 static void portamento_down(int chan, uint16_t slide, uint16_t limit)
@@ -2091,33 +2078,24 @@ static void portamento_down(int chan, uint16_t slide, uint16_t limit)
     if ((freq_table[chan] & 0x1fff) == 0) return;
 
     freq = calc_freq_shift_down(freq_table[chan] & 0x1fff, slide);
-    if (freq >= limit) {
-        change_frequency(chan, freq);
-    } else {
-        change_frequency(chan, limit);
-    }
+
+    change_frequency(chan, freq >= limit ? freq : limit);
 }
 
 static void macro_vibrato__porta_up(int chan, uint8_t depth)
 {
     uint16_t freq = calc_freq_shift_up(macro_table[chan].vib_freq & 0x1fff, depth);
+    uint16_t newfreq = freq <= nFreq(12*8+1) ? freq : nFreq(12*8+1); 
 
-    if (freq <= nFreq(12*8+1)) {
-        change_freq(chan, freq);
-    } else {
-        change_freq(chan, nFreq(12*8+1));
-    }
+    change_freq(chan, newfreq);
 }
 
 static void macro_vibrato__porta_down(int chan, uint8_t depth)
 {
     uint16_t freq = calc_freq_shift_down(macro_table[chan].vib_freq & 0x1fff, depth);
+    uint16_t newfreq = freq >= nFreq(0) ? freq : nFreq(0);
 
-    if (freq >= nFreq(0)) {
-        change_freq(chan, freq);
-    } else {
-        change_freq(chan, nFreq(0));
-    }
+    change_freq(chan, newfreq);
 }
 
 static void tone_portamento(int slot, int chan)
