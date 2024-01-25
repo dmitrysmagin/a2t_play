@@ -2115,7 +2115,6 @@ static void slide_carrier_volume_up(uint8_t chan, uint8_t slide, uint8_t limit)
     uint8_t newvolC = (volC - slide >= limit) ? volC - slide : limit;
 
     set_ins_volume(BYTE_NULL, newvolC, chan);
-
 }
 
 static void slide_modulator_volume_up(uint8_t chan, uint8_t slide, uint8_t limit)
@@ -2223,7 +2222,7 @@ static void slide_modulator_volume_down(uint8_t chan, uint8_t slide)
 
 static void slide_volume_down(int chan, uint8_t slide)
 {
-    tINSTR_DATA *instr = get_instr_data_by_ch(chan);
+    tINSTR_DATA *i = get_instr_data_by_ch(chan);
     uint32_t _4op_flag;
     uint8_t _4op_conn;
     uint8_t _4op_ch1, _4op_ch2;
@@ -2238,7 +2237,7 @@ static void slide_volume_down(int chan, uint8_t slide)
         if (!_4op_vol_valid_chan(chan)) {
             slide_carrier_volume_down(chan, slide);
 
-            if (instr->fm.connect || (percussion_mode && (chan >= 16))) { //in [17..20]
+            if (i->fm.connect || (percussion_mode && (chan >= 16))) { //in [17..20]
                slide_modulator_volume_down(chan, slide);
             }
         } else {
@@ -2308,7 +2307,7 @@ static void global_volume_slide(uint8_t up_speed, uint8_t down_speed)
 
 static void arpeggio(int slot, int chan)
 {
-    uint8_t arpgg_state[3] = {1, 2, 0};
+    static uint8_t arpgg_state[3] = {1, 2, 0};
 
     uint16_t freq;
 
@@ -2377,8 +2376,8 @@ static inline int chanvol(int chan)
 
 static void update_effects_slot(int slot, int chan)
 {
-    uint8_t def  = effect_table[slot][chan].def;
-    uint8_t val  = effect_table[slot][chan].val;
+    uint8_t def = effect_table[slot][chan].def;
+    uint8_t val = effect_table[slot][chan].val;
 
     switch (def) {
     case ef_Arpeggio:
@@ -2573,37 +2572,17 @@ static void update_fine_effects(int slot, int chan)
     uint8_t val = effect_table[slot][chan].val;
 
     switch (def) {
-    case ef_ArpggVSlideFine:
-        volume_slide(chan, val / 16, val % 16);
-        break;
-
-    case ef_FSlideUpFine:
-        portamento_up(chan, val, nFreq(12*8+1));
-        break;
-
-    case ef_FSlideDownFine:
-        portamento_down(chan, val, nFreq(0));
-        break;
-
-    case ef_FSlUpVSlF:
-        volume_slide(chan, val / 16, val % 16);
-        break;
-
-    case ef_FSlDownVSlF:
-        volume_slide(chan, val / 16, val % 16);
-        break;
-
-    case ef_FSlUpFineVSlide:
-        portamento_up(chan, fslide_table[slot][chan], nFreq(12*8+1));
-        break;
+    case ef_ArpggVSlideFine:    volume_slide(chan, val / 16, val % 16); break;
+    case ef_FSlideUpFine:       portamento_up(chan, val, nFreq(12*8+1)); break;
+    case ef_FSlideDownFine:     portamento_down(chan, val, nFreq(0)); break;
+    case ef_FSlUpVSlF:          volume_slide(chan, val / 16, val % 16); break;
+    case ef_FSlDownVSlF:        volume_slide(chan, val / 16, val % 16); break;
+    case ef_FSlUpFineVSlide:    portamento_up(chan, fslide_table[slot][chan], nFreq(12*8+1)); break;
+    case ef_FSlDownFineVSlide:  portamento_down(chan, fslide_table[slot][chan], nFreq(0)); break;
 
     case ef_FSlUpFineVSlF:
         portamento_up(chan, fslide_table[slot][chan], nFreq(12*8+1));
         volume_slide(chan, val / 16, val % 16);
-        break;
-
-    case ef_FSlDownFineVSlide:
-        portamento_down(chan, fslide_table[slot][chan], nFreq(0));
         break;
 
     case ef_FSlDownFineVSlF:
@@ -2611,24 +2590,10 @@ static void update_fine_effects(int slot, int chan)
         volume_slide(chan, val / 16, val % 16);
         break;
 
-    case ef_TPortamVSlideFine:
-        volume_slide(chan, val / 16, val % 16);
-        break;
-
-    case ef_Vibrato:
-        if (vibr_table[slot][chan].fine)
-            vibrato(slot, chan);
-        break;
-
-    case ef_Tremolo:
-        if (trem_table[slot][chan].fine)
-            tremolo(slot, chan);
-        break;
-
-    case ef_VibratoVolSlide:
-        if (vibr_table[slot][chan].fine)
-            vibrato(slot, chan);
-        break;
+    case ef_TPortamVSlideFine:  volume_slide(chan, val / 16, val % 16); break;
+    case ef_Vibrato:            if (vibr_table[slot][chan].fine) vibrato(slot, chan); break;
+    case ef_Tremolo:            if (trem_table[slot][chan].fine) tremolo(slot, chan); break;
+    case ef_VibratoVolSlide:    if (vibr_table[slot][chan].fine) vibrato(slot, chan); break;
 
     case ef_VibratoVSlideFine:
         volume_slide(chan, val / 16, val % 16);
@@ -2636,9 +2601,7 @@ static void update_fine_effects(int slot, int chan)
             vibrato(slot, chan);
         break;
 
-    case ef_VolSlideFine:
-        volume_slide(chan, val / 16, val % 16);
-        break;
+    case ef_VolSlideFine:       volume_slide(chan, val / 16, val % 16); break;
 
     case ef_Extended2:
         switch(val / 16) {
@@ -2666,22 +2629,11 @@ static void update_extra_fine_effects_slot(int slot, int chan)
         }
         break;
 
-    case ef_GlobalFreqSlideUpXF: portamento_up(chan, val, nFreq(12*8+1)); break;
-    case ef_GlobalFreqSlideDnXF: portamento_down(chan, val, nFreq(0)); break;
-
-    case ef_ExtraFineArpeggio:
-        arpeggio(slot, chan);
-        break;
-
-    case ef_ExtraFineVibrato:
-        if (!vibr_table[slot][chan].fine)
-            vibrato(slot, chan);
-        break;
-
-    case ef_ExtraFineTremolo:
-        if (!trem_table[slot][chan].fine)
-            tremolo(slot, chan);
-        break;
+    case ef_GlobalFreqSlideUpXF:    portamento_up(chan, val, nFreq(12*8+1)); break;
+    case ef_GlobalFreqSlideDnXF:    portamento_down(chan, val, nFreq(0)); break;
+    case ef_ExtraFineArpeggio:      arpeggio(slot, chan); break;
+    case ef_ExtraFineVibrato:       if (!vibr_table[slot][chan].fine) vibrato(slot, chan); break;
+    case ef_ExtraFineTremolo:       if (!trem_table[slot][chan].fine) tremolo(slot, chan); break;
     }
 }
 
