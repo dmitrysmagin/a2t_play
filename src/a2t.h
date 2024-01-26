@@ -258,12 +258,6 @@ C_ASSERT(sizeof(tPATTERN_DATA) == 20 * 256 * 6);
 #define ef_ex3_SetKsrC         11
 #define ef_ex3_SetSustainC     12
 
-typedef struct {
-    tFM_INST_DATA fmpar_table[20]; // TODO: rename to 'fm'
-    bool volume_lock[20];
-    bool vol4op_lock[20];
-} tCHDATA;
-
 /* Data for importing A2T format */
 typedef struct {
     char id[15];	// '_a2tiny_module_'
@@ -503,6 +497,18 @@ typedef struct {
     bool vib_paused;
     uint16_t vib_freq;
 } tCH_MACRO_TABLE;
+
+typedef struct {
+    tFM_INST_DATA fmpar_table[20]; // TODO: rename to 'fm'
+    bool volume_lock[20];
+    bool vol4op_lock[20];
+    bool peak_lock[20];
+    bool pan_lock[20];
+    uint8_t modulator_vol[20];
+    uint8_t carrier_vol[20];
+} tCHDATA;
+
+extern tCHDATA *ch;
 
 extern uint8_t voice_table[20];
 extern uint16_t freq_table[20];

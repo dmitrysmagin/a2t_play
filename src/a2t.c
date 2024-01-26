@@ -143,10 +143,10 @@ tCHDATA _ch, *ch = &_ch;
 //tFM_INST_DATA fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
 //bool volume_lock[20];			// array[1..20] of Boolean;
 //bool vol4op_lock[20] ;			// array[1..20] of Boolean;
-bool peak_lock[20];			// array[1..20] of Boolean;
-bool pan_lock[20];			// array[1..20] of Boolean;
-uint8_t modulator_vol[20];		// array[1..20] of Byte;
-uint8_t carrier_vol[20];		// array[1..20] of Byte;
+//bool peak_lock[20];			// array[1..20] of Boolean;
+//bool pan_lock[20];			// array[1..20] of Boolean;
+//uint8_t modulator_vol[20];		// array[1..20] of Byte;
+//uint8_t carrier_vol[20];		// array[1..20] of Byte;
 // note/instr_def work like last_note/last_instr_def
 // effects work like effect_table
 tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
@@ -822,7 +822,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
         }
 
         opl3out(0x40 + m, regm);
-        modulator_vol[chan] = 63 - modulator;
+        ch->modulator_vol[chan] = 63 - modulator;
     }
 
     if (carrier != BYTE_NULL) {
@@ -837,7 +837,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
         regc = scale_volume(carrier, 63 - overall_volume) + (ch->fmpar_table[chan].kslC << 6);
 
         opl3out(0x40 + c, regc);
-        carrier_vol[chan] = 63 - carrier;
+        ch->carrier_vol[chan] = 63 - carrier;
     }
 }
 
@@ -866,7 +866,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
         regm = scale_volume(modulator, 63 - overall_volume) + (ch->fmpar_table[chan].kslM << 6);
 
         opl3out(0x40 + m, regm);
-        modulator_vol[chan] = 63 - modulator;
+        ch->modulator_vol[chan] = 63 - modulator;
     }
 
     if (carrier != BYTE_NULL) {
@@ -879,7 +879,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
         regc = scale_volume(carrier, 63 - overall_volume) + (ch->fmpar_table[chan].kslC << 6);
 
         opl3out(0x40 + c, regc);
-        carrier_vol[chan] = 63 - carrier;
+        ch->carrier_vol[chan] = 63 - carrier;
     }
 }
 
@@ -953,7 +953,7 @@ static void set_global_volume()
     for (int chan = 0; chan < songdata->nm_tracks; chan++) {
         if (_4op_vol_valid_chan(chan)) {
             set_ins_volume_4op(BYTE_NULL, chan);
-        } else if (!((carrier_vol[chan] == 0) && (modulator_vol[chan] == 0))) {
+        } else if (ch->carrier_vol[chan] || ch->modulator_vol[chan]) {
             tINSTR_DATA *instr = get_instr_data_by_ch(chan);
 
             set_ins_volume(instr->fm.connect ? ch->fmpar_table[chan].volM : BYTE_NULL, ch->fmpar_table[chan].volC, chan);
@@ -1003,7 +1003,7 @@ static void set_ins_data(uint8_t ins, int chan)
     }
 
     if ((ins != event_table[chan].instr_def) || reset_chan[chan]) {
-        panning_table[chan] = !pan_lock[chan]
+        panning_table[chan] = !ch->pan_lock[chan]
                                   ? i->panning
                                   : songdata->lock_flags[chan] & 3;
 
@@ -1666,11 +1666,11 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             case ef_ex_cmd2_ResetVol:   reset_ins_volume(chan); break;
             case ef_ex_cmd2_LockVol:    ch->volume_lock[chan] = TRUE; break;
             case ef_ex_cmd2_UnlockVol:  ch->volume_lock[chan] = FALSE; break;
-            case ef_ex_cmd2_LockVP:     peak_lock    [chan] = TRUE; break;
-            case ef_ex_cmd2_UnlockVP:   peak_lock    [chan] = FALSE; break;
-            case ef_ex_cmd2_VSlide_def: volslide_type[chan] = 0; break;
-            case ef_ex_cmd2_LockPan:    pan_lock     [chan] = TRUE; break;
-            case ef_ex_cmd2_UnlockPan:  pan_lock     [chan] = FALSE; break;
+            case ef_ex_cmd2_LockVP:     ch->peak_lock  [chan] = TRUE; break;
+            case ef_ex_cmd2_UnlockVP:   ch->peak_lock  [chan] = FALSE; break;
+            case ef_ex_cmd2_VSlide_def: volslide_type  [chan] = 0; break;
+            case ef_ex_cmd2_LockPan:    ch->pan_lock   [chan] = TRUE; break;
+            case ef_ex_cmd2_UnlockPan:  ch->pan_lock   [chan] = FALSE; break;
             case ef_ex_cmd2_VibrOff:    change_frequency(chan, freq_table[chan]); break;
             case ef_ex_cmd2_TremOff:
                 if (is_4op_chan(chan)) {
@@ -2147,8 +2147,8 @@ static void slide_volume_up(int chan, uint8_t slide)
     if (!_4op_vol_valid_chan(chan)) {
         tINSTR_DATA *ins = get_instr_data(event_table[chan].instr_def);
 
-        limit1 = peak_lock[chan] ? ins->fm.volC : 0;
-        limit2 = peak_lock[chan] ? ins->fm.volM : 0;
+        limit1 = ch->peak_lock[chan] ? ins->fm.volC : 0;
+        limit2 = ch->peak_lock[chan] ? ins->fm.volM : 0;
     }
 
     switch (volslide_type[chan]) {
@@ -2162,10 +2162,10 @@ static void slide_volume_up(int chan, uint8_t slide)
             tINSTR_DATA *ins1 = get_instr_data(_4op_ins1);
             tINSTR_DATA *ins2 = get_instr_data(_4op_ins2);
 
-            uint8_t limit1_volC = peak_lock[_4op_ch1] ? ins1->fm.volC : 0;
-            uint8_t limit1_volM = peak_lock[_4op_ch1] ? ins1->fm.volM : 0;
-            uint8_t limit2_volC = peak_lock[_4op_ch2] ? ins2->fm.volC : 0;
-            uint8_t limit2_volM = peak_lock[_4op_ch2] ? ins2->fm.volM : 0;
+            uint8_t limit1_volC = ch->peak_lock[_4op_ch1] ? ins1->fm.volC : 0;
+            uint8_t limit1_volM = ch->peak_lock[_4op_ch1] ? ins1->fm.volM : 0;
+            uint8_t limit2_volC = ch->peak_lock[_4op_ch2] ? ins2->fm.volC : 0;
+            uint8_t limit2_volM = ch->peak_lock[_4op_ch2] ? ins2->fm.volM : 0;
 
             switch (_4op_conn) {
             // FM/FM
@@ -2884,7 +2884,7 @@ static void macro_poll_proc()
                             case 23: ch->fmpar_table[chan].sustC = d->fm.sustC; break;
                             case 24: ch->fmpar_table[chan].connect = d->fm.connect; break;
                             case 25: ch->fmpar_table[chan].feedb = d->fm.feedb; break;
-                            case 27: if (!pan_lock[chan]) panning_table[chan] = d->panning; break;
+                            case 27: if (!ch->pan_lock[chan]) panning_table[chan] = d->panning; break;
                             }
                         }
 
@@ -3095,9 +3095,9 @@ static void init_buffers()
     memset(ch, 0, sizeof(*ch));
 
     //memset(fmpar_table, 0, sizeof(fmpar_table));
-    memset(pan_lock, panlock, sizeof(pan_lock));
-    memset(modulator_vol, 0, sizeof(modulator_vol));
-    memset(carrier_vol, 0, sizeof(carrier_vol));
+    //memset(pan_lock, panlock, sizeof(pan_lock));
+    //memset(modulator_vol, 0, sizeof(modulator_vol));
+    //memset(carrier_vol, 0, sizeof(carrier_vol));
     memset(event_table, 0, sizeof(event_table));
     memset(freq_table, 0, sizeof(freq_table));
     memset(zero_fq_table, 0, sizeof(zero_fq_table));
@@ -3137,10 +3137,10 @@ static void init_buffers()
     }
 
     if (!lockVP) {
-        memset(peak_lock, 0, sizeof(peak_lock));
+        memset(ch->peak_lock, 0, sizeof(ch->peak_lock));
     } else {
         for (int i = 0; i < 20; i++)
-              peak_lock[i] = (bool)((songdata->lock_flags[i] >> 5) & 1);
+              ch->peak_lock[i] = (bool)((songdata->lock_flags[i] >> 5) & 1);
     }
 
     static uint8_t _4op_main_chan[6] = { 1, 3, 5, 10, 12, 14 }; // 0-based
