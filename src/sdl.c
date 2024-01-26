@@ -136,7 +136,7 @@ void show_info()
     show_eff("EFF", effect_table);
     show_eff("LEF", last_effect);
     //show_eff("GLF", glfsld_table);
-    show_event(event_table);
+    show_event(ch->event_table);
     printf("FMRG: ");
     for (int i = 0; i < 20; i++) {
         printf("%02x%02x%s", macro_table[i].fmreg_pos & 0xff, macro_table[i].fmreg_duration, i < 19 ? "|" : "\n");

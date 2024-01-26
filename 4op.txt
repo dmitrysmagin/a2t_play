@@ -10,6 +10,11 @@ tunes/encore/amegas.a2t - completely wrong 1st inst
 os_sblas.a2m - wrong 4op instrument when 1st channel has only ins, but second has note and effects
 tunes/madbrain/sinner.a2m - void pattern in the order is beyond max patters
 
+tunes/mlf/pink.a2t - x00 after non-compatible command
+
+tunes/mlf/fm-troni.a2m - version 14
+tunes/mlf/ishtar.a2m - version 13
+
 mario.a2m - version 1
 adven.a2m - version 5
 OLD_001.A2M - version 5

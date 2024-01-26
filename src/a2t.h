@@ -118,7 +118,7 @@ C_ASSERT(sizeof(tARPVIB_TABLE) == 521);
 
 typedef struct {
     uint8_t note;
-    uint8_t instr_def;
+    uint8_t instr_def; // TODO: rename to 'ins'
     struct {
         uint8_t def;
         uint8_t val;
@@ -506,6 +506,9 @@ typedef struct {
     bool pan_lock[20];
     uint8_t modulator_vol[20];
     uint8_t carrier_vol[20];
+    // note/instr_def - memorized across rows
+    // effects - change each row
+    tADTRACK2_EVENT event_table[20];
 } tCHDATA;
 
 extern tCHDATA *ch;
@@ -516,6 +519,6 @@ extern tEFFECT_TABLE effect_table[2][20];
 extern tEFFECT_TABLE last_effect[2][20];
 extern tEFFECT_TABLE glfsld_table[2][20];
 extern tCH_MACRO_TABLE macro_table[20];
-extern tADTRACK2_EVENT event_table[20];
+//extern tADTRACK2_EVENT event_table[20];
 
 #endif // _A2T_H_

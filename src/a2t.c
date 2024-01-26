@@ -149,7 +149,7 @@ tCHDATA _ch, *ch = &_ch;
 //uint8_t carrier_vol[20];		// array[1..20] of Byte;
 // note/instr_def work like last_note/last_instr_def
 // effects work like effect_table
-tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
+//tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
 uint8_t voice_table[20];		// array[1..20] of Byte;
 uint16_t freq_table[20];		// array[1..20] of Word;
 uint16_t zero_fq_table[20];		// array[1..20] of Word;
@@ -696,7 +696,7 @@ static void key_off(int chan)
 {
     freq_table[chan] &= ~0x2000;
     change_frequency(chan, freq_table[chan]);
-    event_table[chan].note |= keyoff_flag;
+    ch->event_table[chan].note |= keyoff_flag;
 }
 
 static void release_sustaining_sound(int chan)
@@ -719,7 +719,7 @@ static void release_sustaining_sound(int chan)
     opl3out(0x80 + c, BYTE_NULL);
 
     key_off(chan);
-    event_table[chan].instr_def = 0;
+    ch->event_table[chan].instr_def = 0;
     reset_chan[chan] = TRUE;
 }
 
@@ -747,10 +747,10 @@ static uint32_t _4op_data_flag(uint8_t chan)
             _4op_ch1 = chan - 1;
             _4op_ch2 = chan;
         }
-        _4op_ins1 = event_table[_4op_ch1].instr_def;
+        _4op_ins1 = ch->event_table[_4op_ch1].instr_def;
         if (_4op_ins1 == 0) _4op_ins1 = voice_table[_4op_ch1];
 
-        _4op_ins2 = event_table[_4op_ch2].instr_def;
+        _4op_ins2 = ch->event_table[_4op_ch2].instr_def;
         if (_4op_ins2 == 0) _4op_ins2 = voice_table[_4op_ch2];
 
         if (_4op_ins1 && _4op_ins2) {
@@ -1002,7 +1002,7 @@ static void set_ins_data(uint8_t ins, int chan)
         release_sustaining_sound(chan);
     }
 
-    if ((ins != event_table[chan].instr_def) || reset_chan[chan]) {
+    if ((ins != ch->event_table[chan].instr_def) || reset_chan[chan]) {
         panning_table[chan] = !ch->pan_lock[chan]
                                   ? i->panning
                                   : songdata->lock_flags[chan] & 3;
@@ -1037,15 +1037,15 @@ static void set_ins_data(uint8_t ins, int chan)
             reset_chan[chan] = FALSE;
         }
 
-        uint8_t note = event_table[chan].note & 0x7f;
+        uint8_t note = ch->event_table[chan].note & 0x7f;
         note = note_in_range(note) ? note : 0;
 
         init_macro_table(chan, note, ins, freq_table[chan]);
     }
 
     voice_table[chan] = ins;
-    uint8_t old_ins = event_table[chan].instr_def;
-    event_table[chan].instr_def = ins;
+    uint8_t old_ins = ch->event_table[chan].instr_def;
+    ch->event_table[chan].instr_def = ins;
 
     if (!ch->volume_lock[chan] || (ins != old_ins))
         reset_ins_volume(chan);
@@ -1149,10 +1149,10 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
     change_frequency(chan, freq);
 
     if (note) {
-        event_table[chan].note = note;
+        ch->event_table[chan].note = note;
 
         if (is_4op_chan(chan) && is_4op_chan_lo(chan)) {
-            event_table[chan - 1].note = note;
+            ch->event_table[chan - 1].note = note;
         }
 
         if (restart_macro) {
@@ -1235,7 +1235,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         (arpgg_table[slot][chan].note != 0) && (arpgg_table[slot][chan].state != 1)) {
         arpgg_table[slot][chan].state = 1;
         change_frequency(chan, nFreq(arpgg_table[slot][chan].note - 1) +
-            get_instr_fine_tune(event_table[chan].instr_def));
+            get_instr_fine_tune(ch->event_table[chan].instr_def));
     }
 
     if ((def == ef_GlobalFSlideUp) || (def == ef_GlobalFSlideDown)) {
@@ -1336,7 +1336,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 arpgg_table[slot][chan].add2 = val & 0x0f;
             }
         } else {
-            if (!event->note && note_in_range(event_table[chan].note)) {
+            if (!event->note && note_in_range(ch->event_table[chan].note)) {
 
                 // This never occurs most probably
                 /*if ((def != ef_Arpeggio) &&
@@ -1345,7 +1345,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                     (def != ef_ArpggVSlideFine))
                     arpgg_table[slot][chan].state = 0;*/
 
-                arpgg_table[slot][chan].note = event_table[chan].note & 0x7f;
+                arpgg_table[slot][chan].note = ch->event_table[chan].note & 0x7f;
                 if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
                     arpgg_table[slot][chan].add1 = val / 16;
                     arpgg_table[slot][chan].add2 = val % 16;
@@ -1383,7 +1383,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         if (note_in_range(event->note)) {
             porta_table[slot][chan].speed = val;
             porta_table[slot][chan].freq = nFreq(event->note - 1) +
-                get_instr_fine_tune(event_table[chan].instr_def);
+                get_instr_fine_tune(ch->event_table[chan].instr_def);
         } else {
             porta_table[slot][chan].speed = effect_table[slot][chan].val;
         }
@@ -1884,13 +1884,13 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
         } else if (event->note && tporta_flag) {
             // if previous note was off'ed or restart_adsr enabled for channel
             // and we are doing portamento to a new note
-            if (event_table[chan].note & keyoff_flag || portaFK_table[chan]) {
-                output_note(event_table[chan].note & ~keyoff_flag, voice_table[chan], chan, FALSE, TRUE);
+            if (ch->event_table[chan].note & keyoff_flag || portaFK_table[chan]) {
+                output_note(ch->event_table[chan].note & ~keyoff_flag, voice_table[chan], chan, FALSE, TRUE);
             } else {
-                event_table[chan].note = event->note;
+                ch->event_table[chan].note = event->note;
             }
         } else {
-            event_table[chan].note = event->note;
+            ch->event_table[chan].note = event->note;
         }
     }
 }
@@ -1930,17 +1930,17 @@ static void play_line()
 
         // Fixup event->note
         if (event->note == 0xff) { // Key off
-            event->note = event_table[chan].note | keyoff_flag;
+            event->note = ch->event_table[chan].note | keyoff_flag;
         } else if ((event->note >= fixed_note_flag + 1) /*&& (event->note <= fixed_note_flag + 12*8+1)*/) {
             event->note -= fixed_note_flag;
         }
 
         for (int slot = 0; slot < 2; slot++) {
-            event_table[chan].eff[slot].def = event->eff[slot].def;
-            event_table[chan].eff[slot].val = event->eff[slot].val;
+            ch->event_table[chan].eff[slot].def = event->eff[slot].def;
+            ch->event_table[chan].eff[slot].val = event->eff[slot].val;
         }
 
-        // alters event_table[].instr_def
+        // alters ch->event_table[].instr_def
         set_ins_data(event->instr_def, chan);
 
         // set effect_table here
@@ -1950,15 +1950,15 @@ static void play_line()
         // TODO: is that needed here?
         /*for (int slot = 0; slot < 2; slot++) {
             if (event->eff[slot].def | event->eff[slot].val) {
-                event_table[chan].eff[slot].def = event->eff[slot].def;
-                event_table[chan].eff[slot].val = event->eff[slot].val;
+                ch->event_table[chan].eff[slot].def = event->eff[slot].def;
+                ch->event_table[chan].eff[slot].val = event->eff[slot].val;
             } else if (glfsld_table[slot][chan].def == 0 && glfsld_table[slot][chan].val == 0) {
                 effect_table[slot][chan].def = 0;
                 effect_table[slot][chan].val = 0;
             }
         }*/
 
-        // alters event_table[].note
+        // alters ch->event_table[].note
         new_process_note(event, chan);
 
         check_swap_arp_vibr(event, 0, chan);
@@ -2040,7 +2040,7 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
             macro_table[chan].arpg_count = 1;
             macro_table[chan].arpg_pos = 0;
             macro_table[chan].arpg_table = event->eff[slot].val;
-            macro_table[chan].arpg_note = event_table[chan].note;
+            macro_table[chan].arpg_note = ch->event_table[chan].note;
         }
         break;
 
@@ -2145,7 +2145,7 @@ static void slide_volume_up(int chan, uint8_t slide)
     _4op_ins2 = (uint8_t)(_4op_flag >> 19) & 0xff;
 
     if (!_4op_vol_valid_chan(chan)) {
-        tINSTR_DATA *ins = get_instr_data(event_table[chan].instr_def);
+        tINSTR_DATA *ins = get_instr_data(ch->event_table[chan].instr_def);
 
         limit1 = ch->peak_lock[chan] ? ins->fm.volC : 0;
         limit2 = ch->peak_lock[chan] ? ins->fm.volM : 0;
@@ -2323,7 +2323,7 @@ static void arpeggio(int slot, int chan)
 
     arpgg_table[slot][chan].state = arpgg_state[arpgg_table[slot][chan].state];
     change_frequency(chan, freq +
-            get_instr_fine_tune(event_table[chan].instr_def));
+            get_instr_fine_tune(ch->event_table[chan].instr_def));
 }
 
 static void vibrato(int slot, int chan)
@@ -2474,7 +2474,7 @@ static void update_effects_slot(int slot, int chan)
     case ef_RetrigNote:
         if (retrig_table[slot][chan] >= val) {
             retrig_table[slot][chan] = 0;
-            output_note(event_table[chan].note, event_table[chan].instr_def, chan, TRUE, TRUE);
+            output_note(ch->event_table[chan].note, ch->event_table[chan].instr_def, chan, TRUE, TRUE);
         } else {
             retrig_table[slot][chan]++;
         }
@@ -2512,7 +2512,7 @@ static void update_effects_slot(int slot, int chan)
             }
 
             retrig_table[slot][chan] = 0;
-            output_note(event_table[chan].note, event_table[chan].instr_def, chan, TRUE, TRUE);
+            output_note(ch->event_table[chan].note, ch->event_table[chan].instr_def, chan, TRUE, TRUE);
         } else {
             retrig_table[slot][chan]++;
         }
@@ -2541,7 +2541,7 @@ static void update_effects_slot(int slot, int chan)
         case ef_ex2_NoteDelay:
             if (notedel_table[chan] == 0) {
                 notedel_table[chan] = BYTE_NULL;
-                output_note(event_table[chan].note,	event_table[chan].instr_def, chan, TRUE, TRUE);
+                output_note(ch->event_table[chan].note,	ch->event_table[chan].instr_def, chan, TRUE, TRUE);
             } else if (notedel_table[chan] != BYTE_NULL) {
                 notedel_table[chan]--;
             }
@@ -2713,10 +2713,10 @@ static void update_song_position()
                 loop_table[temp][current_line]--;
         } else {
             if (pattern_break && ((next_line & 0xf0) == pattern_break_flag)) {
-                if (event_table[next_line - pattern_break_flag].eff[1].def == ef_PositionJump) {
-                    current_order = event_table[next_line - pattern_break_flag].eff[1].val;
+                if (ch->event_table[next_line - pattern_break_flag].eff[1].def == ef_PositionJump) {
+                    current_order = ch->event_table[next_line - pattern_break_flag].eff[1].val;
                 } else {
-                    current_order = event_table[next_line - pattern_break_flag].eff[0].val;
+                    current_order = ch->event_table[next_line - pattern_break_flag].eff[0].val;
                 }
                 pattern_break = FALSE;
             } else {
@@ -2897,8 +2897,8 @@ static void macro_poll_proc()
 
                         if (force_macro_keyon || (macro_flags & 0x80)) { // MACRO_NOTE_RETRIG_FLAG
                             if (!((is_4op_chan(chan) && is_4op_chan_hi(chan)))) {
-                                output_note(event_table[chan].note,
-                                            event_table[chan].instr_def, chan, FALSE, TRUE);
+                                output_note(ch->event_table[chan].note,
+                                            ch->event_table[chan].instr_def, chan, FALSE, TRUE);
                                 if (is_4op_chan(chan) && is_4op_chan_lo(chan))
                                     init_macro_table(chan - 1, 0, voice_table[chan - 1], 0);
                             }
@@ -2970,7 +2970,7 @@ static void macro_poll_proc()
 
                 if ((mt->arpg_pos != 0) &&
                     (mt->arpg_pos != IDLE) && (mt->arpg_pos != finished_flag)) {
-                    int8_t fine_tune = get_instr_fine_tune(event_table[chan].instr_def);
+                    int8_t fine_tune = get_instr_fine_tune(ch->event_table[chan].instr_def);
                     switch (at->data[mt->arpg_pos - 1]) {
                     case 0:
                         change_frequency(chan, nFreq(mt->arpg_note - 1) +
@@ -3098,7 +3098,7 @@ static void init_buffers()
     //memset(pan_lock, panlock, sizeof(pan_lock));
     //memset(modulator_vol, 0, sizeof(modulator_vol));
     //memset(carrier_vol, 0, sizeof(carrier_vol));
-    memset(event_table, 0, sizeof(event_table));
+    //memset(event_table, 0, sizeof(event_table));
     memset(freq_table, 0, sizeof(freq_table));
     memset(zero_fq_table, 0, sizeof(zero_fq_table));
     memset(effect_table, 0, sizeof(effect_table));
