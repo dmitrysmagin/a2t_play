@@ -5,9 +5,10 @@
 
     In order to get into Adplug:
     - Reduce the memory used for a tune
-    - Rework tADTRACK2_EVENT event_table:
-        * Effects: resolve common code with effect_table
-        * Note/instr: Perhaps use last_note/last_inst_def instead
+    - Rework all variables layout:
+        * Put *fmreg and dis_fmreg into tINSTR_DATA_EXT
+        * Put all channel data into tCHDATA *chdata;
+        * After that drop _table suffix for all included data
 
 */
 #include <stdio.h>
@@ -136,10 +137,12 @@ uint8_t vibtrem_speed_factor;
 uint8_t vibtrem_table_size;
 uint8_t vibtrem_table[256];
 
+tCHDATA _ch, *ch = &_ch;
+
 // Channel data that changes during playback
-tFM_INST_DATA fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
-bool volume_lock[20];			// array[1..20] of Boolean;
-bool vol4op_lock[20] ;			// array[1..20] of Boolean;
+//tFM_INST_DATA fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
+//bool volume_lock[20];			// array[1..20] of Boolean;
+//bool vol4op_lock[20] ;			// array[1..20] of Boolean;
 bool peak_lock[20];			// array[1..20] of Boolean;
 bool pan_lock[20];			// array[1..20] of Boolean;
 uint8_t modulator_vol[20];		// array[1..20] of Byte;
@@ -568,7 +571,7 @@ static void change_freq(int chan, uint16_t freq)
 
 static bool is_chan_adsr_data_empty(int chan)
 {
-    tFM_INST_DATA *fmpar = &fmpar_table[chan];
+    tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
 
     return (
         !fmpar->data[4] &&
@@ -706,7 +709,7 @@ static void release_sustaining_sound(int chan)
 
     // clear adsrw_mod and adsrw_car
     for (int i = 4; i <= 9; i++) {
-        fmpar_table[chan].data[i] = 0;
+        ch->fmpar_table[chan].data[i] = 0;
     }
 
     key_on(chan);
@@ -777,7 +780,7 @@ static uint32_t _4op_data_flag(uint8_t chan)
 static bool _4op_vol_valid_chan(int chan)
 {
     uint32_t _4op_flag = _4op_data_flag(chan);
-    return ((_4op_flag & 1) && vol4op_lock[chan] &&
+    return ((_4op_flag & 1) && ch->vol4op_lock[chan] &&
             ((_4op_flag >> 11) & 1) &&
             ((_4op_flag >> 19) & 1));
 }
@@ -806,16 +809,16 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
         bool is_perc_chan = instr->fm.connect ||
                             (percussion_mode && (chan >= 16 && chan <= 19)); // in [17..20]
 
-        fmpar_table[chan].volM = modulator;
+        ch->fmpar_table[chan].volM = modulator;
 
         if (is_perc_chan) { // in [17..20]
             if (volume_scaling)
                 modulator = scale_volume(instr->fm.volM, modulator);
 
             modulator = scale_volume(modulator, 63 - global_volume);
-            regm = scale_volume(modulator, 63 - overall_volume) + (fmpar_table[chan].kslM << 6);
+            regm = scale_volume(modulator, 63 - overall_volume) + (ch->fmpar_table[chan].kslM << 6);
         } else {
-            regm = modulator + (fmpar_table[chan].kslM << 6);
+            regm = modulator + (ch->fmpar_table[chan].kslM << 6);
         }
 
         opl3out(0x40 + m, regm);
@@ -825,13 +828,13 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
     if (carrier != BYTE_NULL) {
         uint8_t regc;
 
-        fmpar_table[chan].volC = carrier;
+        ch->fmpar_table[chan].volC = carrier;
 
         if (volume_scaling)
             carrier = scale_volume(instr->fm.volC, carrier);
 
         carrier = scale_volume(carrier, 63 - global_volume);
-        regc = scale_volume(carrier, 63 - overall_volume) + (fmpar_table[chan].kslC << 6);
+        regc = scale_volume(carrier, 63 - overall_volume) + (ch->fmpar_table[chan].kslC << 6);
 
         opl3out(0x40 + c, regc);
         carrier_vol[chan] = 63 - carrier;
@@ -855,12 +858,12 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 
     if (modulator != BYTE_NULL) {
         uint8_t regm;
-        fmpar_table[chan].volM = modulator;
+        ch->fmpar_table[chan].volM = modulator;
 
         modulator = scale_volume(instr->fm.volM, modulator);
         modulator = scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
 
-        regm = scale_volume(modulator, 63 - overall_volume) + (fmpar_table[chan].kslM << 6);
+        regm = scale_volume(modulator, 63 - overall_volume) + (ch->fmpar_table[chan].kslM << 6);
 
         opl3out(0x40 + m, regm);
         modulator_vol[chan] = 63 - modulator;
@@ -868,12 +871,12 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 
     if (carrier != BYTE_NULL) {
         uint8_t regc;
-        fmpar_table[chan].volC = carrier;
+        ch->fmpar_table[chan].volC = carrier;
 
         carrier = scale_volume(instr->fm.volC, carrier);
         carrier = scale_volume(carrier, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
 
-        regc = scale_volume(carrier, 63 - overall_volume) + (fmpar_table[chan].kslC << 6);
+        regc = scale_volume(carrier, 63 - overall_volume) + (ch->fmpar_table[chan].kslC << 6);
 
         opl3out(0x40 + c, regc);
         carrier_vol[chan] = 63 - carrier;
@@ -894,15 +897,15 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
         switch (_4op_conn) {
             case 0: // FM/FM
                 if (volume == BYTE_NULL) {
-                    set_volume(BYTE_NULL, fmpar_table[_4op_ch1].volC, _4op_ch1);
+                    set_volume(BYTE_NULL, ch->fmpar_table[_4op_ch1].volC, _4op_ch1);
                 } else {
                     set_volume(BYTE_NULL, volume, _4op_ch1);
                 }
                 break;
             case 1: // FM/AM
                 if (volume == BYTE_NULL) {
-                    set_volume(BYTE_NULL, fmpar_table[_4op_ch1].volC, _4op_ch1);
-                    set_volume(fmpar_table[_4op_ch2].volM, BYTE_NULL, _4op_ch2);
+                    set_volume(BYTE_NULL, ch->fmpar_table[_4op_ch1].volC, _4op_ch1);
+                    set_volume(ch->fmpar_table[_4op_ch2].volM, BYTE_NULL, _4op_ch2);
                 } else {
                     set_volume(BYTE_NULL, volume, _4op_ch1);
                     set_volume(volume, BYTE_NULL, _4op_ch2);
@@ -910,8 +913,8 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
                 break;
             case 2: // AM/FM
                 if (volume == BYTE_NULL) {
-                    set_volume(BYTE_NULL, fmpar_table[_4op_ch1].volC, _4op_ch1);
-                    set_volume(BYTE_NULL, fmpar_table[_4op_ch2].volC, _4op_ch2);
+                    set_volume(BYTE_NULL, ch->fmpar_table[_4op_ch1].volC, _4op_ch1);
+                    set_volume(BYTE_NULL, ch->fmpar_table[_4op_ch2].volC, _4op_ch2);
                 } else {
                     set_volume(BYTE_NULL, volume, _4op_ch1);
                     set_volume(BYTE_NULL, volume, _4op_ch2);
@@ -919,8 +922,8 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
                 break;
             case 3:// AM/AM
                 if (volume == BYTE_NULL) {
-                    set_volume(fmpar_table[_4op_ch1].volM, fmpar_table[_4op_ch1].volC, _4op_ch1);
-                    set_volume(fmpar_table[_4op_ch2].volM, BYTE_NULL, _4op_ch2);
+                    set_volume(ch->fmpar_table[_4op_ch1].volM, ch->fmpar_table[_4op_ch1].volC, _4op_ch1);
+                    set_volume(ch->fmpar_table[_4op_ch2].volM, BYTE_NULL, _4op_ch2);
                 } else {
                     set_volume(volume, volume, _4op_ch1);
                     set_volume(volume, BYTE_NULL, _4op_ch2);
@@ -953,7 +956,7 @@ static void set_global_volume()
         } else if (!((carrier_vol[chan] == 0) && (modulator_vol[chan] == 0))) {
             tINSTR_DATA *instr = get_instr_data_by_ch(chan);
 
-            set_ins_volume(instr->fm.connect ? fmpar_table[chan].volM : BYTE_NULL, fmpar_table[chan].volC, chan);
+            set_ins_volume(instr->fm.connect ? ch->fmpar_table[chan].volM : BYTE_NULL, ch->fmpar_table[chan].volC, chan);
         }
     }
 }
@@ -1021,7 +1024,7 @@ static void set_ins_data(uint8_t ins, int chan)
         opl3out(0xc0 + n, i->fm.data[10] | _panning[panning_table[chan]]);
 
         for (int r = 0; r < 11; r++) {
-            fmpar_table[chan].data[r] = i->fm.data[r];
+            ch->fmpar_table[chan].data[r] = i->fm.data[r];
         }
 
         // Stop instr macro if resetting voice
@@ -1044,13 +1047,13 @@ static void set_ins_data(uint8_t ins, int chan)
     uint8_t old_ins = event_table[chan].instr_def;
     event_table[chan].instr_def = ins;
 
-    if (!volume_lock[chan] || (ins != old_ins))
+    if (!ch->volume_lock[chan] || (ins != old_ins))
         reset_ins_volume(chan);
 }
 
 static void update_modulator_adsrw(int chan)
 {
-    tFM_INST_DATA *fmpar = &fmpar_table[chan];
+    tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
     uint16_t m = regoffs_m(chan);
 
     opl3out(0x60 + m, fmpar->data[4]);
@@ -1060,7 +1063,7 @@ static void update_modulator_adsrw(int chan)
 
 static void update_carrier_adsrw(int chan)
 {
-    tFM_INST_DATA *fmpar = &fmpar_table[chan];
+    tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
     uint16_t c = regoffs_c(chan);
 
     opl3out(0x60 + c, fmpar->data[5]);
@@ -1070,7 +1073,7 @@ static void update_carrier_adsrw(int chan)
 
 static void update_fmpar(int chan)
 {
-    tFM_INST_DATA *fmpar = &fmpar_table[chan];
+    tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
 
     opl3out(0x20 + regoffs_m(chan), fmpar->data[0]);
     opl3out(0x20 + regoffs_c(chan), fmpar->data[1]);
@@ -1482,12 +1485,12 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
     case ef_SetWaveform:
         if (val / 16 <= 7) { // in [0..7]
-            fmpar_table[chan].wformC = val / 16;
+            ch->fmpar_table[chan].wformC = val / 16;
             update_carrier_adsrw(chan);
         }
 
         if (val % 16 <= 7) { // in [0..7]
-            fmpar_table[chan].wformM = val % 16;
+            ch->fmpar_table[chan].wformM = val % 16;
             update_modulator_adsrw(chan);
         }
         break;
@@ -1523,8 +1526,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         if (val) {
             if (last_effect[slot][chan].def != ef_Tremor) {
                 tremor_table[slot][chan].pos = 0;
-                tremor_table[slot][chan].volM = fmpar_table[chan].volM;
-                tremor_table[slot][chan].volC = fmpar_table[chan].volC;
+                tremor_table[slot][chan].volM = ch->fmpar_table[chan].volM;
+                tremor_table[slot][chan].volC = ch->fmpar_table[chan].volC;
             }
 
             effect_table[slot][chan].def = def;
@@ -1561,47 +1564,47 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             }
 
         case ef_ex_SetAttckRateM:
-            fmpar_table[chan].attckM = val % 16;
+            ch->fmpar_table[chan].attckM = val % 16;
             update_modulator_adsrw(chan);
             break;
 
         case ef_ex_SetDecayRateM:
-            fmpar_table[chan].decM = val % 16;
+            ch->fmpar_table[chan].decM = val % 16;
             update_modulator_adsrw(chan);
             break;
 
         case ef_ex_SetSustnLevelM:
-            fmpar_table[chan].sustnM = val % 16;
+            ch->fmpar_table[chan].sustnM = val % 16;
             update_modulator_adsrw(chan);
             break;
 
         case ef_ex_SetRelRateM:
-            fmpar_table[chan].relM = val % 16;
+            ch->fmpar_table[chan].relM = val % 16;
             update_modulator_adsrw(chan);
             break;
 
         case ef_ex_SetAttckRateC:
-            fmpar_table[chan].attckC = val % 16;
+            ch->fmpar_table[chan].attckC = val % 16;
             update_carrier_adsrw(chan);
             break;
 
         case ef_ex_SetDecayRateC:
-            fmpar_table[chan].decC = val % 16;
+            ch->fmpar_table[chan].decC = val % 16;
             update_carrier_adsrw(chan);
             break;
 
         case ef_ex_SetSustnLevelC:
-            fmpar_table[chan].sustnC = val % 16;
+            ch->fmpar_table[chan].sustnC = val % 16;
             update_carrier_adsrw(chan);
             break;
 
         case ef_ex_SetRelRateC:
-            fmpar_table[chan].relC = val % 16;
+            ch->fmpar_table[chan].relC = val % 16;
             update_carrier_adsrw(chan);
             break;
 
         case ef_ex_SetFeedback:
-            fmpar_table[chan].feedb = val % 16;
+            ch->fmpar_table[chan].feedb = val % 16;
             update_fmpar(chan);
             break;
 
@@ -1641,18 +1644,18 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 break;
             case ef_ex_cmd_4opVlockOff:
                 if (is_4op_chan(chan)) {
-                    vol4op_lock[chan] = FALSE;
+                    ch->vol4op_lock[chan] = FALSE;
                     int i = is_4op_chan_hi(chan) ? 1 : -1;
 
-                    vol4op_lock[chan + i] = FALSE;
+                    ch->vol4op_lock[chan + i] = FALSE;
                 }
                 break;
             case ef_ex_cmd_4opVlockOn:
                 if (is_4op_chan(chan)) {
-                    vol4op_lock[chan] = TRUE;
+                    ch->vol4op_lock[chan] = TRUE;
                     int i = is_4op_chan_hi(chan) ? 1 : -1;
 
-                    vol4op_lock[chan + i] = TRUE;
+                    ch->vol4op_lock[chan + i] = TRUE;
                 }
                 break;
             }
@@ -1661,8 +1664,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             switch (val % 16) {
             case ef_ex_cmd2_RSS:        release_sustaining_sound(chan); break;
             case ef_ex_cmd2_ResetVol:   reset_ins_volume(chan); break;
-            case ef_ex_cmd2_LockVol:    volume_lock  [chan] = TRUE; break;
-            case ef_ex_cmd2_UnlockVol:  volume_lock  [chan] = FALSE; break;
+            case ef_ex_cmd2_LockVol:    ch->volume_lock[chan] = TRUE; break;
+            case ef_ex_cmd2_UnlockVol:  ch->volume_lock[chan] = FALSE; break;
             case ef_ex_cmd2_LockVP:     peak_lock    [chan] = TRUE; break;
             case ef_ex_cmd2_UnlockVP:   peak_lock    [chan] = FALSE; break;
             case ef_ex_cmd2_VSlide_def: volslide_type[chan] = 0; break;
@@ -1673,7 +1676,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 if (is_4op_chan(chan)) {
                     set_ins_volume_4op(BYTE_NULL, chan);
                 } else {
-                    set_ins_volume(fmpar_table[chan].volM, fmpar_table[chan].volC, chan);
+                    set_ins_volume(ch->fmpar_table[chan].volM, ch->fmpar_table[chan].volC, chan);
                 }
                 break;
             case ef_ex_cmd2_VSlide_car:
@@ -1751,67 +1754,67 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_Extended3:
         switch (val / 16) {
         case ef_ex3_SetConnection:
-            fmpar_table[chan].connect = val % 16;
+            ch->fmpar_table[chan].connect = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetMultipM:
-            fmpar_table[chan].multipM = val % 16;
+            ch->fmpar_table[chan].multipM = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetKslM:
-            fmpar_table[chan].kslM = val % 16;
+            ch->fmpar_table[chan].kslM = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetTremoloM:
-            fmpar_table[chan].tremM = val % 16;
+            ch->fmpar_table[chan].tremM = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetVibratoM:
-            fmpar_table[chan].vibrM = val % 16;
+            ch->fmpar_table[chan].vibrM = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetKsrM:
-            fmpar_table[chan].ksrM = val % 16;
+            ch->fmpar_table[chan].ksrM = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetSustainM:
-            fmpar_table[chan].sustM = val % 16;
+            ch->fmpar_table[chan].sustM = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetMultipC:
-            fmpar_table[chan].multipC = val % 16;
+            ch->fmpar_table[chan].multipC = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetKslC:
-            fmpar_table[chan].kslC = val % 16;
+            ch->fmpar_table[chan].kslC = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetTremoloC:
-            fmpar_table[chan].tremC = val % 16;
+            ch->fmpar_table[chan].tremC = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetVibratoC:
-            fmpar_table[chan].vibrC = val % 16;
+            ch->fmpar_table[chan].vibrC = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetKsrC:
-            fmpar_table[chan].ksrC = val % 16;
+            ch->fmpar_table[chan].ksrC = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex3_SetSustainC:
-            fmpar_table[chan].sustC = val % 16;
+            ch->fmpar_table[chan].sustC = val % 16;
             update_fmpar(chan);
             break;
         }
@@ -2111,7 +2114,7 @@ static void tone_portamento(int slot, int chan)
 
 static void slide_carrier_volume_up(uint8_t chan, uint8_t slide, uint8_t limit)
 {
-    uint8_t volC = fmpar_table[chan].volC;
+    uint8_t volC = ch->fmpar_table[chan].volC;
     uint8_t newvolC = (volC - slide >= limit) ? volC - slide : limit;
 
     set_ins_volume(BYTE_NULL, newvolC, chan);
@@ -2119,7 +2122,7 @@ static void slide_carrier_volume_up(uint8_t chan, uint8_t slide, uint8_t limit)
 
 static void slide_modulator_volume_up(uint8_t chan, uint8_t slide, uint8_t limit)
 {
-    uint8_t volM = fmpar_table[chan].volM;
+    uint8_t volM = ch->fmpar_table[chan].volM;
     uint8_t newvolM = (volM - slide >= limit) ? volM - slide : limit;
 
     set_ins_volume(newvolM, BYTE_NULL, chan);
@@ -2206,7 +2209,7 @@ static void slide_volume_up(int chan, uint8_t slide)
 
 static void slide_carrier_volume_down(uint8_t chan, uint8_t slide)
 {
-    uint8_t volC = fmpar_table[chan].volC;
+    uint8_t volC = ch->fmpar_table[chan].volC;
     uint8_t newvolC = volC + slide <= 63 ? volC + slide : 63;
 
     set_ins_volume(BYTE_NULL, newvolC, chan);
@@ -2214,7 +2217,7 @@ static void slide_carrier_volume_down(uint8_t chan, uint8_t slide)
 
 static void slide_modulator_volume_down(uint8_t chan, uint8_t slide)
 {
-    uint8_t volM = fmpar_table[chan].volM;
+    uint8_t volM = ch->fmpar_table[chan].volM;
     uint8_t newvolM = volM + slide <= 63 ? volM + slide : 63;
 
     set_ins_volume(newvolM, BYTE_NULL, chan);
@@ -2347,8 +2350,8 @@ static void tremolo(int slot, int chan)
     uint16_t slide;
     uint8_t direction;
 
-    uint8_t volM = fmpar_table[chan].volM;
-    uint8_t volC = fmpar_table[chan].volC;
+    uint8_t volM = ch->fmpar_table[chan].volM;
+    uint8_t volC = ch->fmpar_table[chan].volC;
 
     trem_table[slot][chan].pos += trem_table[slot][chan].speed;
     slide = calc_vibrato_shift(trem_table[slot][chan].depth, trem_table[slot][chan].pos);
@@ -2360,8 +2363,8 @@ static void tremolo(int slot, int chan)
         slide_volume_up(chan, slide);
 
     // is this needed?
-    fmpar_table[chan].volM = volM;
-    fmpar_table[chan].volC = volC;
+    ch->fmpar_table[chan].volM = volM;
+    ch->fmpar_table[chan].volC = volC;
 }
 
 static inline int chanvol(int chan)
@@ -2369,9 +2372,9 @@ static inline int chanvol(int chan)
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
 
     if (instr->fm.connect == 0)
-        return 63 - fmpar_table[chan].volC;
+        return 63 - ch->fmpar_table[chan].volC;
     else
-        return 63 - (fmpar_table[chan].volM + fmpar_table[chan].volC) / 2;
+        return 63 - (ch->fmpar_table[chan].volM + ch->fmpar_table[chan].volC) / 2;
 }
 
 static void update_effects_slot(int slot, int chan)
@@ -2855,32 +2858,32 @@ static void macro_poll_proc()
                                 continue;
 
                             switch (bit) {
-                            case 0: fmpar_table[chan].attckM = d->fm.attckM; break;
-                            case 1: fmpar_table[chan].decM = d->fm.decM; break;
-                            case 2: fmpar_table[chan].sustnM = d->fm.sustnM; break;
-                            case 3: fmpar_table[chan].relM = d->fm.relM; break;
-                            case 4: fmpar_table[chan].wformM = d->fm.wformM; break;
-                            case 5: set_ins_volume(63 - d->fm.volM, BYTE_NULL, chan); break;
-                            case 6: fmpar_table[chan].kslM = d->fm.kslM; break;
-                            case 7: fmpar_table[chan].multipM = d->fm.multipM; break;
-                            case 8: fmpar_table[chan].tremM = d->fm.tremM; break;
-                            case 9: fmpar_table[chan].vibrM = d->fm.vibrM; break;
-                            case 10: fmpar_table[chan].ksrM = d->fm.ksrM; break;
-                            case 11: fmpar_table[chan].sustM = d->fm.sustM; break;
-                            case 12: fmpar_table[chan].attckC = d->fm.attckC; break;
-                            case 13: fmpar_table[chan].decC = d->fm.decC; break;
-                            case 14: fmpar_table[chan].sustnC = d->fm.sustnC; break;
-                            case 15: fmpar_table[chan].relC = d->fm.relC; break;
-                            case 16: fmpar_table[chan].wformC = d->fm.wformC; break;
+                            case 0:  ch->fmpar_table[chan].attckM = d->fm.attckM; break;
+                            case 1:  ch->fmpar_table[chan].decM = d->fm.decM; break;
+                            case 2:  ch->fmpar_table[chan].sustnM = d->fm.sustnM; break;
+                            case 3:  ch->fmpar_table[chan].relM = d->fm.relM; break;
+                            case 4:  ch->fmpar_table[chan].wformM = d->fm.wformM; break;
+                            case 5:  set_ins_volume(63 - d->fm.volM, BYTE_NULL, chan); break;
+                            case 6:  ch->fmpar_table[chan].kslM = d->fm.kslM; break;
+                            case 7:  ch->fmpar_table[chan].multipM = d->fm.multipM; break;
+                            case 8:  ch->fmpar_table[chan].tremM = d->fm.tremM; break;
+                            case 9:  ch->fmpar_table[chan].vibrM = d->fm.vibrM; break;
+                            case 10: ch->fmpar_table[chan].ksrM = d->fm.ksrM; break;
+                            case 11: ch->fmpar_table[chan].sustM = d->fm.sustM; break;
+                            case 12: ch->fmpar_table[chan].attckC = d->fm.attckC; break;
+                            case 13: ch->fmpar_table[chan].decC = d->fm.decC; break;
+                            case 14: ch->fmpar_table[chan].sustnC = d->fm.sustnC; break;
+                            case 15: ch->fmpar_table[chan].relC = d->fm.relC; break;
+                            case 16: ch->fmpar_table[chan].wformC = d->fm.wformC; break;
                             case 17: set_ins_volume(BYTE_NULL, 63 - d->fm.volC, chan); break;
-                            case 18: fmpar_table[chan].kslC = d->fm.kslC; break;
-                            case 19: fmpar_table[chan].multipC = d->fm.multipC; break;
-                            case 20: fmpar_table[chan].tremC = d->fm.tremC; break;
-                            case 21: fmpar_table[chan].vibrC = d->fm.vibrC; break;
-                            case 22: fmpar_table[chan].ksrC = d->fm.ksrC; break;
-                            case 23: fmpar_table[chan].sustC = d->fm.sustC; break;
-                            case 24: fmpar_table[chan].connect = d->fm.connect; break;
-                            case 25: fmpar_table[chan].feedb = d->fm.feedb; break;
+                            case 18: ch->fmpar_table[chan].kslC = d->fm.kslC; break;
+                            case 19: ch->fmpar_table[chan].multipC = d->fm.multipC; break;
+                            case 20: ch->fmpar_table[chan].tremC = d->fm.tremC; break;
+                            case 21: ch->fmpar_table[chan].vibrC = d->fm.vibrC; break;
+                            case 22: ch->fmpar_table[chan].ksrC = d->fm.ksrC; break;
+                            case 23: ch->fmpar_table[chan].sustC = d->fm.sustC; break;
+                            case 24: ch->fmpar_table[chan].connect = d->fm.connect; break;
+                            case 25: ch->fmpar_table[chan].feedb = d->fm.feedb; break;
                             case 27: if (!pan_lock[chan]) panning_table[chan] = d->panning; break;
                             }
                         }
@@ -3089,7 +3092,9 @@ static void done_irq()
 
 static void init_buffers()
 {
-    memset(fmpar_table, 0, sizeof(fmpar_table));
+    memset(ch, 0, sizeof(*ch));
+
+    //memset(fmpar_table, 0, sizeof(fmpar_table));
     memset(pan_lock, panlock, sizeof(pan_lock));
     memset(modulator_vol, 0, sizeof(modulator_vol));
     memset(carrier_vol, 0, sizeof(carrier_vol));
@@ -3118,10 +3123,10 @@ static void init_buffers()
     memset(macro_table, 0, sizeof(macro_table));
 
     if (!lockvol) {
-        memset(volume_lock, 0, sizeof(volume_lock));
+        memset(ch->volume_lock, 0, sizeof(ch->volume_lock));
     } else {
         for (int i = 0; i < 20; i++)
-              volume_lock[i] = (bool)((songdata->lock_flags[i] >> 4) & 1);
+            ch->volume_lock[i] = (bool)((songdata->lock_flags[i] >> 4) & 1);
     }
 
     if (!panlock) {
@@ -3140,11 +3145,11 @@ static void init_buffers()
 
     static uint8_t _4op_main_chan[6] = { 1, 3, 5, 10, 12, 14 }; // 0-based
 
-    memset(vol4op_lock, FALSE, sizeof(vol4op_lock));
+    memset(ch->vol4op_lock, FALSE, sizeof(ch->vol4op_lock));
     for (int i = 0; i < 6; i++) {
-        vol4op_lock[_4op_main_chan[i]] =
+        ch->vol4op_lock[_4op_main_chan[i]] =
             ((songdata->lock_flags[_4op_main_chan[i]] | 0x40) == songdata->lock_flags[_4op_main_chan[i]]);
-        vol4op_lock[_4op_main_chan[i] - 1] =
+        ch->vol4op_lock[_4op_main_chan[i] - 1] =
             ((songdata->lock_flags[_4op_main_chan[i] - 1] | 0x40) == songdata->lock_flags[_4op_main_chan[i] - 1]);
     }
 

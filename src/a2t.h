@@ -258,6 +258,12 @@ C_ASSERT(sizeof(tPATTERN_DATA) == 20 * 256 * 6);
 #define ef_ex3_SetKsrC         11
 #define ef_ex3_SetSustainC     12
 
+typedef struct {
+    tFM_INST_DATA fmpar_table[20]; // TODO: rename to 'fm'
+    bool volume_lock[20];
+    bool vol4op_lock[20];
+} tCHDATA;
+
 /* Data for importing A2T format */
 typedef struct {
     char id[15];	// '_a2tiny_module_'
