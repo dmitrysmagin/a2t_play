@@ -509,12 +509,14 @@ typedef struct {
     // note/instr_def - memorized across rows
     // effects - change each row
     tADTRACK2_EVENT event_table[20];
+    uint8_t voice_table[20];
+    uint16_t freq_table[20];
 } tCHDATA;
 
 extern tCHDATA *ch;
 
-extern uint8_t voice_table[20];
-extern uint16_t freq_table[20];
+//extern uint8_t voice_table[20];
+//extern uint16_t freq_table[20];
 extern tEFFECT_TABLE effect_table[2][20];
 extern tEFFECT_TABLE last_effect[2][20];
 extern tEFFECT_TABLE glfsld_table[2][20];

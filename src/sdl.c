@@ -127,11 +127,11 @@ void show_info()
     printf("Order %03d, Pattern %03d, Row %03d\n", current_order, current_pattern, current_line);
     printf("VOIC: ");
     for (int i = 0; i < 20; i++) {
-        printf("  %02x%s", voice_table[i], i < 19 ? "|" : "\n");
+        printf("  %02x%s", ch->voice_table[i], i < 19 ? "|" : "\n");
     }
     printf("FREQ: ");
     for (int i = 0; i < 20; i++) {
-        printf("%04x%s", freq_table[i], i < 19 ? "|" : "\n");
+        printf("%04x%s", ch->freq_table[i], i < 19 ? "|" : "\n");
     }
     show_eff("EFF", effect_table);
     show_eff("LEF", last_effect);

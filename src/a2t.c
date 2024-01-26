@@ -150,8 +150,8 @@ tCHDATA _ch, *ch = &_ch;
 // note/instr_def work like last_note/last_instr_def
 // effects work like effect_table
 //tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
-uint8_t voice_table[20];		// array[1..20] of Byte;
-uint16_t freq_table[20];		// array[1..20] of Word;
+//uint8_t voice_table[20];		// array[1..20] of Byte;
+//uint16_t freq_table[20];		// array[1..20] of Word;
 uint16_t zero_fq_table[20];		// array[1..20] of Word;
 tEFFECT_TABLE effect_table[2][20];	// array[1..20] of Word;
 uint8_t fslide_table[2][20];		// array[1..20] of Byte;
@@ -233,7 +233,7 @@ static inline int8_t get_instr_fine_tune(uint8_t ins)
 
 static inline tINSTR_DATA *get_instr_data_by_ch(int chan)
 {
-    uint8_t ins = voice_table[chan];
+    uint8_t ins = ch->voice_table[chan];
     return ins ? &instruments[ins - 1].instr_data : NULL;
 }
 
@@ -552,20 +552,19 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 static void change_freq(int chan, uint16_t freq)
 {
     if (is_4op_chan(chan) && is_4op_chan_hi(chan)) {
-        //freq_table[chan + 1] = freq_table[chan];
         chan++;
     }
 
-    freq_table[chan] &= ~0x1fff;
-    freq_table[chan] |= (freq & 0x1fff);
+    ch->freq_table[chan] &= ~0x1fff;
+    ch->freq_table[chan] |= (freq & 0x1fff);
 
     uint16_t n = regoffs_n(chan);
 
-    opl3out(0xa0 + n, freq_table[chan] & 0xFF);
-    opl3out(0xb0 + n, (freq_table[chan] >> 8) & 0xFF);
+    opl3out(0xa0 + n, ch->freq_table[chan] & 0xFF);
+    opl3out(0xb0 + n, (ch->freq_table[chan] >> 8) & 0xFF);
 
     if (is_4op_chan(chan) && is_4op_chan_lo(chan)) {
-        freq_table[chan - 1] = freq_table[chan];
+        ch->freq_table[chan - 1] = ch->freq_table[chan];
     }
 }
 
@@ -694,8 +693,8 @@ static void key_on(int chan)
 
 static void key_off(int chan)
 {
-    freq_table[chan] &= ~0x2000;
-    change_frequency(chan, freq_table[chan]);
+    ch->freq_table[chan] &= ~0x2000;
+    change_frequency(chan, ch->freq_table[chan]);
     ch->event_table[chan].note |= keyoff_flag;
 }
 
@@ -748,10 +747,10 @@ static uint32_t _4op_data_flag(uint8_t chan)
             _4op_ch2 = chan;
         }
         _4op_ins1 = ch->event_table[_4op_ch1].instr_def;
-        if (_4op_ins1 == 0) _4op_ins1 = voice_table[_4op_ch1];
+        if (_4op_ins1 == 0) _4op_ins1 = ch->voice_table[_4op_ch1];
 
         _4op_ins2 = ch->event_table[_4op_ch2].instr_def;
-        if (_4op_ins2 == 0) _4op_ins2 = voice_table[_4op_ch2];
+        if (_4op_ins2 == 0) _4op_ins2 = ch->voice_table[_4op_ch2];
 
         if (_4op_ins1 && _4op_ins2) {
             _4op_mode = TRUE;
@@ -794,7 +793,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
     // when there is additionally no FM-reg macro defined for this instrument
-    if (is_chan_adsr_data_empty(chan) && !get_fmreg_length(voice_table[chan])) {
+    if (is_chan_adsr_data_empty(chan) && !get_fmreg_length(ch->voice_table[chan])) {
             modulator = 63;
             carrier = 63;
     }
@@ -848,7 +847,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
     // when there is additionally no FM-reg macro defined for this instrument
-    if (is_chan_adsr_data_empty(chan) && !get_fmreg_length(voice_table[chan])) {
+    if (is_chan_adsr_data_empty(chan) && !get_fmreg_length(ch->voice_table[chan])) {
             modulator = 63;
             carrier = 63;
     }
@@ -1032,7 +1031,7 @@ static void set_ins_data(uint8_t ins, int chan)
             keyoff_loop[chan] = FALSE;
 
         if (reset_chan[chan]) {
-            voice_table[chan] = ins;
+            ch->voice_table[chan] = ins;
             reset_ins_volume(chan);
             reset_chan[chan] = FALSE;
         }
@@ -1040,10 +1039,10 @@ static void set_ins_data(uint8_t ins, int chan)
         uint8_t note = ch->event_table[chan].note & 0x7f;
         note = note_in_range(note) ? note : 0;
 
-        init_macro_table(chan, note, ins, freq_table[chan]);
+        init_macro_table(chan, note, ins, ch->freq_table[chan]);
     }
 
-    voice_table[chan] = ins;
+    ch->voice_table[chan] = ins;
     uint8_t old_ins = ch->event_table[chan].instr_def;
     ch->event_table[chan].instr_def = ins;
 
@@ -1129,7 +1128,7 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
     if ((note == 0) && (ftune_table[chan] == 0)) return;
 
     if ((note & 0x80) || !note_in_range(note)) {
-        freq = freq_table[chan];
+        freq = ch->freq_table[chan];
     } else {
         freq = nFreq(note - 1) + get_instr_fine_tune(ins);
 
@@ -1139,7 +1138,7 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
             //printf("restart_adsr=false\n");
         }
 
-        freq_table[chan] |= 0x2000;
+        ch->freq_table[chan] |= 0x2000;
     }
 
     if (ftune_table[chan] == -127)
@@ -1640,7 +1639,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             case ef_ex_cmd_TPortaFKenb: portaFK_table[chan] = TRUE;		break;
             case ef_ex_cmd_RestartEnv:
                 key_on(chan);
-                change_freq(chan, freq_table[chan]);
+                change_freq(chan, ch->freq_table[chan]);
                 break;
             case ef_ex_cmd_4opVlockOff:
                 if (is_4op_chan(chan)) {
@@ -1671,7 +1670,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             case ef_ex_cmd2_VSlide_def: volslide_type  [chan] = 0; break;
             case ef_ex_cmd2_LockPan:    ch->pan_lock   [chan] = TRUE; break;
             case ef_ex_cmd2_UnlockPan:  ch->pan_lock   [chan] = FALSE; break;
-            case ef_ex_cmd2_VibrOff:    change_frequency(chan, freq_table[chan]); break;
+            case ef_ex_cmd2_VibrOff:    change_frequency(chan, ch->freq_table[chan]); break;
             case ef_ex_cmd2_TremOff:
                 if (is_4op_chan(chan)) {
                     set_ins_volume_4op(BYTE_NULL, chan);
@@ -1880,12 +1879,12 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
 
         if (no_current_porta_or_delay) {
             // Usually we end up here
-            output_note(event->note, voice_table[chan], chan, TRUE, no_swap_and_restart(event));
+            output_note(event->note, ch->voice_table[chan], chan, TRUE, no_swap_and_restart(event));
         } else if (event->note && tporta_flag) {
             // if previous note was off'ed or restart_adsr enabled for channel
             // and we are doing portamento to a new note
             if (ch->event_table[chan].note & keyoff_flag || portaFK_table[chan]) {
-                output_note(ch->event_table[chan].note & ~keyoff_flag, voice_table[chan], chan, FALSE, TRUE);
+                output_note(ch->event_table[chan].note & ~keyoff_flag, ch->voice_table[chan], chan, FALSE, TRUE);
             } else {
                 ch->event_table[chan].note = event->note;
             }
@@ -2067,9 +2066,9 @@ static void portamento_up(int chan, uint16_t slide, uint16_t limit)
 {
     uint16_t freq;
 
-    if ((freq_table[chan] & 0x1fff) == 0) return;
+    if ((ch->freq_table[chan] & 0x1fff) == 0) return;
 
-    freq = calc_freq_shift_up(freq_table[chan] & 0x1fff, slide);
+    freq = calc_freq_shift_up(ch->freq_table[chan] & 0x1fff, slide);
 
     change_frequency(chan, freq <= limit ? freq : limit);
 }
@@ -2078,9 +2077,9 @@ static void portamento_down(int chan, uint16_t slide, uint16_t limit)
 {
     uint16_t freq;
 
-    if ((freq_table[chan] & 0x1fff) == 0) return;
+    if ((ch->freq_table[chan] & 0x1fff) == 0) return;
 
-    freq = calc_freq_shift_down(freq_table[chan] & 0x1fff, slide);
+    freq = calc_freq_shift_down(ch->freq_table[chan] & 0x1fff, slide);
 
     change_frequency(chan, freq >= limit ? freq : limit);
 }
@@ -2103,7 +2102,7 @@ static void macro_vibrato__porta_down(int chan, uint8_t depth)
 
 static void tone_portamento(int slot, int chan)
 {
-    uint16_t freq = freq_table[chan] & 0x1fff;
+    uint16_t freq = ch->freq_table[chan] & 0x1fff;
 
     if (freq > porta_table[slot][chan].freq) {
         portamento_down(chan, porta_table[slot][chan].speed, porta_table[slot][chan].freq);
@@ -2331,7 +2330,7 @@ static void vibrato(int slot, int chan)
     uint16_t freq, slide;
     uint8_t direction;
 
-    freq = freq_table[chan];
+    freq = ch->freq_table[chan];
 
     vibr_table[slot][chan].pos += vibr_table[slot][chan].speed;
     slide = calc_vibrato_shift(vibr_table[slot][chan].depth, vibr_table[slot][chan].pos);
@@ -2342,7 +2341,7 @@ static void vibrato(int slot, int chan)
     else
         portamento_up(chan, slide, nFreq(12*8+1));
 
-    freq_table[chan] = freq;
+    ch->freq_table[chan] = freq;
 }
 
 static void tremolo(int slot, int chan)
@@ -2825,12 +2824,12 @@ static void macro_poll_proc()
                     mt->fmreg_pos = finished_flag;
                 }
 
-                if (((freq_table[chan] | 0x2000) == freq_table[chan]) &&
+                if (((ch->freq_table[chan] | 0x2000) == ch->freq_table[chan]) &&
                      (rt->keyoff_pos != 0) &&
                      (mt->fmreg_pos >= rt->keyoff_pos)) {
                     mt->fmreg_pos = IDLE;
                 } else {
-                    if (((freq_table[chan] | 0x2000) != freq_table[chan]) &&
+                    if (((ch->freq_table[chan] | 0x2000) != ch->freq_table[chan]) &&
                          (mt->fmreg_pos != 0) && (rt->keyoff_pos != 0) &&
                         ((mt->fmreg_pos < rt->keyoff_pos) || (mt->fmreg_pos == IDLE)))
                         mt->fmreg_pos = rt->keyoff_pos;
@@ -2848,7 +2847,7 @@ static void macro_poll_proc()
                         if (mt->fmreg_pos == 1) {
                             uint32_t adsr_disabled = disabled & ((1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) |
                                 (1 << 12) | (1 << 13) | (1 << 14) | (1 << 15));
-                            if (is_ins_adsr_data_empty(voice_table[chan]) && !adsr_disabled) {
+                            if (is_ins_adsr_data_empty(ch->voice_table[chan]) && !adsr_disabled) {
                                 force_macro_keyon = TRUE;
                             }
                         }
@@ -2900,20 +2899,20 @@ static void macro_poll_proc()
                                 output_note(ch->event_table[chan].note,
                                             ch->event_table[chan].instr_def, chan, FALSE, TRUE);
                                 if (is_4op_chan(chan) && is_4op_chan_lo(chan))
-                                    init_macro_table(chan - 1, 0, voice_table[chan - 1], 0);
+                                    init_macro_table(chan - 1, 0, ch->voice_table[chan - 1], 0);
                             }
                         } else if (macro_flags & 0x40) { // MACRO_ENVELOPE_RESTART_FLAG
                             key_on(chan);
-                            change_freq(chan, freq_table[chan]);
+                            change_freq(chan, ch->freq_table[chan]);
                         } else if (macro_flags & 0x20) { // MACRO_ZERO_FREQ_FLAG
-                            if (freq_table[chan]) {
-                                zero_fq_table[chan] = freq_table[chan];
-                                freq_table[chan] = freq_table[chan] & ~0x1fff;
-                                change_freq(chan, freq_table[chan]);
+                            if (ch->freq_table[chan]) {
+                                zero_fq_table[chan] = ch->freq_table[chan];
+                                ch->freq_table[chan] &= ~0x1fff;
+                                change_freq(chan, ch->freq_table[chan]);
                             } else if (zero_fq_table[chan]) {
-                                freq_table[chan] = zero_fq_table[chan];
+                                ch->freq_table[chan] = zero_fq_table[chan];
                                 zero_fq_table[chan] = 0;
-                                change_freq(chan, freq_table[chan]);
+                                change_freq(chan, ch->freq_table[chan]);
                             }
                         }
 
@@ -2957,12 +2956,12 @@ static void macro_poll_proc()
                     mt->arpg_pos = finished_flag;
                 }
 
-                if (((freq_table[chan] | 0x2000) == freq_table[chan]) &&
+                if (((ch->freq_table[chan] | 0x2000) == ch->freq_table[chan]) &&
                      (at->keyoff_pos != 0) &&
                      (mt->arpg_pos >= at->keyoff_pos)) {
                     mt->arpg_pos = IDLE;
                 } else {
-                    if (((freq_table[chan] | 0x2000) != freq_table[chan]) &&
+                    if (((ch->freq_table[chan] | 0x2000) != ch->freq_table[chan]) &&
                          (at->keyoff_pos != 0) && (at->keyoff_pos != 0) &&
                         ((mt->arpg_pos < at->keyoff_pos) || (mt->arpg_pos == IDLE)))
                         mt->arpg_pos = at->keyoff_pos;
@@ -3022,12 +3021,12 @@ static void macro_poll_proc()
                         mt->vib_pos = finished_flag;
                     }
 
-                    if (((freq_table[chan] | 0x2000) == freq_table[chan]) &&
+                    if (((ch->freq_table[chan] | 0x2000) == ch->freq_table[chan]) &&
                          (vt->keyoff_pos != 0) &
                          (mt->vib_pos >= vt->keyoff_pos)) {
                         mt->vib_pos = IDLE;
                     } else {
-                        if (((freq_table[chan] | 0x2000) != freq_table[chan]) &&
+                        if (((ch->freq_table[chan] | 0x2000) != ch->freq_table[chan]) &&
                              (mt->vib_pos != 0) && (vt->keyoff_pos != 0) &&
                             ((mt->vib_pos < vt->keyoff_pos) || (mt->vib_pos == IDLE)))
                             mt->vib_pos = vt->keyoff_pos;
@@ -3099,7 +3098,7 @@ static void init_buffers()
     //memset(modulator_vol, 0, sizeof(modulator_vol));
     //memset(carrier_vol, 0, sizeof(carrier_vol));
     //memset(event_table, 0, sizeof(event_table));
-    memset(freq_table, 0, sizeof(freq_table));
+    //memset(freq_table, 0, sizeof(freq_table));
     memset(zero_fq_table, 0, sizeof(zero_fq_table));
     memset(effect_table, 0, sizeof(effect_table));
     memset(fslide_table, 0, sizeof(fslide_table));
@@ -3112,7 +3111,7 @@ static void init_buffers()
     memset(retrig_table, 0, sizeof(retrig_table));
     memset(tremor_table, 0, sizeof(tremor_table));
     memset(last_effect, 0, sizeof(last_effect));
-    memset(voice_table, 0, sizeof(voice_table));
+    //memset(voice_table, 0, sizeof(voice_table));
     memset(notedel_table, BYTE_NULL, sizeof(notedel_table));
     memset(notecut_table, BYTE_NULL, sizeof(notecut_table));
     memset(ftune_table, 0, sizeof(ftune_table));
@@ -3197,7 +3196,7 @@ static void init_player()
     for (int i = 0; i < 20; i++) {
         arpgg_table[0][i].state = 1;
         arpgg_table[1][i].state = 1;
-        voice_table[i] = i + 1;
+        ch->voice_table[i] = i + 1;
     }
 }
 
