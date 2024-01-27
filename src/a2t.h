@@ -513,6 +513,13 @@ typedef struct {
     uint16_t freq_table[20];
     uint16_t zero_fq_table[20];
     tEFFECT_TABLE effect_table[2][20];
+    uint8_t fslide_table[2][20];
+    tEFFECT_TABLE glfsld_table[2][20];
+    tPORTA_TABLE porta_table[2][20];
+    bool portaFK_table[20];
+    tARPGG_TABLE arpgg_table[2][20];
+    tVIBRTREM_TABLE vibr_table[2][20];
+    tVIBRTREM_TABLE trem_table[2][20];
 } tCHDATA;
 
 extern tCHDATA *ch;
@@ -521,7 +528,7 @@ extern tCHDATA *ch;
 //extern uint16_t freq_table[20];
 //extern tEFFECT_TABLE effect_table[2][20];
 extern tEFFECT_TABLE last_effect[2][20];
-extern tEFFECT_TABLE glfsld_table[2][20];
+//extern tEFFECT_TABLE glfsld_table[2][20];
 extern tCH_MACRO_TABLE macro_table[20];
 //extern tADTRACK2_EVENT event_table[20];
 

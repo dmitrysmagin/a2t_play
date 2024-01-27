@@ -154,13 +154,13 @@ tCHDATA _ch, *ch = &_ch;
 //uint16_t freq_table[20];		// array[1..20] of Word;
 //uint16_t zero_fq_table[20];		// array[1..20] of Word;
 //tEFFECT_TABLE effect_table[2][20];	// array[1..20] of Word;
-uint8_t fslide_table[2][20];		// array[1..20] of Byte;
-tEFFECT_TABLE glfsld_table[2][20];	// array[1..20] of Word;
-tPORTA_TABLE porta_table[2][20];	// array[1..20] of Record freq: Word; speed: Byte; end;
-bool portaFK_table[20]; // array[1..20] of Boolean;;
-tARPGG_TABLE arpgg_table[2][20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
-tVIBRTREM_TABLE vibr_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
-tVIBRTREM_TABLE trem_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
+//uint8_t fslide_table[2][20];		// array[1..20] of Byte;
+//tEFFECT_TABLE glfsld_table[2][20];	// array[1..20] of Word;
+//tPORTA_TABLE porta_table[2][20];	// array[1..20] of Record freq: Word; speed: Byte; end;
+//bool portaFK_table[20]; // array[1..20] of Boolean;;
+//tARPGG_TABLE arpgg_table[2][20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
+//tVIBRTREM_TABLE vibr_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
+//tVIBRTREM_TABLE trem_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
 uint8_t retrig_table[2][20];	// array[1..20] of Byte;
 tTREMOR_TABLE tremor_table[2][20];		// array[1..20] of Record pos: Integer; volume: Word; end;
 uint8_t panning_table[20];	// array[1..20] of Byte;
@@ -1220,7 +1220,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         (def != ef_ExtraFineVibrato) &&
         (def != ef_VibratoVolSlide) &&
         (def != ef_VibratoVSlideFine))
-        memset(&vibr_table[slot][chan], 0, sizeof(vibr_table[slot][chan]));
+        memset(&ch->vibr_table[slot][chan], 0, sizeof(ch->vibr_table[slot][chan]));
 
     if ((def != ef_RetrigNote) &&
         (def != ef_MultiRetrigNote))
@@ -1228,12 +1228,12 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
     if ((def != ef_Tremolo) &&
         (def != ef_ExtraFineTremolo))
-        memset(&trem_table[slot][chan], 0, sizeof(trem_table[slot][chan]));
+        memset(&ch->trem_table[slot][chan], 0, sizeof(ch->trem_table[slot][chan]));
 
     if (!(((def == ef_Arpeggio) && (val != 0)) || (def == ef_ExtraFineArpeggio)) &&
-        (arpgg_table[slot][chan].note != 0) && (arpgg_table[slot][chan].state != 1)) {
-        arpgg_table[slot][chan].state = 1;
-        change_frequency(chan, nFreq(arpgg_table[slot][chan].note - 1) +
+        (ch->arpgg_table[slot][chan].note != 0) && (ch->arpgg_table[slot][chan].state != 1)) {
+        ch->arpgg_table[slot][chan].state = 1;
+        change_frequency(chan, nFreq(ch->arpgg_table[slot][chan].note - 1) +
             get_instr_fine_tune(ch->event_table[chan].instr_def));
     }
 
@@ -1292,9 +1292,9 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
             // shouldn't it be int c = 0 ??
             for (int c = chan; c < songdata->nm_tracks; c++) {
-                fslide_table[slot][c] = val;
-                glfsld_table[slot][c].def = ch->effect_table[slot][chan].def;
-                glfsld_table[slot][c].val = ch->effect_table[slot][chan].val;
+                ch->fslide_table[slot][c] = val;
+                ch->glfsld_table[slot][c].def = ch->effect_table[slot][chan].def;
+                ch->glfsld_table[slot][c].val = ch->effect_table[slot][chan].val;
             }
         }
     }
@@ -1328,11 +1328,11 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         }
 
         if (note_in_range(event->note)) {
-            arpgg_table[slot][chan].state = 0;
-            arpgg_table[slot][chan].note = event->note & 0x7f;
+            ch->arpgg_table[slot][chan].state = 0;
+            ch->arpgg_table[slot][chan].note = event->note & 0x7f;
             if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
-                arpgg_table[slot][chan].add1 = val >> 4;
-                arpgg_table[slot][chan].add2 = val & 0x0f;
+                ch->arpgg_table[slot][chan].add1 = val >> 4;
+                ch->arpgg_table[slot][chan].add2 = val & 0x0f;
             }
         } else {
             if (!event->note && note_in_range(ch->event_table[chan].note)) {
@@ -1342,12 +1342,12 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                     (def != ef_ExtraFineArpeggio) &&
                     (def != ef_ArpggVSlide) &&
                     (def != ef_ArpggVSlideFine))
-                    arpgg_table[slot][chan].state = 0;*/
+                    ch->arpgg_table[slot][chan].state = 0;*/
 
-                arpgg_table[slot][chan].note = ch->event_table[chan].note & 0x7f;
+                ch->arpgg_table[slot][chan].note = ch->event_table[chan].note & 0x7f;
                 if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
-                    arpgg_table[slot][chan].add1 = val / 16;
-                    arpgg_table[slot][chan].add2 = val % 16;
+                    ch->arpgg_table[slot][chan].add1 = val / 16;
+                    ch->arpgg_table[slot][chan].add2 = val % 16;
                 }
             } else {
                 ch->effect_table[slot][chan].def = 0;
@@ -1362,7 +1362,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_FSlideDownFine:
         ch->effect_table[slot][chan].def = def;
         ch->effect_table[slot][chan].val = val;
-        fslide_table[slot][chan] = val;
+        ch->fslide_table[slot][chan] = val;
         break;
 
     case ef_FSlideUpVSlide:
@@ -1380,11 +1380,11 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         update_effect_table(slot, chan, EFGR_TONEPORTAMENTO, def, val);
 
         if (note_in_range(event->note)) {
-            porta_table[slot][chan].speed = val;
-            porta_table[slot][chan].freq = nFreq(event->note - 1) +
+            ch->porta_table[slot][chan].speed = val;
+            ch->porta_table[slot][chan].freq = nFreq(event->note - 1) +
                 get_instr_fine_tune(ch->event_table[chan].instr_def);
         } else {
-            porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
+            ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
         }
         break;
 
@@ -1400,11 +1400,11 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
         if ((event->eff[slot ^ 1].def == ef_Extended) &&
             (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
-            vibr_table[slot][chan].fine = TRUE;
+            ch->vibr_table[slot][chan].fine = TRUE;
         }
 
-        vibr_table[slot][chan].speed = val / 16;
-        vibr_table[slot][chan].depth = val % 16;
+        ch->vibr_table[slot][chan].speed = val / 16;
+        ch->vibr_table[slot][chan].depth = val % 16;
         break;
 
     case ef_Tremolo:
@@ -1413,11 +1413,11 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
         if ((event->eff[slot ^ 1].def == ef_Extended) &&
             (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
-            trem_table[slot][chan].fine = TRUE;
+            ch->trem_table[slot][chan].fine = TRUE;
         }
 
-        trem_table[slot][chan].speed = val / 16;
-        trem_table[slot][chan].depth = val % 16;
+        ch->trem_table[slot][chan].speed = val / 16;
+        ch->trem_table[slot][chan].depth = val % 16;
         break;
 
     case ef_VibratoVolSlide:
@@ -1426,7 +1426,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
         if ((event->eff[slot ^ 1].def == ef_Extended) &&
             (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS))
-            vibr_table[slot][chan].fine = TRUE;
+            ch->vibr_table[slot][chan].fine = TRUE;
         break;
 
     case ef_SetCarrierVol:
@@ -1635,8 +1635,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             switch (val & 0x0f) {
             case ef_ex_cmd_MKOffLoopDi: keyoff_loop[chan] = FALSE;		break;
             case ef_ex_cmd_MKOffLoopEn: keyoff_loop[chan] = TRUE;		break;
-            case ef_ex_cmd_TPortaFKdis: portaFK_table[chan] = FALSE;	break;
-            case ef_ex_cmd_TPortaFKenb: portaFK_table[chan] = TRUE;		break;
+            case ef_ex_cmd_TPortaFKdis: ch->portaFK_table[chan] = FALSE;	break;
+            case ef_ex_cmd_TPortaFKenb: ch->portaFK_table[chan] = TRUE;		break;
             case ef_ex_cmd_RestartEnv:
                 key_on(chan);
                 change_freq(chan, ch->freq_table[chan]);
@@ -1883,7 +1883,7 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
         } else if (event->note && tporta_flag) {
             // if previous note was off'ed or restart_adsr enabled for channel
             // and we are doing portamento to a new note
-            if (ch->event_table[chan].note & keyoff_flag || portaFK_table[chan]) {
+            if (ch->event_table[chan].note & keyoff_flag || ch->portaFK_table[chan]) {
                 output_note(ch->event_table[chan].note & ~keyoff_flag, ch->voice_table[chan], chan, FALSE, TRUE);
             } else {
                 ch->event_table[chan].note = event->note;
@@ -1913,9 +1913,9 @@ static void play_line()
                 last_effect[slot][chan].def = ch->effect_table[slot][chan].def;
                 last_effect[slot][chan].val = ch->effect_table[slot][chan].val;
             }
-            if (glfsld_table[slot][chan].def | glfsld_table[slot][chan].val) {
-                ch->effect_table[slot][chan].def = glfsld_table[slot][chan].def;
-                ch->effect_table[slot][chan].val = glfsld_table[slot][chan].val;
+            if (ch->glfsld_table[slot][chan].def | ch->glfsld_table[slot][chan].val) {
+                ch->effect_table[slot][chan].def = ch->glfsld_table[slot][chan].def;
+                ch->effect_table[slot][chan].val = ch->glfsld_table[slot][chan].val;
             } else {
                 ch->effect_table[slot][chan].def = 0;
                 ch->effect_table[slot][chan].val = 0;
@@ -1951,7 +1951,7 @@ static void play_line()
             if (event->eff[slot].def | event->eff[slot].val) {
                 ch->event_table[chan].eff[slot].def = event->eff[slot].def;
                 ch->event_table[chan].eff[slot].val = event->eff[slot].val;
-            } else if (glfsld_table[slot][chan].def == 0 && glfsld_table[slot][chan].val == 0) {
+            } else if (ch->glfsld_table[slot][chan].def == 0 && ch->glfsld_table[slot][chan].val == 0) {
                 ch->effect_table[slot][chan].def = 0;
                 ch->effect_table[slot][chan].val = 0;
             }
@@ -2104,10 +2104,10 @@ static void tone_portamento(int slot, int chan)
 {
     uint16_t freq = ch->freq_table[chan] & 0x1fff;
 
-    if (freq > porta_table[slot][chan].freq) {
-        portamento_down(chan, porta_table[slot][chan].speed, porta_table[slot][chan].freq);
-    } else if (freq < porta_table[slot][chan].freq) {
-        portamento_up(chan, porta_table[slot][chan].speed, porta_table[slot][chan].freq);
+    if (freq > ch->porta_table[slot][chan].freq) {
+        portamento_down(chan, ch->porta_table[slot][chan].speed, ch->porta_table[slot][chan].freq);
+    } else if (freq < ch->porta_table[slot][chan].freq) {
+        portamento_up(chan, ch->porta_table[slot][chan].speed, ch->porta_table[slot][chan].freq);
     }
 }
 
@@ -2313,14 +2313,14 @@ static void arpeggio(int slot, int chan)
 
     uint16_t freq;
 
-    switch (arpgg_table[slot][chan].state) {
-    case 0: freq = nFreq(arpgg_table[slot][chan].note - 1); break;
-    case 1: freq = nFreq(arpgg_table[slot][chan].note - 1 + arpgg_table[slot][chan].add1); break;
-    case 2: freq = nFreq(arpgg_table[slot][chan].note - 1 + arpgg_table[slot][chan].add2); break;
+    switch (ch->arpgg_table[slot][chan].state) {
+    case 0: freq = nFreq(ch->arpgg_table[slot][chan].note - 1); break;
+    case 1: freq = nFreq(ch->arpgg_table[slot][chan].note - 1 + ch->arpgg_table[slot][chan].add1); break;
+    case 2: freq = nFreq(ch->arpgg_table[slot][chan].note - 1 + ch->arpgg_table[slot][chan].add2); break;
     default: freq = 0;
     }
 
-    arpgg_table[slot][chan].state = arpgg_state[arpgg_table[slot][chan].state];
+    ch->arpgg_table[slot][chan].state = arpgg_state[ch->arpgg_table[slot][chan].state];
     change_frequency(chan, freq +
             get_instr_fine_tune(ch->event_table[chan].instr_def));
 }
@@ -2332,9 +2332,9 @@ static void vibrato(int slot, int chan)
 
     freq = ch->freq_table[chan];
 
-    vibr_table[slot][chan].pos += vibr_table[slot][chan].speed;
-    slide = calc_vibrato_shift(vibr_table[slot][chan].depth, vibr_table[slot][chan].pos);
-    direction = vibr_table[slot][chan].pos & 0x20;
+    ch->vibr_table[slot][chan].pos += ch->vibr_table[slot][chan].speed;
+    slide = calc_vibrato_shift(ch->vibr_table[slot][chan].depth, ch->vibr_table[slot][chan].pos);
+    direction = ch->vibr_table[slot][chan].pos & 0x20;
 
     if (direction == 0)
         portamento_down(chan, slide, nFreq(0));
@@ -2352,9 +2352,9 @@ static void tremolo(int slot, int chan)
     uint8_t volM = ch->fmpar_table[chan].volM;
     uint8_t volC = ch->fmpar_table[chan].volC;
 
-    trem_table[slot][chan].pos += trem_table[slot][chan].speed;
-    slide = calc_vibrato_shift(trem_table[slot][chan].depth, trem_table[slot][chan].pos);
-    direction = trem_table[slot][chan].pos & 0x20;
+    ch->trem_table[slot][chan].pos += ch->trem_table[slot][chan].speed;
+    slide = calc_vibrato_shift(ch->trem_table[slot][chan].depth, ch->trem_table[slot][chan].pos);
+    direction = ch->trem_table[slot][chan].pos & 0x20;
 
     if (direction == 0)
         slide_volume_down(chan, slide);
@@ -2407,21 +2407,21 @@ static void update_effects_slot(int slot, int chan)
         break;
 
     case ef_FSlideUpVSlide:
-        portamento_up(chan, fslide_table[slot][chan], nFreq(12*8+1));
+        portamento_up(chan, ch->fslide_table[slot][chan], nFreq(12*8+1));
         volume_slide(chan, val / 16, val % 16);
         break;
 
     case ef_FSlUpVSlF:
-        portamento_up(chan, fslide_table[slot][chan], nFreq(12*8+1));
+        portamento_up(chan, ch->fslide_table[slot][chan], nFreq(12*8+1));
         break;
 
     case ef_FSlideDownVSlide:
-        portamento_down(chan, fslide_table[slot][chan], nFreq(0));
+        portamento_down(chan, ch->fslide_table[slot][chan], nFreq(0));
         volume_slide(chan, val / 16, val % 16);
         break;
 
     case ef_FSlDownVSlF:
-        portamento_down(chan, fslide_table[slot][chan], nFreq(0));
+        portamento_down(chan, ch->fslide_table[slot][chan], nFreq(0));
         break;
 
     case ef_FSlUpFineVSlide:
@@ -2446,23 +2446,23 @@ static void update_effects_slot(int slot, int chan)
         break;
 
     case ef_Vibrato:
-        if (!vibr_table[slot][chan].fine)
+        if (!ch->vibr_table[slot][chan].fine)
             vibrato(slot, chan);
         break;
 
     case ef_Tremolo:
-        if (!trem_table[slot][chan].fine)
+        if (!ch->trem_table[slot][chan].fine)
             tremolo(slot, chan);
         break;
 
     case ef_VibratoVolSlide:
         volume_slide(chan, val / 16, val % 16);
-        if (!vibr_table[slot][chan].fine)
+        if (!ch->vibr_table[slot][chan].fine)
             vibrato(slot, chan);
         break;
 
     case ef_VibratoVSlideFine:
-        if (!vibr_table[slot][chan].fine)
+        if (!ch->vibr_table[slot][chan].fine)
             vibrato(slot, chan);
         break;
 
@@ -2579,27 +2579,27 @@ static void update_fine_effects(int slot, int chan)
     case ef_FSlideDownFine:     portamento_down(chan, val, nFreq(0)); break;
     case ef_FSlUpVSlF:          volume_slide(chan, val / 16, val % 16); break;
     case ef_FSlDownVSlF:        volume_slide(chan, val / 16, val % 16); break;
-    case ef_FSlUpFineVSlide:    portamento_up(chan, fslide_table[slot][chan], nFreq(12*8+1)); break;
-    case ef_FSlDownFineVSlide:  portamento_down(chan, fslide_table[slot][chan], nFreq(0)); break;
+    case ef_FSlUpFineVSlide:    portamento_up(chan, ch->fslide_table[slot][chan], nFreq(12*8+1)); break;
+    case ef_FSlDownFineVSlide:  portamento_down(chan, ch->fslide_table[slot][chan], nFreq(0)); break;
 
     case ef_FSlUpFineVSlF:
-        portamento_up(chan, fslide_table[slot][chan], nFreq(12*8+1));
+        portamento_up(chan, ch->fslide_table[slot][chan], nFreq(12*8+1));
         volume_slide(chan, val / 16, val % 16);
         break;
 
     case ef_FSlDownFineVSlF:
-        portamento_down(chan, fslide_table[slot][chan], nFreq(0));
+        portamento_down(chan, ch->fslide_table[slot][chan], nFreq(0));
         volume_slide(chan, val / 16, val % 16);
         break;
 
     case ef_TPortamVSlideFine:  volume_slide(chan, val / 16, val % 16); break;
-    case ef_Vibrato:            if (vibr_table[slot][chan].fine) vibrato(slot, chan); break;
-    case ef_Tremolo:            if (trem_table[slot][chan].fine) tremolo(slot, chan); break;
-    case ef_VibratoVolSlide:    if (vibr_table[slot][chan].fine) vibrato(slot, chan); break;
+    case ef_Vibrato:            if (ch->vibr_table[slot][chan].fine) vibrato(slot, chan); break;
+    case ef_Tremolo:            if (ch->trem_table[slot][chan].fine) tremolo(slot, chan); break;
+    case ef_VibratoVolSlide:    if (ch->vibr_table[slot][chan].fine) vibrato(slot, chan); break;
 
     case ef_VibratoVSlideFine:
         volume_slide(chan, val / 16, val % 16);
-        if (vibr_table[slot][chan].fine)
+        if (ch->vibr_table[slot][chan].fine)
             vibrato(slot, chan);
         break;
 
@@ -2634,8 +2634,8 @@ static void update_extra_fine_effects_slot(int slot, int chan)
     case ef_GlobalFreqSlideUpXF:    portamento_up(chan, val, nFreq(12*8+1)); break;
     case ef_GlobalFreqSlideDnXF:    portamento_down(chan, val, nFreq(0)); break;
     case ef_ExtraFineArpeggio:      arpeggio(slot, chan); break;
-    case ef_ExtraFineVibrato:       if (!vibr_table[slot][chan].fine) vibrato(slot, chan); break;
-    case ef_ExtraFineTremolo:       if (!trem_table[slot][chan].fine) tremolo(slot, chan); break;
+    case ef_ExtraFineVibrato:       if (!ch->vibr_table[slot][chan].fine) vibrato(slot, chan); break;
+    case ef_ExtraFineTremolo:       if (!ch->trem_table[slot][chan].fine) tremolo(slot, chan); break;
     }
 }
 
@@ -2738,10 +2738,10 @@ static void update_song_position()
     }
 
     for (int chan = 0; chan < songdata->nm_tracks; chan++) {
-        glfsld_table[0][chan].def = 0;
-        glfsld_table[0][chan].val = 0;
-        glfsld_table[1][chan].def = 0;
-        glfsld_table[1][chan].val = 0;
+        ch->glfsld_table[0][chan].def = 0;
+        ch->glfsld_table[0][chan].val = 0;
+        ch->glfsld_table[1][chan].def = 0;
+        ch->glfsld_table[1][chan].val = 0;
     }
 
     if ((current_line == 0) &&
@@ -3101,13 +3101,13 @@ static void init_buffers()
     //memset(freq_table, 0, sizeof(freq_table));
     //memset(zero_fq_table, 0, sizeof(zero_fq_table));
     //memset(effect_table, 0, sizeof(effect_table));
-    memset(fslide_table, 0, sizeof(fslide_table));
-    memset(glfsld_table, 0, sizeof(glfsld_table));
-    memset(porta_table, 0, sizeof(porta_table));
-    memset(portaFK_table, FALSE, sizeof(portaFK_table));
-    memset(arpgg_table, 0, sizeof(arpgg_table));
-    memset(vibr_table, 0, sizeof(vibr_table));
-    memset(trem_table, 0, sizeof(trem_table));
+    //memset(fslide_table, 0, sizeof(fslide_table));
+    //memset(glfsld_table, 0, sizeof(glfsld_table));
+    //memset(porta_table, 0, sizeof(porta_table));
+    //memset(portaFK_table, FALSE, sizeof(portaFK_table));
+    //memset(arpgg_table, 0, sizeof(arpgg_table));
+    //memset(vibr_table, 0, sizeof(vibr_table));
+    //memset(trem_table, 0, sizeof(trem_table));
     memset(retrig_table, 0, sizeof(retrig_table));
     memset(tremor_table, 0, sizeof(tremor_table));
     memset(last_effect, 0, sizeof(last_effect));
@@ -3194,8 +3194,8 @@ static void init_player()
     memcpy(&vibtrem_table, &def_vibtrem_table, sizeof(vibtrem_table));
 
     for (int i = 0; i < 20; i++) {
-        arpgg_table[0][i].state = 1;
-        arpgg_table[1][i].state = 1;
+        ch->arpgg_table[0][i].state = 1;
+        ch->arpgg_table[1][i].state = 1;
         ch->voice_table[i] = i + 1;
     }
 }

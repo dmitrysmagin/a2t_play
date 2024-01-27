@@ -135,7 +135,7 @@ void show_info()
     }
     show_eff("EFF", ch->effect_table);
     show_eff("LEF", last_effect);
-    //show_eff("GLF", glfsld_table);
+    //show_eff("GLF", ch->glfsld_table);
     show_event(ch->event_table);
     printf("FMRG: ");
     for (int i = 0; i < 20; i++) {
