@@ -511,13 +511,15 @@ typedef struct {
     tADTRACK2_EVENT event_table[20];
     uint8_t voice_table[20];
     uint16_t freq_table[20];
+    uint16_t zero_fq_table[20];
+    tEFFECT_TABLE effect_table[2][20];
 } tCHDATA;
 
 extern tCHDATA *ch;
 
 //extern uint8_t voice_table[20];
 //extern uint16_t freq_table[20];
-extern tEFFECT_TABLE effect_table[2][20];
+//extern tEFFECT_TABLE effect_table[2][20];
 extern tEFFECT_TABLE last_effect[2][20];
 extern tEFFECT_TABLE glfsld_table[2][20];
 extern tCH_MACRO_TABLE macro_table[20];

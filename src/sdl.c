@@ -133,7 +133,7 @@ void show_info()
     for (int i = 0; i < 20; i++) {
         printf("%04x%s", ch->freq_table[i], i < 19 ? "|" : "\n");
     }
-    show_eff("EFF", effect_table);
+    show_eff("EFF", ch->effect_table);
     show_eff("LEF", last_effect);
     //show_eff("GLF", glfsld_table);
     show_event(ch->event_table);
