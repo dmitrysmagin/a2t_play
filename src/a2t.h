@@ -520,6 +520,18 @@ typedef struct {
     tARPGG_TABLE arpgg_table[2][20];
     tVIBRTREM_TABLE vibr_table[2][20];
     tVIBRTREM_TABLE trem_table[2][20];
+    uint8_t retrig_table[2][20];
+    tTREMOR_TABLE tremor_table[2][20];
+    uint8_t panning_table[20];
+    tEFFECT_TABLE last_effect[2][20];
+    uint8_t volslide_type[20];
+    uint8_t notedel_table[20];
+    uint8_t notecut_table[20];
+    int8_t ftune_table[20];
+    bool keyoff_loop[20];
+    uint8_t loopbck_table[20];
+    uint8_t loop_table[20][256];
+    bool reset_chan[20];
 } tCHDATA;
 
 extern tCHDATA *ch;
@@ -527,7 +539,7 @@ extern tCHDATA *ch;
 //extern uint8_t voice_table[20];
 //extern uint16_t freq_table[20];
 //extern tEFFECT_TABLE effect_table[2][20];
-extern tEFFECT_TABLE last_effect[2][20];
+//extern tEFFECT_TABLE last_effect[2][20];
 //extern tEFFECT_TABLE glfsld_table[2][20];
 extern tCH_MACRO_TABLE macro_table[20];
 //extern tADTRACK2_EVENT event_table[20];

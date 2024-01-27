@@ -161,19 +161,20 @@ tCHDATA _ch, *ch = &_ch;
 //tARPGG_TABLE arpgg_table[2][20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
 //tVIBRTREM_TABLE vibr_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
 //tVIBRTREM_TABLE trem_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
-uint8_t retrig_table[2][20];	// array[1..20] of Byte;
-tTREMOR_TABLE tremor_table[2][20];		// array[1..20] of Record pos: Integer; volume: Word; end;
-uint8_t panning_table[20];	// array[1..20] of Byte;
-tEFFECT_TABLE last_effect[2][20];	// array[1..20] of Byte;
-uint8_t volslide_type[20];	// array[1..20] of Byte;
-uint8_t notedel_table[20];	// array[1..20] of Byte;
-uint8_t notecut_table[20];	// array[1..20] of Byte;
-int8_t ftune_table[20];		// array[1..20] of Shortint;
-bool keyoff_loop[20];		// array[1..20] of Boolean;
+//uint8_t retrig_table[2][20];	// array[1..20] of Byte;
+//tTREMOR_TABLE tremor_table[2][20];		// array[1..20] of Record pos: Integer; volume: Word; end;
+//uint8_t panning_table[20];	// array[1..20] of Byte;
+//tEFFECT_TABLE last_effect[2][20];	// array[1..20] of Byte;
+//uint8_t volslide_type[20];	// array[1..20] of Byte;
+//uint8_t notedel_table[20];	// array[1..20] of Byte;
+//uint8_t notecut_table[20];	// array[1..20] of Byte;
+//int8_t ftune_table[20];		// array[1..20] of Shortint;
+//bool keyoff_loop[20];		// array[1..20] of Boolean;
+//uint8_t loopbck_table[20];	// array[1..20] of Byte;
+//uint8_t loop_table[20][256];	// array[1..20,0..255] of Byte;
+bool reset_chan[20];	// array[1..20] of Boolean;
 tCH_MACRO_TABLE macro_table[20];// array[1..20] of tCH_MACRO_TABLE;
 
-uint8_t loopbck_table[20];	// array[1..20] of Byte;
-uint8_t loop_table[20][256];	// array[1..20,0..255] of Byte;
 uint8_t misc_register;
 
 uint8_t current_tremolo_depth = 0;
@@ -183,7 +184,6 @@ bool speed_update, lockvol, panlock, lockVP;
 uint8_t tremolo_depth, vibrato_depth;
 bool volume_scaling, percussion_mode;
 uint8_t last_order;
-bool reset_chan[20];	// array[1..20] of Boolean;
 
 typedef struct {
     tINSTR_DATA instr_data;
@@ -1002,7 +1002,7 @@ static void set_ins_data(uint8_t ins, int chan)
     }
 
     if ((ins != ch->event_table[chan].instr_def) || reset_chan[chan]) {
-        panning_table[chan] = !ch->pan_lock[chan]
+        ch->panning_table[chan] = !ch->pan_lock[chan]
                                   ? i->panning
                                   : songdata->lock_flags[chan] & 3;
 
@@ -1020,7 +1020,7 @@ static void set_ins_data(uint8_t ins, int chan)
         opl3out(0x80 + c, i->fm.data[7]);
         opl3out(0xe0 + m, i->fm.data[8]);
         opl3out(0xe0 + c, i->fm.data[9]);
-        opl3out(0xc0 + n, i->fm.data[10] | _panning[panning_table[chan]]);
+        opl3out(0xc0 + n, i->fm.data[10] | _panning[ch->panning_table[chan]]);
 
         for (int r = 0; r < 11; r++) {
             ch->fmpar_table[chan].data[r] = i->fm.data[r];
@@ -1028,7 +1028,7 @@ static void set_ins_data(uint8_t ins, int chan)
 
         // Stop instr macro if resetting voice
         if (!reset_chan[chan])
-            keyoff_loop[chan] = FALSE;
+            ch->keyoff_loop[chan] = FALSE;
 
         if (reset_chan[chan]) {
             ch->voice_table[chan] = ins;
@@ -1076,7 +1076,7 @@ static void update_fmpar(int chan)
 
     opl3out(0x20 + regoffs_m(chan), fmpar->data[0]);
     opl3out(0x20 + regoffs_c(chan), fmpar->data[1]);
-    opl3out(0xc0 + regoffs_n(chan), fmpar->data[10] | _panning[panning_table[chan]]);
+    opl3out(0xc0 + regoffs_n(chan), fmpar->data[10] | _panning[ch->panning_table[chan]]);
 
     set_ins_volume(fmpar->volM, fmpar->volC, chan);
 }
@@ -1125,7 +1125,7 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
 {
     uint16_t freq;
 
-    if ((note == 0) && (ftune_table[chan] == 0)) return;
+    if ((note == 0) && (ch->ftune_table[chan] == 0)) return;
 
     if ((note & 0x80) || !note_in_range(note)) {
         freq = ch->freq_table[chan];
@@ -1141,10 +1141,10 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
         ch->freq_table[chan] |= 0x2000;
     }
 
-    if (ftune_table[chan] == -127)
-        ftune_table[chan] = 0;
+    if (ch->ftune_table[chan] == -127)
+        ch->ftune_table[chan] = 0;
 
-    freq = freq + ftune_table[chan];
+    freq = freq + ch->ftune_table[chan];
     change_frequency(chan, freq);
 
     if (note) {
@@ -1176,8 +1176,8 @@ static void update_fine_effects(int slot, int chan); // forward
 static bool no_loop(uint8_t current_chan, uint8_t current_line)
 {
     for (int chan = 0; chan < current_chan; chan++) {
-        if ((loop_table[chan][current_line] != 0) &&
-            (loop_table[chan][current_line] != BYTE_NULL))
+        if ((ch->loop_table[chan][current_line] != 0) &&
+            (ch->loop_table[chan][current_line] != BYTE_NULL))
             return FALSE;
     }
 
@@ -1189,13 +1189,13 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan); // 
 // In case of x00 set value of the previous compatible effect command
 static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, uint8_t val)
 {
-    uint8_t lval = last_effect[slot][chan].val;
+    uint8_t lval = ch->last_effect[slot][chan].val;
 
     ch->effect_table[slot][chan].def = def;
 
     if (val) {
         ch->effect_table[slot][chan].val = val;
-    } else if (effect_group[last_effect[slot][chan].def] == eff_group && lval) {
+    } else if (effect_group[ch->last_effect[slot][chan].def] == eff_group && lval) {
         ch->effect_table[slot][chan].val = lval;
     } else {
         // x00 without any previous compatible command, should never happen
@@ -1224,7 +1224,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
     if ((def != ef_RetrigNote) &&
         (def != ef_MultiRetrigNote))
-        memset(&retrig_table[slot][chan], 0, sizeof(retrig_table[slot][chan]));
+        memset(&ch->retrig_table[slot][chan], 0, sizeof(ch->retrig_table[slot][chan]));
 
     if ((def != ef_Tremolo) &&
         (def != ef_ExtraFineTremolo))
@@ -1299,9 +1299,9 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         }
     }
 
-    if (tremor_table[slot][chan].pos && (def != ef_Tremor)) {
-        tremor_table[slot][chan].pos = 0;
-        set_ins_volume(tremor_table[slot][chan].volM, tremor_table[slot][chan].volC, chan);
+    if (ch->tremor_table[slot][chan].pos && (def != ef_Tremor)) {
+        ch->tremor_table[slot][chan].pos = 0;
+        set_ins_volume(ch->tremor_table[slot][chan].volM, ch->tremor_table[slot][chan].volC, chan);
     }
 
     switch (def) {
@@ -1507,8 +1507,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_RetrigNote:
     case ef_MultiRetrigNote:
         if (val) {
-            if (effect_group[last_effect[slot][chan].def] != EFGR_RETRIGNOTE) {
-                retrig_table[slot][chan] = 1;
+            if (effect_group[ch->last_effect[slot][chan].def] != EFGR_RETRIGNOTE) {
+                ch->retrig_table[slot][chan] = 1;
             }
 
             ch->effect_table[slot][chan].def = def;
@@ -1523,10 +1523,10 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
     case ef_Tremor:
         if (val) {
-            if (last_effect[slot][chan].def != ef_Tremor) {
-                tremor_table[slot][chan].pos = 0;
-                tremor_table[slot][chan].volM = ch->fmpar_table[chan].volM;
-                tremor_table[slot][chan].volC = ch->fmpar_table[chan].volC;
+            if (ch->last_effect[slot][chan].def != ef_Tremor) {
+                ch->tremor_table[slot][chan].pos = 0;
+                ch->tremor_table[slot][chan].volM = ch->fmpar_table[chan].volM;
+                ch->tremor_table[slot][chan].volC = ch->fmpar_table[chan].volC;
             }
 
             ch->effect_table[slot][chan].def = def;
@@ -1608,33 +1608,33 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             break;
 
         case ef_ex_SetPanningPos:
-            panning_table[chan] = val % 16;
+            ch->panning_table[chan] = val % 16;
             update_fmpar(chan);
             break;
 
         case ef_ex_PatternLoop:
         case ef_ex_PatternLoopRec:
             if (val % 16 == 0) {
-                loopbck_table[chan] = current_line;
+                ch->loopbck_table[chan] = current_line;
             } else {
-                if (loopbck_table[chan] != BYTE_NULL) {
-                    if (loop_table[chan][current_line] == BYTE_NULL)
-                        loop_table[chan][current_line] = val % 16;
+                if (ch->loopbck_table[chan] != BYTE_NULL) {
+                    if (ch->loop_table[chan][current_line] == BYTE_NULL)
+                        ch->loop_table[chan][current_line] = val % 16;
 
-                    if (loop_table[chan][current_line] != 0) {
+                    if (ch->loop_table[chan][current_line] != 0) {
                         pattern_break = TRUE;
                         next_line = pattern_loop_flag + chan;
                     } else {
                         if (val / 16 == ef_ex_PatternLoopRec)
-                            loop_table[chan][current_line] = BYTE_NULL;
+                            ch->loop_table[chan][current_line] = BYTE_NULL;
                     }
                 }
             }
             break;
         case ef_ex_ExtendedCmd:
             switch (val & 0x0f) {
-            case ef_ex_cmd_MKOffLoopDi: keyoff_loop[chan] = FALSE;		break;
-            case ef_ex_cmd_MKOffLoopEn: keyoff_loop[chan] = TRUE;		break;
+            case ef_ex_cmd_MKOffLoopDi: ch->keyoff_loop[chan] = FALSE;		break;
+            case ef_ex_cmd_MKOffLoopEn: ch->keyoff_loop[chan] = TRUE;		break;
             case ef_ex_cmd_TPortaFKdis: ch->portaFK_table[chan] = FALSE;	break;
             case ef_ex_cmd_TPortaFKenb: ch->portaFK_table[chan] = TRUE;		break;
             case ef_ex_cmd_RestartEnv:
@@ -1663,13 +1663,13 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             switch (val % 16) {
             case ef_ex_cmd2_RSS:        release_sustaining_sound(chan); break;
             case ef_ex_cmd2_ResetVol:   reset_ins_volume(chan); break;
-            case ef_ex_cmd2_LockVol:    ch->volume_lock[chan] = TRUE; break;
-            case ef_ex_cmd2_UnlockVol:  ch->volume_lock[chan] = FALSE; break;
-            case ef_ex_cmd2_LockVP:     ch->peak_lock  [chan] = TRUE; break;
-            case ef_ex_cmd2_UnlockVP:   ch->peak_lock  [chan] = FALSE; break;
-            case ef_ex_cmd2_VSlide_def: volslide_type  [chan] = 0; break;
-            case ef_ex_cmd2_LockPan:    ch->pan_lock   [chan] = TRUE; break;
-            case ef_ex_cmd2_UnlockPan:  ch->pan_lock   [chan] = FALSE; break;
+            case ef_ex_cmd2_LockVol:    ch->volume_lock  [chan] = TRUE; break;
+            case ef_ex_cmd2_UnlockVol:  ch->volume_lock  [chan] = FALSE; break;
+            case ef_ex_cmd2_LockVP:     ch->peak_lock    [chan] = TRUE; break;
+            case ef_ex_cmd2_UnlockVP:   ch->peak_lock    [chan] = FALSE; break;
+            case ef_ex_cmd2_VSlide_def: ch->volslide_type[chan] = 0; break;
+            case ef_ex_cmd2_LockPan:    ch->pan_lock     [chan] = TRUE; break;
+            case ef_ex_cmd2_UnlockPan:  ch->pan_lock     [chan] = FALSE; break;
             case ef_ex_cmd2_VibrOff:    change_frequency(chan, ch->freq_table[chan]); break;
             case ef_ex_cmd2_TremOff:
                 if (is_4op_chan(chan)) {
@@ -1682,9 +1682,9 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 +
                               ef_ex_cmd2_VSlide_mod)) {
-                    volslide_type[chan] = 3;
+                    ch->volslide_type[chan] = 3;
                 } else {
-                    volslide_type[chan] = 1;
+                    ch->volslide_type[chan] = 1;
                 }
                 break;
 
@@ -1692,9 +1692,9 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 +
                               ef_ex_cmd2_VSlide_car)) {
-                    volslide_type[chan] = 3;
+                    ch->volslide_type[chan] = 3;
                 } else {
-                    volslide_type[chan] = 2;
+                    ch->volslide_type[chan] = 2;
                 }
                 break;
             }
@@ -1717,21 +1717,21 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         case ef_ex2_NoteDelay:
             ch->effect_table[slot][chan].def = ef_Extended2;
             ch->effect_table[slot][chan].val = val;
-            notedel_table[chan] = val % 16;
+            ch->notedel_table[chan] = val % 16;
             break;
 
         case ef_ex2_NoteCut:
             ch->effect_table[slot][chan].def = ef_Extended2;
             ch->effect_table[slot][chan].val = val;
-            notecut_table[chan] = val % 16;
+            ch->notecut_table[chan] = val % 16;
             break;
 
         case ef_ex2_FineTuneUp:
-            ftune_table[chan] += val % 16;
+            ch->ftune_table[chan] += val % 16;
             break;
 
         case ef_ex2_FineTuneDown:
-            ftune_table[chan] -= val % 16;
+            ch->ftune_table[chan] -= val % 16;
             break;
 
         case ef_ex2_GlVolSlideUp:
@@ -1901,8 +1901,8 @@ static void play_line()
     tADTRACK2_EVENT _event, *event = &_event;
 
     if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) && current_order != last_order) {
-        memset(loopbck_table, BYTE_NULL, sizeof(loopbck_table));
-        memset(loop_table, BYTE_NULL, sizeof(loop_table));
+        memset(ch->loopbck_table, BYTE_NULL, sizeof(ch->loopbck_table));
+        memset(ch->loop_table, BYTE_NULL, sizeof(ch->loop_table));
         last_order = current_order;
     }
 
@@ -1910,8 +1910,8 @@ static void play_line()
         // save effect_table into last_effect
         for (int slot = 0; slot < 2; slot++) {
             if (ch->effect_table[slot][chan].def | ch->effect_table[slot][chan].val) {
-                last_effect[slot][chan].def = ch->effect_table[slot][chan].def;
-                last_effect[slot][chan].val = ch->effect_table[slot][chan].val;
+                ch->last_effect[slot][chan].def = ch->effect_table[slot][chan].def;
+                ch->last_effect[slot][chan].val = ch->effect_table[slot][chan].val;
             }
             if (ch->glfsld_table[slot][chan].def | ch->glfsld_table[slot][chan].val) {
                 ch->effect_table[slot][chan].def = ch->glfsld_table[slot][chan].def;
@@ -1922,7 +1922,7 @@ static void play_line()
             }
         }
 
-        ftune_table[chan] = 0;
+        ch->ftune_table[chan] = 0;
 
         // Do a full copy of the event, because we modify event->note
         *event = *get_event_p(current_pattern, chan, current_line);
@@ -2150,7 +2150,7 @@ static void slide_volume_up(int chan, uint8_t slide)
         limit2 = ch->peak_lock[chan] ? ins->fm.volM : 0;
     }
 
-    switch (volslide_type[chan]) {
+    switch (ch->volslide_type[chan]) {
     case 0:
         if (!_4op_vol_valid_chan(chan)) {
             slide_carrier_volume_up(chan, slide, limit1);
@@ -2234,7 +2234,7 @@ static void slide_volume_down(int chan, uint8_t slide)
     _4op_ch1 = (_4op_flag >> 3) & 15;
     _4op_ch2 = (_4op_flag >> 7) & 15;
 
-    switch (volslide_type[chan]) {
+    switch (ch->volslide_type[chan]) {
     case 0:
         if (!_4op_vol_valid_chan(chan)) {
             slide_carrier_volume_down(chan, slide);
@@ -2471,16 +2471,16 @@ static void update_effects_slot(int slot, int chan)
         break;
 
     case ef_RetrigNote:
-        if (retrig_table[slot][chan] >= val) {
-            retrig_table[slot][chan] = 0;
+        if (ch->retrig_table[slot][chan] >= val) {
+            ch->retrig_table[slot][chan] = 0;
             output_note(ch->event_table[chan].note, ch->event_table[chan].instr_def, chan, TRUE, TRUE);
         } else {
-            retrig_table[slot][chan]++;
+            ch->retrig_table[slot][chan]++;
         }
         break;
 
     case ef_MultiRetrigNote:
-        if (retrig_table[slot][chan] >= val / 16) {
+        if (ch->retrig_table[slot][chan] >= val / 16) {
             switch (val % 16) {
             case 0: break;
             case 8: break;
@@ -2510,27 +2510,27 @@ static void update_effects_slot(int slot, int chan)
                 break;
             }
 
-            retrig_table[slot][chan] = 0;
+            ch->retrig_table[slot][chan] = 0;
             output_note(ch->event_table[chan].note, ch->event_table[chan].instr_def, chan, TRUE, TRUE);
         } else {
-            retrig_table[slot][chan]++;
+            ch->retrig_table[slot][chan]++;
         }
         break;
 
     case ef_Tremor:
-        if (tremor_table[slot][chan].pos >= 0) {
-            if ((tremor_table[slot][chan].pos + 1) <= val / 16) {
-                tremor_table[slot][chan].pos++;
+        if (ch->tremor_table[slot][chan].pos >= 0) {
+            if ((ch->tremor_table[slot][chan].pos + 1) <= val / 16) {
+                ch->tremor_table[slot][chan].pos++;
             } else {
                 slide_volume_down(chan, 63);
-                tremor_table[slot][chan].pos = -1;
+                ch->tremor_table[slot][chan].pos = -1;
             }
         } else {
-            if ((tremor_table[slot][chan].pos - 1) >= -(val % 16)) {
-                tremor_table[slot][chan].pos--;
+            if ((ch->tremor_table[slot][chan].pos - 1) >= -(val % 16)) {
+                ch->tremor_table[slot][chan].pos--;
             } else {
-                set_ins_volume(tremor_table[slot][chan].volM, tremor_table[slot][chan].volC, chan);
-                tremor_table[slot][chan].pos = 1;
+                set_ins_volume(ch->tremor_table[slot][chan].volM, ch->tremor_table[slot][chan].volC, chan);
+                ch->tremor_table[slot][chan].pos = 1;
             }
         }
         break;
@@ -2538,19 +2538,19 @@ static void update_effects_slot(int slot, int chan)
     case ef_Extended2:
         switch (val / 16) {
         case ef_ex2_NoteDelay:
-            if (notedel_table[chan] == 0) {
-                notedel_table[chan] = BYTE_NULL;
+            if (ch->notedel_table[chan] == 0) {
+                ch->notedel_table[chan] = BYTE_NULL;
                 output_note(ch->event_table[chan].note,	ch->event_table[chan].instr_def, chan, TRUE, TRUE);
-            } else if (notedel_table[chan] != BYTE_NULL) {
-                notedel_table[chan]--;
+            } else if (ch->notedel_table[chan] != BYTE_NULL) {
+                ch->notedel_table[chan]--;
             }
             break;
         case ef_ex2_NoteCut:
-            if (notecut_table[chan] == 0) {
-                notecut_table[chan] = BYTE_NULL;
+            if (ch->notecut_table[chan] == 0) {
+                ch->notecut_table[chan] = BYTE_NULL;
                 key_off(chan);
-            } else if (notecut_table[chan] != BYTE_NULL) {
-                notecut_table[chan]--;
+            } else if (ch->notecut_table[chan] != BYTE_NULL) {
+                ch->notecut_table[chan]--;
             }
             break;
         case ef_ex2_GlVolSlideUp: global_volume_slide(val & 0xf, BYTE_NULL); break;
@@ -2697,8 +2697,8 @@ static void update_song_position()
     } else {
         if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
              (current_order < 0x7f)) {
-            memset(loopbck_table, BYTE_NULL, sizeof(loopbck_table));
-            memset(loop_table, BYTE_NULL, sizeof(loop_table));
+            memset(ch->loopbck_table, BYTE_NULL, sizeof(ch->loopbck_table));
+            memset(ch->loop_table, BYTE_NULL, sizeof(ch->loop_table));
             current_order++;
         }
 
@@ -2706,10 +2706,10 @@ static void update_song_position()
             uint8_t temp;
 
             temp = next_line - pattern_loop_flag;
-            next_line = loopbck_table[temp];
+            next_line = ch->loopbck_table[temp];
 
-            if (loop_table[temp][current_line] != 0)
-                loop_table[temp][current_line]--;
+            if (ch->loop_table[temp][current_line] != 0)
+                ch->loop_table[temp][current_line]--;
         } else {
             if (pattern_break && ((next_line & 0xf0) == pattern_break_flag)) {
                 if (ch->event_table[next_line - pattern_break_flag].eff[1].def == ef_PositionJump) {
@@ -2786,8 +2786,8 @@ static void macro_poll_proc()
     uint16_t finished_flag;
 
     for (chan = 0; chan < 20; chan++) {
-        finished_flag = keyoff_loop[chan] ? IDLE : FINISHED;
-        /*if (!keyoff_loop[chan]) {
+        finished_flag = ch->keyoff_loop[chan] ? IDLE : FINISHED;
+        /*if (!ch->keyoff_loop[chan]) {
             finished_flag = FINISHED;
         } else {
             finished_flag = IDLE;
@@ -2883,7 +2883,7 @@ static void macro_poll_proc()
                             case 23: ch->fmpar_table[chan].sustC = d->fm.sustC; break;
                             case 24: ch->fmpar_table[chan].connect = d->fm.connect; break;
                             case 25: ch->fmpar_table[chan].feedb = d->fm.feedb; break;
-                            case 27: if (!ch->pan_lock[chan]) panning_table[chan] = d->panning; break;
+                            case 27: if (!ch->pan_lock[chan]) ch->panning_table[chan] = d->panning; break;
                             }
                         }
 
@@ -3108,17 +3108,17 @@ static void init_buffers()
     //memset(arpgg_table, 0, sizeof(arpgg_table));
     //memset(vibr_table, 0, sizeof(vibr_table));
     //memset(trem_table, 0, sizeof(trem_table));
-    memset(retrig_table, 0, sizeof(retrig_table));
-    memset(tremor_table, 0, sizeof(tremor_table));
-    memset(last_effect, 0, sizeof(last_effect));
+    //memset(retrig_table, 0, sizeof(retrig_table));
+    //memset(tremor_table, 0, sizeof(tremor_table));
+    //memset(last_effect, 0, sizeof(last_effect));
     //memset(voice_table, 0, sizeof(voice_table));
-    memset(notedel_table, BYTE_NULL, sizeof(notedel_table));
-    memset(notecut_table, BYTE_NULL, sizeof(notecut_table));
-    memset(ftune_table, 0, sizeof(ftune_table));
-    memset(loopbck_table, BYTE_NULL, sizeof(loopbck_table));
-    memset(loop_table, BYTE_NULL, sizeof(loop_table));
+    //memset(notedel_table, BYTE_NULL, sizeof(notedel_table));
+    //memset(notecut_table, BYTE_NULL, sizeof(notecut_table));
+    //memset(ftune_table, 0, sizeof(ftune_table));
+    //memset(loopbck_table, BYTE_NULL, sizeof(loopbck_table));
+    //memset(loop_table, BYTE_NULL, sizeof(loop_table));
     memset(reset_chan, FALSE, sizeof(reset_chan));
-    memset(keyoff_loop, FALSE, sizeof(keyoff_loop));
+    //memset(keyoff_loop, FALSE, sizeof(keyoff_loop));
     memset(macro_table, 0, sizeof(macro_table));
 
     if (!lockvol) {
@@ -3129,10 +3129,10 @@ static void init_buffers()
     }
 
     if (!panlock) {
-        memset(panning_table, 0, sizeof(panning_table));
+        memset(ch->panning_table, 0, sizeof(ch->panning_table));
     } else {
         for (int i = 0; i < 20; i++)
-              panning_table[i] = songdata->lock_flags[i] & 3;
+              ch->panning_table[i] = songdata->lock_flags[i] & 3;
     }
 
     if (!lockVP) {
@@ -3153,7 +3153,7 @@ static void init_buffers()
     }
 
     for (int i = 0; i < 20; i++)
-        volslide_type[i] = (songdata->lock_flags[i] >> 2) & 3;
+        ch->volslide_type[i] = (songdata->lock_flags[i] >> 2) & 3;
 }
 
 static void init_player()
