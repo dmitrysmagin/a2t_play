@@ -532,6 +532,7 @@ typedef struct {
     uint8_t loopbck_table[20];
     uint8_t loop_table[20][256];
     bool reset_chan[20];
+    tCH_MACRO_TABLE macro_table[20];
 } tCHDATA;
 
 extern tCHDATA *ch;
@@ -541,7 +542,7 @@ extern tCHDATA *ch;
 //extern tEFFECT_TABLE effect_table[2][20];
 //extern tEFFECT_TABLE last_effect[2][20];
 //extern tEFFECT_TABLE glfsld_table[2][20];
-extern tCH_MACRO_TABLE macro_table[20];
+//extern tCH_MACRO_TABLE macro_table[20];
 //extern tADTRACK2_EVENT event_table[20];
 
 #endif // _A2T_H_

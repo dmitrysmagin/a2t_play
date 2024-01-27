@@ -172,8 +172,8 @@ tCHDATA _ch, *ch = &_ch;
 //bool keyoff_loop[20];		// array[1..20] of Boolean;
 //uint8_t loopbck_table[20];	// array[1..20] of Byte;
 //uint8_t loop_table[20][256];	// array[1..20,0..255] of Byte;
-bool reset_chan[20];	// array[1..20] of Boolean;
-tCH_MACRO_TABLE macro_table[20];// array[1..20] of tCH_MACRO_TABLE;
+//bool reset_chan[20];	// array[1..20] of Boolean;
+//tCH_MACRO_TABLE macro_table[20];// array[1..20] of tCH_MACRO_TABLE;
 
 uint8_t misc_register;
 
@@ -609,22 +609,22 @@ static inline uint16_t max(uint16_t value, uint16_t maximum)
 
 static void change_frequency(int chan, uint16_t freq)
 {
-    macro_table[chan].vib_paused = TRUE;
+    ch->macro_table[chan].vib_paused = TRUE;
     change_freq(chan, freq);
 
     if (is_4op_chan(chan)) {
         int i = is_4op_chan_hi(chan) ? 1 : -1;
 
-        macro_table[chan + i].vib_count = 1;
-        macro_table[chan + i].vib_pos = 0;
-        macro_table[chan + i].vib_freq = freq;
-        macro_table[chan + i].vib_paused = FALSE;
+        ch->macro_table[chan + i].vib_count = 1;
+        ch->macro_table[chan + i].vib_pos = 0;
+        ch->macro_table[chan + i].vib_freq = freq;
+        ch->macro_table[chan + i].vib_paused = FALSE;
     }
 
-    macro_table[chan].vib_count = 1;
-    macro_table[chan].vib_pos = 0;
-    macro_table[chan].vib_freq = freq;
-    macro_table[chan].vib_paused = FALSE;
+    ch->macro_table[chan].vib_count = 1;
+    ch->macro_table[chan].vib_pos = 0;
+    ch->macro_table[chan].vib_freq = freq;
+    ch->macro_table[chan].vib_paused = FALSE;
 }
 
 static inline uint16_t _macro_speedup()
@@ -719,7 +719,7 @@ static void release_sustaining_sound(int chan)
 
     key_off(chan);
     ch->event_table[chan].instr_def = 0;
-    reset_chan[chan] = TRUE;
+    ch->reset_chan[chan] = TRUE;
 }
 
 // inverted volume here
@@ -969,21 +969,21 @@ void set_overall_volume(unsigned char level)
 static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 {
     uint8_t arp_table = instruments[ins - 1].arpeggio;
-    macro_table[chan].fmreg_pos = 0;
-    macro_table[chan].fmreg_duration = 0;
-    macro_table[chan].fmreg_ins = ins; // todo: check against fmreg_table[ins - 1]->length
-    macro_table[chan].arpg_count = 1;
-    macro_table[chan].arpg_pos = 0;
-    macro_table[chan].arpg_table = arp_table;
-    macro_table[chan].arpg_note = note;
+    ch->macro_table[chan].fmreg_pos = 0;
+    ch->macro_table[chan].fmreg_duration = 0;
+    ch->macro_table[chan].fmreg_ins = ins; // todo: check against fmreg_table[ins - 1]->length
+    ch->macro_table[chan].arpg_count = 1;
+    ch->macro_table[chan].arpg_pos = 0;
+    ch->macro_table[chan].arpg_table = arp_table;
+    ch->macro_table[chan].arpg_note = note;
 
     uint8_t vib_table = instruments[ins - 1].vibrato;
-    macro_table[chan].vib_count = 1;
-    macro_table[chan].vib_paused = FALSE;
-    macro_table[chan].vib_pos = 0;
-    macro_table[chan].vib_table = vib_table;
-    macro_table[chan].vib_freq = freq;
-    macro_table[chan].vib_delay = get_vibrato_delay(vib_table);
+    ch->macro_table[chan].vib_count = 1;
+    ch->macro_table[chan].vib_paused = FALSE;
+    ch->macro_table[chan].vib_pos = 0;
+    ch->macro_table[chan].vib_table = vib_table;
+    ch->macro_table[chan].vib_freq = freq;
+    ch->macro_table[chan].vib_delay = get_vibrato_delay(vib_table);
 
     ch->zero_fq_table[chan] = 0;
 }
@@ -1001,7 +1001,7 @@ static void set_ins_data(uint8_t ins, int chan)
         release_sustaining_sound(chan);
     }
 
-    if ((ins != ch->event_table[chan].instr_def) || reset_chan[chan]) {
+    if ((ins != ch->event_table[chan].instr_def) || ch->reset_chan[chan]) {
         ch->panning_table[chan] = !ch->pan_lock[chan]
                                   ? i->panning
                                   : songdata->lock_flags[chan] & 3;
@@ -1027,13 +1027,13 @@ static void set_ins_data(uint8_t ins, int chan)
         }
 
         // Stop instr macro if resetting voice
-        if (!reset_chan[chan])
+        if (!ch->reset_chan[chan])
             ch->keyoff_loop[chan] = FALSE;
 
-        if (reset_chan[chan]) {
+        if (ch->reset_chan[chan]) {
             ch->voice_table[chan] = ins;
             reset_ins_volume(chan);
-            reset_chan[chan] = FALSE;
+            ch->reset_chan[chan] = FALSE;
         }
 
         uint8_t note = ch->event_table[chan].note & 0x7f;
@@ -1165,7 +1165,7 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
             if (!force_no_restart) {
                 init_macro_table(chan, note, ins, freq);
             } else {
-                macro_table[chan].arpg_note = note;
+                ch->macro_table[chan].arpg_note = note;
             }
         }
     }
@@ -2032,28 +2032,28 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_SwapArpeggio:
         if (is_norestart) {
             uint8_t length = get_arpeggio_length(event->eff[slot].val);
-            if (macro_table[chan].arpg_pos > length)
-                macro_table[chan].arpg_pos = length;
-            macro_table[chan].arpg_table = event->eff[slot].val;
+            if (ch->macro_table[chan].arpg_pos > length)
+                ch->macro_table[chan].arpg_pos = length;
+            ch->macro_table[chan].arpg_table = event->eff[slot].val;
         } else {
-            macro_table[chan].arpg_count = 1;
-            macro_table[chan].arpg_pos = 0;
-            macro_table[chan].arpg_table = event->eff[slot].val;
-            macro_table[chan].arpg_note = ch->event_table[chan].note;
+            ch->macro_table[chan].arpg_count = 1;
+            ch->macro_table[chan].arpg_pos = 0;
+            ch->macro_table[chan].arpg_table = event->eff[slot].val;
+            ch->macro_table[chan].arpg_note = ch->event_table[chan].note;
         }
         break;
 
     case ef_SwapVibrato:
         if (is_norestart) {
             uint8_t length = get_vibrato_length(event->eff[slot].val);
-            if (macro_table[chan].vib_pos > length)
-                macro_table[chan].vib_pos = length;
-            macro_table[chan].vib_table = event->eff[slot].val;
+            if (ch->macro_table[chan].vib_pos > length)
+                ch->macro_table[chan].vib_pos = length;
+            ch->macro_table[chan].vib_table = event->eff[slot].val;
         } else {
-            macro_table[chan].vib_count = 1;
-            macro_table[chan].vib_pos = 0;
-            macro_table[chan].vib_table = event->eff[slot].val;
-            macro_table[chan].vib_delay = get_vibrato_delay(macro_table[chan].vib_table);
+            ch->macro_table[chan].vib_count = 1;
+            ch->macro_table[chan].vib_pos = 0;
+            ch->macro_table[chan].vib_table = event->eff[slot].val;
+            ch->macro_table[chan].vib_delay = get_vibrato_delay(ch->macro_table[chan].vib_table);
         }
         break;
     case ef_SetCustomSpeedTab:
@@ -2086,7 +2086,7 @@ static void portamento_down(int chan, uint16_t slide, uint16_t limit)
 
 static void macro_vibrato__porta_up(int chan, uint8_t depth)
 {
-    uint16_t freq = calc_freq_shift_up(macro_table[chan].vib_freq & 0x1fff, depth);
+    uint16_t freq = calc_freq_shift_up(ch->macro_table[chan].vib_freq & 0x1fff, depth);
     uint16_t newfreq = freq <= nFreq(12*8+1) ? freq : nFreq(12*8+1); 
 
     change_freq(chan, newfreq);
@@ -2094,7 +2094,7 @@ static void macro_vibrato__porta_up(int chan, uint8_t depth)
 
 static void macro_vibrato__porta_down(int chan, uint8_t depth)
 {
-    uint16_t freq = calc_freq_shift_down(macro_table[chan].vib_freq & 0x1fff, depth);
+    uint16_t freq = calc_freq_shift_down(ch->macro_table[chan].vib_freq & 0x1fff, depth);
     uint16_t newfreq = freq >= nFreq(0) ? freq : nFreq(0);
 
     change_freq(chan, newfreq);
@@ -2793,7 +2793,7 @@ static void macro_poll_proc()
             finished_flag = IDLE;
         }*/
 
-        tCH_MACRO_TABLE *mt = &macro_table[chan];
+        tCH_MACRO_TABLE *mt = &ch->macro_table[chan];
         tFMREG_TABLE *rt = get_fmreg_table(mt->fmreg_ins);
 
         bool force_macro_keyon = FALSE;
@@ -3117,9 +3117,9 @@ static void init_buffers()
     //memset(ftune_table, 0, sizeof(ftune_table));
     //memset(loopbck_table, BYTE_NULL, sizeof(loopbck_table));
     //memset(loop_table, BYTE_NULL, sizeof(loop_table));
-    memset(reset_chan, FALSE, sizeof(reset_chan));
+    //memset(reset_chan, FALSE, sizeof(reset_chan));
     //memset(keyoff_loop, FALSE, sizeof(keyoff_loop));
-    memset(macro_table, 0, sizeof(macro_table));
+    //memset(macro_table, 0, sizeof(macro_table));
 
     if (!lockvol) {
         memset(ch->volume_lock, 0, sizeof(ch->volume_lock));

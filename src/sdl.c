@@ -139,11 +139,11 @@ void show_info()
     show_event(ch->event_table);
     printf("FMRG: ");
     for (int i = 0; i < 20; i++) {
-        printf("%02x%02x%s", macro_table[i].fmreg_pos & 0xff, macro_table[i].fmreg_duration, i < 19 ? "|" : "\n");
+        printf("%02x%02x%s", ch->macro_table[i].fmreg_pos & 0xff, ch->macro_table[i].fmreg_duration, i < 19 ? "|" : "\n");
     }
     printf("VIBM: ");
     for (int i = 0; i < 20; i++) {
-        printf("%02x%02x%s", macro_table[i].vib_pos & 0xff, macro_table[i].vib_count, i < 19 ? "|" : "\n");
+        printf("%02x%02x%s", ch->macro_table[i].vib_pos & 0xff, ch->macro_table[i].vib_count, i < 19 ? "|" : "\n");
     }
 }
 
