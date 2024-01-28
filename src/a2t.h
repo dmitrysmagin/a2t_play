@@ -34,6 +34,19 @@ typedef signed char bool;
 #define INT32LE(A) (int32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
 #define UINT32LE(A) (uint32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
 
+#define keyoff_flag         0x80
+#define fixed_note_flag     0x90
+#define pattern_loop_flag   0xe0
+#define pattern_break_flag  0xf0
+
+typedef enum {
+    isPlaying = 0, isPaused, isStopped
+} tPLAY_STATUS;
+
+#define BYTE_NULL (uint8_t)(0xFFFFFFFF)
+
+#define MIN_IRQ_FREQ        50
+#define MAX_IRQ_FREQ        1000
 
 /*
     Structures for importing A2T/A2M with no padding.
@@ -536,13 +549,5 @@ typedef struct {
 } tCHDATA;
 
 extern tCHDATA *ch;
-
-//extern uint8_t voice_table[20];
-//extern uint16_t freq_table[20];
-//extern tEFFECT_TABLE effect_table[2][20];
-//extern tEFFECT_TABLE last_effect[2][20];
-//extern tEFFECT_TABLE glfsld_table[2][20];
-//extern tCH_MACRO_TABLE macro_table[20];
-//extern tADTRACK2_EVENT event_table[20];
 
 #endif // _A2T_H_

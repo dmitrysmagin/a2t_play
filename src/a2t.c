@@ -25,18 +25,7 @@
 #include "opl3.h"
 #include "a2t.h"
 
-#define keyoff_flag			0x80
-#define fixed_note_flag		0x90
-//#define pattern_loop_flag	0xe0
-//#define pattern_break_flag	0xf0
-
-typedef enum {
-    isPlaying = 0, isPaused, isStopped
-} tPLAY_STATUS;
-
 const uint8_t _panning[3] = { 0x30, 0x10, 0x20 };
-
-#define BYTE_NULL (uint8_t)(0xFFFFFFFF)
 
 #define EFGR_ARPVOLSLIDE 1
 #define EFGR_FSLIDEVOLSLIDE 2
@@ -82,9 +71,6 @@ const int effect_group[] = {
     [ef_GlobalFSlideDown] = 0,
 };
 
-const int MIN_IRQ_FREQ = 50;
-const int MAX_IRQ_FREQ = 1000;
-
 uint8_t current_order = 0;
 uint8_t current_pattern = 0;
 uint8_t current_line = 0; // TODO: rename to current_row
@@ -98,7 +84,7 @@ bool irq_mode = FALSE;
 int16_t IRQ_freq = 50;
 int IRQ_freq_shift = 0;
 bool irq_initialized = FALSE;
-const bool timer_fix = TRUE;
+bool timer_fix = TRUE;
 
 bool pattern_break = FALSE;
 bool pattern_delay = FALSE;
@@ -108,9 +94,6 @@ int playback_speed_shift = 0;
 tPLAY_STATUS play_status = isStopped;
 uint8_t overall_volume = 63;
 uint8_t global_volume = 63;
-
-const uint8_t pattern_loop_flag  = 0xe0;
-const uint8_t pattern_break_flag = 0xf0;
 
 const uint8_t def_vibtrem_speed_factor = 1;
 const uint8_t def_vibtrem_table_size = 32;
@@ -137,44 +120,6 @@ uint8_t vibtrem_speed_factor;
 uint8_t vibtrem_table_size;
 uint8_t vibtrem_table[256];
 
-tCHDATA _ch, *ch = &_ch;
-
-// Channel data that changes during playback
-//tFM_INST_DATA fmpar_table[20];	// array[1..20] of tFM_PARAMETER_TABLE;
-//bool volume_lock[20];			// array[1..20] of Boolean;
-//bool vol4op_lock[20] ;			// array[1..20] of Boolean;
-//bool peak_lock[20];			// array[1..20] of Boolean;
-//bool pan_lock[20];			// array[1..20] of Boolean;
-//uint8_t modulator_vol[20];		// array[1..20] of Byte;
-//uint8_t carrier_vol[20];		// array[1..20] of Byte;
-// note/instr_def work like last_note/last_instr_def
-// effects work like effect_table
-//tADTRACK2_EVENT event_table[20];	// array[1..20] of tADTRACK2_EVENT;
-//uint8_t voice_table[20];		// array[1..20] of Byte;
-//uint16_t freq_table[20];		// array[1..20] of Word;
-//uint16_t zero_fq_table[20];		// array[1..20] of Word;
-//tEFFECT_TABLE effect_table[2][20];	// array[1..20] of Word;
-//uint8_t fslide_table[2][20];		// array[1..20] of Byte;
-//tEFFECT_TABLE glfsld_table[2][20];	// array[1..20] of Word;
-//tPORTA_TABLE porta_table[2][20];	// array[1..20] of Record freq: Word; speed: Byte; end;
-//bool portaFK_table[20]; // array[1..20] of Boolean;;
-//tARPGG_TABLE arpgg_table[2][20];		// array[1..20] of Record state,note,add1,add2: Byte; end;
-//tVIBRTREM_TABLE vibr_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
-//tVIBRTREM_TABLE trem_table[2][20];		// array[1..20] of Record pos,speed,depth: Byte; fine: Boolean; end;
-//uint8_t retrig_table[2][20];	// array[1..20] of Byte;
-//tTREMOR_TABLE tremor_table[2][20];		// array[1..20] of Record pos: Integer; volume: Word; end;
-//uint8_t panning_table[20];	// array[1..20] of Byte;
-//tEFFECT_TABLE last_effect[2][20];	// array[1..20] of Byte;
-//uint8_t volslide_type[20];	// array[1..20] of Byte;
-//uint8_t notedel_table[20];	// array[1..20] of Byte;
-//uint8_t notecut_table[20];	// array[1..20] of Byte;
-//int8_t ftune_table[20];		// array[1..20] of Shortint;
-//bool keyoff_loop[20];		// array[1..20] of Boolean;
-//uint8_t loopbck_table[20];	// array[1..20] of Byte;
-//uint8_t loop_table[20][256];	// array[1..20,0..255] of Byte;
-//bool reset_chan[20];	// array[1..20] of Boolean;
-//tCH_MACRO_TABLE macro_table[20];// array[1..20] of tCH_MACRO_TABLE;
-
 uint8_t misc_register;
 
 uint8_t current_tremolo_depth = 0;
@@ -189,6 +134,9 @@ typedef struct {
     tINSTR_DATA instr_data;
     uint8_t vibrato;
     uint8_t arpeggio;
+    // TODO:
+    // tFMREG_TABLE *fmreg;
+    // uint32_t dis_fmreg_cols;
 } tINSTR_DATA_EXT;
 
 C_ASSERT(sizeof(tINSTR_DATA_EXT) == 16);
@@ -207,10 +155,11 @@ typedef struct {
     uint16_t        macro_speedup;
     uint8_t         flag_4op;
     uint8_t         lock_flags[20];
-} tFIXED_SONGDATA;
+} tSONGINFO;
 
 // This would be later moved to class or struct
-tFIXED_SONGDATA _songdata, *songdata = &_songdata;
+tCHDATA _ch, *ch = &_ch;
+tSONGINFO _song, *songdata = &_song;
 
 // Helpers for instruments ========================================================================
 
@@ -396,7 +345,7 @@ static void memory_usage()
     }
 
     printf("Memory usage:\n");
-    printf("\tSongdata: %d bytes\n", sizeof(tFIXED_SONGDATA));
+    printf("\tSongdata: %d bytes\n", sizeof(tSONGINFO));
     //printf("\tPatterns * %d: %d bytes (old)\n", eventsinfo->patterns, oldsize);
     printf("\tPatterns * %d: %d bytes\n", eventsinfo->patterns, eventsinfo->size);
     printf("\tInstruments * 255: %d bytes\n", sizeof(tINSTR_DATA_EXT[255]));
