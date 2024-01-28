@@ -27,50 +27,6 @@
 
 const uint8_t _panning[3] = { 0x30, 0x10, 0x20 };
 
-#define EFGR_ARPVOLSLIDE 1
-#define EFGR_FSLIDEVOLSLIDE 2
-#define EFGR_TONEPORTAMENTO 3
-#define EFGR_VIBRATO 4
-#define EFGR_TREMOLO 5
-#define EFGR_VIBRATOVOLSLIDE 6
-#define EFGR_PORTAVOLSLIDE 7
-#define EFGR_RETRIGNOTE 8
-
-// Effect can inherit previous effect value only within the group
-// x00 <-- use previous val
-const int effect_group[] = {
-    [ef_ArpggVSlide] = EFGR_ARPVOLSLIDE,
-    [ef_ArpggVSlideFine] = EFGR_ARPVOLSLIDE,
-
-    [ef_FSlideUpVSlide] = EFGR_FSLIDEVOLSLIDE,
-    [ef_FSlUpVSlF] = EFGR_FSLIDEVOLSLIDE,
-    [ef_FSlideDownVSlide] = EFGR_FSLIDEVOLSLIDE,
-    [ef_FSlDownVSlF] = EFGR_FSLIDEVOLSLIDE,
-    [ef_FSlUpFineVSlide] = EFGR_FSLIDEVOLSLIDE,
-    [ef_FSlUpFineVSlF] = EFGR_FSLIDEVOLSLIDE,
-    [ef_FSlDownFineVSlide] = EFGR_FSLIDEVOLSLIDE,
-    [ef_FSlDownFineVSlF] = EFGR_FSLIDEVOLSLIDE,
-
-    [ef_TonePortamento] = EFGR_TONEPORTAMENTO,
-
-    [ef_Vibrato] = EFGR_VIBRATO,
-    [ef_ExtraFineVibrato] = EFGR_VIBRATO,
-
-    [ef_Tremolo] = EFGR_TREMOLO,
-    [ef_ExtraFineTremolo] = EFGR_TREMOLO,
-
-    [ef_VibratoVolSlide] = EFGR_VIBRATOVOLSLIDE,
-    [ef_VibratoVSlideFine] = EFGR_VIBRATOVOLSLIDE,
-
-    [ef_TPortamVolSlide] = EFGR_PORTAVOLSLIDE,
-    [ef_TPortamVSlideFine] = EFGR_PORTAVOLSLIDE,
-
-    [ef_RetrigNote] = EFGR_RETRIGNOTE,
-    [ef_MultiRetrigNote] = EFGR_RETRIGNOTE,
-
-    [ef_GlobalFSlideDown] = 0,
-};
-
 uint8_t current_order = 0;
 uint8_t current_pattern = 0;
 uint8_t current_line = 0; // TODO: rename to current_row
@@ -1135,6 +1091,36 @@ static bool no_loop(uint8_t current_chan, uint8_t current_line)
 
 static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan); // forward
 
+static int get_effect_group(uint8_t def)
+{
+    switch (def) {
+    case ef_ArpggVSlide:
+    case ef_ArpggVSlideFine:    return EFGR_ARPVOLSLIDE;
+    case ef_FSlideUpVSlide:
+    case ef_FSlUpVSlF:
+    case ef_FSlideDownVSlide:
+    case ef_FSlDownVSlF:
+    case ef_FSlUpFineVSlide:
+    case ef_FSlUpFineVSlF:
+    case ef_FSlDownFineVSlide:
+    case ef_FSlDownFineVSlF:    return EFGR_FSLIDEVOLSLIDE;
+    case ef_TonePortamento:     return EFGR_TONEPORTAMENTO;
+    case ef_Vibrato:
+    case ef_ExtraFineVibrato:   return EFGR_VIBRATO;
+    case ef_Tremolo:
+    case ef_ExtraFineTremolo:   return EFGR_TREMOLO;
+    case ef_VibratoVolSlide:
+    case ef_VibratoVSlideFine:  return EFGR_VIBRATOVOLSLIDE;
+    case ef_TPortamVolSlide:
+    case ef_TPortamVSlideFine:  return EFGR_PORTAVOLSLIDE;
+    case ef_RetrigNote:
+    case ef_MultiRetrigNote:    return EFGR_RETRIGNOTE;
+    default: return -1;
+    }
+
+    return -1;
+}
+
 // In case of x00 set value of the previous compatible effect command
 static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, uint8_t val)
 {
@@ -1144,7 +1130,7 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
 
     if (val) {
         ch->effect_table[slot][chan].val = val;
-    } else if (effect_group[ch->last_effect[slot][chan].def] == eff_group && lval) {
+    } else if (get_effect_group(ch->last_effect[slot][chan].def) == eff_group && lval) {
         ch->effect_table[slot][chan].val = lval;
     } else {
         // x00 without any previous compatible command, should never happen
@@ -1456,7 +1442,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_RetrigNote:
     case ef_MultiRetrigNote:
         if (val) {
-            if (effect_group[ch->last_effect[slot][chan].def] != EFGR_RETRIGNOTE) {
+            if (get_effect_group(ch->last_effect[slot][chan].def) != EFGR_RETRIGNOTE) {
                 ch->retrig_table[slot][chan] = 1;
             }
 

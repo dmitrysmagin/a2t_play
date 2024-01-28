@@ -271,6 +271,15 @@ C_ASSERT(sizeof(tPATTERN_DATA) == 20 * 256 * 6);
 #define ef_ex3_SetKsrC         11
 #define ef_ex3_SetSustainC     12
 
+#define EFGR_ARPVOLSLIDE 1
+#define EFGR_FSLIDEVOLSLIDE 2
+#define EFGR_TONEPORTAMENTO 3
+#define EFGR_VIBRATO 4
+#define EFGR_TREMOLO 5
+#define EFGR_VIBRATOVOLSLIDE 6
+#define EFGR_PORTAVOLSLIDE 7
+#define EFGR_RETRIGNOTE 8
+
 /* Data for importing A2T format */
 typedef struct {
     char id[15];	// '_a2tiny_module_'
