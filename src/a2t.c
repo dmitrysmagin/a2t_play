@@ -1783,58 +1783,45 @@ static bool is_eff_porta(tADTRACK2_EVENT *event)
     return is_p0 || is_p1;
 }
 
-static bool no_porta_or_delay(int chan)
+static bool is_eff_notedelay(tADTRACK2_EVENT *event)
 {
-    uint8_t eff0 = ch->effect_table[0][chan].def;
-    uint8_t val0 = ch->effect_table[0][chan].val;
-    bool is_p0 = (eff0 == ef_TonePortamento) ||
-                (eff0 == ef_TPortamVolSlide) ||
-                (eff0 == ef_TPortamVSlideFine) ||
-                (eff0 == ef_Extended2 && val0 / 16 == ef_ex2_NoteDelay);
-
-    uint8_t eff1 = ch->effect_table[1][chan].def;
-    uint8_t val1 = ch->effect_table[1][chan].val;
-    bool is_p1 = (eff1 == ef_TonePortamento) ||
-                (eff1 == ef_TPortamVolSlide) ||
-                (eff1 == ef_TPortamVSlideFine) ||
-                (eff1 == ef_Extended2 && val1 / 16 == ef_ex2_NoteDelay);
-
-    return !is_p0 && !is_p1;
+    return (
+        (event->eff[0].def == ef_Extended2 && (event->eff[0].val / 16 == ef_ex2_NoteDelay)) ||
+        (event->eff[1].def == ef_Extended2 && (event->eff[1].val / 16 == ef_ex2_NoteDelay))
+    );
 }
 
 static void new_process_note(tADTRACK2_EVENT *event, int chan)
 {
     bool tporta_flag = is_eff_porta(event);
+    bool notedelay_flag = is_eff_notedelay(event);
 
-    // Treat Tone Portamento based effects vs. note Key-Off's
+    if (event->note == 0)
+        return;
+
+    // This might delay even note-off
+    // Or put this after key_off?
+    if (notedelay_flag) {
+        ch->event_table[chan].note = event->note;
+        return;
+    }
+
     if (event->note & keyoff_flag) {
         key_off(chan);
+        return;
+    }
+
+    if (!tporta_flag) {
+        output_note(event->note, ch->voice_table[chan], chan, TRUE, no_swap_and_restart(event));
+        return;
+    }
+
+    // if previous note was off'ed or restart_adsr enabled for channel
+    // and we are doing portamento to a new note
+    if (ch->event_table[chan].note & keyoff_flag || ch->portaFK_table[chan]) {
+        output_note(ch->event_table[chan].note & ~keyoff_flag, ch->voice_table[chan], chan, FALSE, TRUE);
     } else {
-        bool no_current_porta_or_delay = no_porta_or_delay(chan);
-
-        if (no_current_porta_or_delay) {
-            output_note(event->note, ch->voice_table[chan], chan, TRUE, no_swap_and_restart(event));
-            return;
-        }
-
-        // TODO: refactor this spaghetti mess and not break fank5.a2m and badapple.a2m
-        if (event->note && tporta_flag) {
-            // if previous note was off'ed or restart_adsr enabled for channel
-            // and we are doing portamento to a new note
-            if (ch->event_table[chan].note & keyoff_flag || ch->portaFK_table[chan]) {
-                output_note(ch->event_table[chan].note & ~keyoff_flag, ch->voice_table[chan], chan, FALSE, TRUE);
-            } else {
-                ch->event_table[chan].note = event->note;
-            }
-        } else if (!(event->note & keyoff_flag) && !(ch->event_table[chan].note) && event[chan].instr_def && tporta_flag) {
-            output_note(event->note, event->instr_def, chan, FALSE, TRUE);
-        } else if (event->note) {
-            if (ch->portaFK_table[chan] && tporta_flag) {
-                output_note(event->note, event->instr_def, chan, FALSE, TRUE);
-            } else {
-                ch->event_table[chan].note = event->note;
-            }
-        }
+        ch->event_table[chan].note = event->note;
     }
 }
 
