@@ -1813,9 +1813,12 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
         bool no_current_porta_or_delay = no_porta_or_delay(chan);
 
         if (no_current_porta_or_delay) {
-            // Usually we end up here
             output_note(event->note, ch->voice_table[chan], chan, TRUE, no_swap_and_restart(event));
-        } else if (event->note && tporta_flag) {
+            return;
+        }
+
+        // TODO: refactor this spaghetti mess and not break fank5.a2m and badapple.a2m
+        if (event->note && tporta_flag) {
             // if previous note was off'ed or restart_adsr enabled for channel
             // and we are doing portamento to a new note
             if (ch->event_table[chan].note & keyoff_flag || ch->portaFK_table[chan]) {
@@ -1823,8 +1826,14 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
             } else {
                 ch->event_table[chan].note = event->note;
             }
-        } else {
-            ch->event_table[chan].note = event->note;
+        } else if (!(event->note & keyoff_flag) && !(ch->event_table[chan].note) && event[chan].instr_def && tporta_flag) {
+            output_note(event->note, event->instr_def, chan, FALSE, TRUE);
+        } else if (event->note) {
+            if (ch->portaFK_table[chan] && tporta_flag) {
+                output_note(event->note, event->instr_def, chan, FALSE, TRUE);
+            } else {
+                ch->event_table[chan].note = event->note;
+            }
         }
     }
 }
