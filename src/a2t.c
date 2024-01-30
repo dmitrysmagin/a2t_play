@@ -7,7 +7,6 @@
     - Reduce the memory used for a tune
     - Rework all variables layout:
         * After that drop _table suffix for all included data
-        * Use tINSTRINFO instead of plain instruments[255]
 
 */
 #include <stdio.h>
@@ -123,12 +122,25 @@ tSONGINFO _song, *songinfo = &_song;
 typedef struct {
     int count;
     size_t size;
-    tINSTR_DATA_EXT *instruments; // instruments[n]
+    tINSTR_DATA_EXT *instruments;
 } tINSTR_INFO;
 
-tINSTR_INFO _insinfo = {0}, *insinfo = &_insinfo;
+tINSTR_INFO _instrinfo = {0}, *instrinfo = &_instrinfo;
 
-tINSTR_DATA_EXT instruments[255] = { };
+static void instruments_free()
+{
+    if (instrinfo->instruments) {
+        for (int i = 0; i < instrinfo->count; i++) {
+            if (instrinfo->instruments[i].fmreg)
+                free(instrinfo->instruments[i].fmreg);
+        }
+
+        free(instrinfo->instruments);
+        instrinfo->instruments = NULL;
+        instrinfo->count = 0;
+        instrinfo->size = 0;
+    }
+}
 
 static void instruments_allocate(size_t number)
 {
@@ -136,33 +148,43 @@ static void instruments_allocate(size_t number)
         number = 255; // Allocate max possible
     }
 
-    size_t size = number * sizeof(tINSTR_DATA_EXT);
-    insinfo->instruments = calloc(1, size);
-    assert(insinfo->instruments);
-    insinfo->count = number;
-    insinfo->size = size;
+    instruments_free();
 
-    // TODO: perhaps use tINSTR_DATA_EXT **instruments;
-    memset(instruments, 0, sizeof(instruments));
+    size_t size = number * sizeof(tINSTR_DATA_EXT);
+    instrinfo->instruments = calloc(1, size);
+    assert(instrinfo->instruments);
+    instrinfo->count = number;
+    instrinfo->size = size;
+}
+
+static tINSTR_DATA_EXT *get_instr(uint8_t ins)
+{
+    if (ins == 0 || ins > instrinfo->count ) {
+        return NULL;
+    }
+
+    return &instrinfo->instruments[ins - 1];
 }
 
 static inline int8_t get_instr_fine_tune(uint8_t ins)
 {
-    return ins ? instruments[ins - 1].instr_data.fine_tune : 0;
+    tINSTR_DATA_EXT *instrument = get_instr(ins);
+
+    return instrument ? instrument->instr_data.fine_tune : 0;
 }
 
 static inline tINSTR_DATA *get_instr_data_by_ch(int chan)
 {
-    uint8_t ins = ch->voice_table[chan];
-    return ins ? &instruments[ins - 1].instr_data : NULL;
+    tINSTR_DATA_EXT *instrument = get_instr(ch->voice_table[chan]);
+
+    return instrument ? &instrument->instr_data : NULL;
 }
 
 static inline tINSTR_DATA *get_instr_data(uint8_t ins)
 {
-    // TODO: check for max instrument and return zeroins if beyond
-    //static tINSTR_DATA zeroins = { {.data = {0}}, 0, 0, 0};
+    tINSTR_DATA_EXT *instrument = get_instr(ins);
 
-    return ins ? &instruments[ins - 1].instr_data : NULL;
+    return instrument ? &instrument->instr_data : NULL;
 }
 
 // Helpers for macro tables =======================================================================
@@ -177,9 +199,13 @@ static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
     // Note: for editor_mode allocate max entries possible
     for (unsigned int i = 0; i < n; i++) {
         if (rt[i].length) {
-            instruments[i].fmreg = calloc(1, sizeof(tFMREG_TABLE));
-            assert(instruments[i].fmreg);
-            *instruments[i].fmreg = rt[i]; // copy struct
+            tINSTR_DATA_EXT *instrument = get_instr(i + 1);
+            if (!instrument)
+                continue;
+
+            instrument->fmreg = calloc(1, sizeof(tFMREG_TABLE));
+            assert(instrument->fmreg);
+            *instrument->fmreg = rt[i]; // copy struct
         }
     }
 }
@@ -192,7 +218,12 @@ static void disabled_fmregs_import(size_t n, bool dis_fmregs[n][28])
         for (unsigned int bit = 0; bit < 28; bit++) {
             result |= (dis_fmregs[i][bit] & 1) << bit;
         }
-        instruments[i].dis_fmreg_cols = result;
+
+        tINSTR_DATA_EXT *instrument = get_instr(i + 1);
+        if (!instrument)
+            continue;
+
+        instrument->dis_fmreg_cols = result;
     }
 }
 
@@ -225,7 +256,9 @@ static tVIBRATO_TABLE *get_vibrato_table(uint8_t vib_table)
 
 static tFMREG_TABLE *get_fmreg_table(uint8_t fmreg_ins)
 {
-    return fmreg_ins && instruments[fmreg_ins - 1].fmreg ? instruments[fmreg_ins - 1].fmreg : NULL;
+    tINSTR_DATA_EXT *instrument = get_instr(fmreg_ins);
+
+    return instrument && instrument->fmreg ? instrument->fmreg : NULL;
 }
 
 // Helpers for patterns ===========================================================================
@@ -285,7 +318,7 @@ static void memory_usage()
     // Count fmreg/vib/arp macros
     int nfmregs = 0, nvib = 0, narp = 0;
     for (int i = 0; i < 255; i++) {
-        nfmregs += (instruments[i].fmreg ? 1 : 0);
+        nfmregs += (instrinfo->instruments[i].fmreg ? 1 : 0);
         nvib += (vibrato_table[i] ? 1 : 0);
         narp += (arpeggio_table[i] ? 1 : 0);
     }
@@ -868,16 +901,18 @@ void set_overall_volume(unsigned char level)
 
 static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 {
-    uint8_t arp_table = instruments[ins - 1].arpeggio;
+    tINSTR_DATA_EXT *instrument = get_instr(ins);
+
+    uint8_t arp_table = instrument ? instrument->arpeggio : 0;
     ch->macro_table[chan].fmreg_pos = 0;
     ch->macro_table[chan].fmreg_duration = 0;
-    ch->macro_table[chan].fmreg_ins = ins; // todo: check against instruments[ins - 1].fmreg->length
+    ch->macro_table[chan].fmreg_ins = ins; // todo: check against instruments->fmreg.length
     ch->macro_table[chan].arpg_count = 1;
     ch->macro_table[chan].arpg_pos = 0;
     ch->macro_table[chan].arpg_table = arp_table;
     ch->macro_table[chan].arpg_note = note;
 
-    uint8_t vib_table = instruments[ins - 1].vibrato;
+    uint8_t vib_table = instrument ? instrument->vibrato : 0;
     tVIBRATO_TABLE *vib = get_vibrato_table(vib_table);
     uint8_t vib_delay = vib ? vib->delay : 0;
 
@@ -2774,7 +2809,8 @@ static void macro_poll_proc()
 
                     if (mt->fmreg_duration) {
                         tREGISTER_TABLE_DEF *d = &rt->data[mt->fmreg_pos - 1];
-                        uint32_t disabled = instruments[mt->fmreg_ins - 1].dis_fmreg_cols;
+                        // NOTE: if we are already here, no need to call get_instr()
+                        uint32_t disabled = instrinfo->instruments[mt->fmreg_ins - 1].dis_fmreg_cols;
 
                         // force KEY-ON with missing ADSR instrument data
                         force_macro_keyon = FALSE;
@@ -3332,6 +3368,12 @@ static void instrument_import_v1_8(int ins, tINSTR_DATA_V1_8 *instr_s)
     instr_d->fm = instr_s->fm; // copy struct
     instr_d->panning = instr_s->panning;
     instr_d->fine_tune = instr_s->fine_tune;
+
+    tINSTR_DATA_EXT *i = get_instr(ins);
+    assert(i);
+    i->instr_data.fm = instr_s->fm; // copy struct
+    i->instr_data.panning = instr_s->panning;
+    i->instr_data.fine_tune = instr_s->fine_tune;
 }
 
 static void instrument_import(int ins, tINSTR_DATA *instr_s)
@@ -3340,6 +3382,10 @@ static void instrument_import(int ins, tINSTR_DATA *instr_s)
     assert(instr_d);
 
     *instr_d = *instr_s; // copy struct
+
+    tINSTR_DATA_EXT *i = get_instr(ins);
+    assert(i);
+    i->instr_data = *instr_s; // copy struct
 }
 
 static int a2t_read_instruments(char *src)
@@ -3404,8 +3450,10 @@ static int a2t_read_fmregtable(char *src)
 
     for (int i = 0; i < 255; i++) {
         // Instrument arpegio/vibrato references
-        instruments[i].arpeggio = data[i].arpeggio_table;
-        instruments[i].vibrato = data[i].vibrato_table;
+        tINSTR_DATA_EXT *dst = get_instr(i + 1);
+        assert(dst);
+        dst->arpeggio = data[i].arpeggio_table;
+        dst->vibrato = data[i].vibrato_table;
     }
 
     free(data);
@@ -3880,8 +3928,10 @@ static int a2m_read_songdata(char *src)
             instrument_import(i + 1, &data->instr_data[i]);
 
             // Instrument arpegio/vibrato references
-            instruments[i].arpeggio = data->fmreg_table[i].arpeggio_table;
-            instruments[i].vibrato = data->fmreg_table[i].vibrato_table;
+            tINSTR_DATA_EXT *dst = get_instr(i + 1);
+            assert(dst);
+            dst->arpeggio = data->fmreg_table[i].arpeggio_table;
+            dst->vibrato = data->fmreg_table[i].vibrato_table;
         }
 
         // Allocate fmreg macro tables
