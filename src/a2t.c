@@ -199,19 +199,9 @@ static void arpvib_tables_allocate(size_t n, tARPVIB_TABLE mt[n])
     }
 }
 
-static inline uint8_t get_arpeggio_length(uint8_t arp_table)
-{
-    return arp_table && arpeggio_table[arp_table - 1] ? arpeggio_table[arp_table - 1]->length : 0;
-}
-
 static tARPEGGIO_TABLE *get_arpeggio_table(uint8_t arp_table)
 {
     return arp_table && arpeggio_table[arp_table - 1] ? arpeggio_table[arp_table - 1] : NULL;
-}
-
-static inline uint8_t get_vibrato_length(uint8_t vib_table)
-{
-    return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1]->length : 0;
 }
 
 static inline uint8_t get_vibrato_delay(uint8_t vib_table)
@@ -1961,7 +1951,9 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
     switch (event->eff[slot].def) {
     case ef_SwapArpeggio:
         if (is_norestart) {
-            uint8_t length = get_arpeggio_length(event->eff[slot].val);
+            tARPEGGIO_TABLE *arp = get_arpeggio_table(event->eff[slot].val);
+            uint8_t length = arp ? arp->length : 0;
+
             if (ch->macro_table[chan].arpg_pos > length)
                 ch->macro_table[chan].arpg_pos = length;
             ch->macro_table[chan].arpg_table = event->eff[slot].val;
@@ -1975,7 +1967,9 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
 
     case ef_SwapVibrato:
         if (is_norestart) {
-            uint8_t length = get_vibrato_length(event->eff[slot].val);
+            tVIBRATO_TABLE *vib = get_vibrato_table(event->eff[slot].val);
+            uint8_t length = vib ? vib->length : 0;
+
             if (ch->macro_table[chan].vib_pos > length)
                 ch->macro_table[chan].vib_pos = length;
             ch->macro_table[chan].vib_table = event->eff[slot].val;
