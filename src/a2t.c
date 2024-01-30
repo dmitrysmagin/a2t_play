@@ -209,11 +209,6 @@ static tVIBRATO_TABLE *get_vibrato_table(uint8_t vib_table)
     return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1] : NULL;
 }
 
-static inline uint8_t get_fmreg_length(uint8_t fmreg_ins)
-{
-    return fmreg_ins && fmreg_table[fmreg_ins - 1] ? fmreg_table[fmreg_ins - 1]->length : 0;
-}
-
 static tFMREG_TABLE *get_fmreg_table(uint8_t fmreg_ins)
 {
     return fmreg_ins && fmreg_table[fmreg_ins - 1] ? fmreg_table[fmreg_ins - 1] : NULL;
@@ -682,7 +677,10 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
     // when there is additionally no FM-reg macro defined for this instrument
-    if (is_chan_adsr_data_empty(chan) && !get_fmreg_length(ch->voice_table[chan])) {
+    tFMREG_TABLE *fmreg = get_fmreg_table(ch->voice_table[chan]);
+    uint8_t fmreg_length = fmreg ? fmreg->length : 0;
+
+    if (is_chan_adsr_data_empty(chan) && !fmreg_length) {
             modulator = 63;
             carrier = 63;
     }
@@ -736,7 +734,10 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
     // when there is additionally no FM-reg macro defined for this instrument
-    if (is_chan_adsr_data_empty(chan) && !get_fmreg_length(ch->voice_table[chan])) {
+    tFMREG_TABLE *fmreg = get_fmreg_table(ch->voice_table[chan]);
+    uint8_t fmreg_length = fmreg ? fmreg->length : 0;
+
+    if (is_chan_adsr_data_empty(chan) && !fmreg_length) {
             modulator = 63;
             carrier = 63;
     }
