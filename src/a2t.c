@@ -204,11 +204,6 @@ static tARPEGGIO_TABLE *get_arpeggio_table(uint8_t arp_table)
     return arp_table && arpeggio_table[arp_table - 1] ? arpeggio_table[arp_table - 1] : NULL;
 }
 
-static inline uint8_t get_vibrato_delay(uint8_t vib_table)
-{
-    return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1]->delay : 0;
-}
-
 static tVIBRATO_TABLE *get_vibrato_table(uint8_t vib_table)
 {
     return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1] : NULL;
@@ -872,12 +867,15 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
     ch->macro_table[chan].arpg_note = note;
 
     uint8_t vib_table = instruments[ins - 1].vibrato;
+    tVIBRATO_TABLE *vib = get_vibrato_table(vib_table);
+    uint8_t vib_delay = vib ? vib->delay : 0;
+
     ch->macro_table[chan].vib_count = 1;
     ch->macro_table[chan].vib_paused = FALSE;
     ch->macro_table[chan].vib_pos = 0;
     ch->macro_table[chan].vib_table = vib_table;
     ch->macro_table[chan].vib_freq = freq;
-    ch->macro_table[chan].vib_delay = get_vibrato_delay(vib_table);
+    ch->macro_table[chan].vib_delay = vib_delay;
 
     ch->zero_fq_table[chan] = 0;
 }
@@ -1974,10 +1972,13 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
                 ch->macro_table[chan].vib_pos = length;
             ch->macro_table[chan].vib_table = event->eff[slot].val;
         } else {
+            tVIBRATO_TABLE *vib = get_vibrato_table(ch->macro_table[chan].vib_table);
+            uint8_t vib_delay = vib ? vib->delay : 0;
+
             ch->macro_table[chan].vib_count = 1;
             ch->macro_table[chan].vib_pos = 0;
             ch->macro_table[chan].vib_table = event->eff[slot].val;
-            ch->macro_table[chan].vib_delay = get_vibrato_delay(ch->macro_table[chan].vib_table);
+            ch->macro_table[chan].vib_delay = vib_delay;
         }
         break;
     case ef_SetCustomSpeedTab:
