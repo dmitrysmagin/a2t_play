@@ -7,7 +7,6 @@
     - Reduce the memory used for a tune
     - Rework all variables layout:
         * Put *fmreg and dis_fmreg into tINSTR_DATA_EXT
-        * Put all channel data into tCHDATA *chdata;
         * After that drop _table suffix for all included data
 
 */
