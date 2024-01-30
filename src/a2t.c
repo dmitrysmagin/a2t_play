@@ -6,7 +6,6 @@
     In order to get into Adplug:
     - Reduce the memory used for a tune
     - Rework all variables layout:
-        * Put *fmreg and dis_fmreg into tINSTR_DATA_EXT
         * After that drop _table suffix for all included data
         * Use tINSTRINFO instead of plain instruments[255]
 
@@ -86,16 +85,17 @@ uint8_t tremolo_depth, vibrato_depth;
 bool volume_scaling, percussion_mode;
 uint8_t last_order;
 
+bool editor_mode = FALSE;
+
 typedef struct {
     tINSTR_DATA instr_data;
     uint8_t vibrato;
     uint8_t arpeggio;
-    // TODO:
-    // tFMREG_TABLE *fmreg;
+    tFMREG_TABLE *fmreg;
     uint32_t dis_fmreg_cols;
 } tINSTR_DATA_EXT;
 
-C_ASSERT(sizeof(tINSTR_DATA_EXT) == 20);
+C_ASSERT(sizeof(tINSTR_DATA_EXT) == 20 + sizeof(tFMREG_TABLE *));
 
 // NOTE: doesn't map to a2m songdata structure anymore!
 typedef struct {
@@ -124,7 +124,7 @@ typedef struct {
     int count;
     size_t size;
     tINSTR_DATA_EXT *instruments; // instruments[n]
-} tINSTRINFO;
+} tINSTR_INFO;
 
 tINSTR_DATA_EXT instruments[255] = { };
 
@@ -159,8 +159,7 @@ static inline tINSTR_DATA *get_instr_data(uint8_t ins)
 
 // Helpers for macro tables =======================================================================
 
-// fmreg/arpeggio/vibrato macro tables
-tFMREG_TABLE *fmreg_table[255] = { 0 };
+// arpeggio/vibrato macro tables
 tVIBRATO_TABLE *vibrato_table[255] = { 0 };
 tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
 
@@ -170,14 +169,14 @@ static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
     // Note: for editor_mode allocate max entries possible
     for (unsigned int i = 0; i < n; i++) {
         if (rt[i].length) {
-            fmreg_table[i] = calloc(1, sizeof(tFMREG_TABLE));
-            assert(fmreg_table[i]);
-            *fmreg_table[i] = rt[i]; // copy struct
+            instruments[i].fmreg = calloc(1, sizeof(tFMREG_TABLE));
+            assert(instruments[i].fmreg);
+            *instruments[i].fmreg = rt[i]; // copy struct
         }
     }
 }
 
-static void disabled_fmregs_allocate(size_t n, bool dis_fmregs[n][28])
+static void disabled_fmregs_import(size_t n, bool dis_fmregs[n][28])
 {
     // shrink bool[255][28] to uint32_t[255], use bits as enable/disable flag
     for (unsigned int i = 0; i < n; i++) {
@@ -218,7 +217,7 @@ static tVIBRATO_TABLE *get_vibrato_table(uint8_t vib_table)
 
 static tFMREG_TABLE *get_fmreg_table(uint8_t fmreg_ins)
 {
-    return fmreg_ins && fmreg_table[fmreg_ins - 1] ? fmreg_table[fmreg_ins - 1] : NULL;
+    return fmreg_ins && instruments[fmreg_ins - 1].fmreg ? instruments[fmreg_ins - 1].fmreg : NULL;
 }
 
 // Helpers for patterns ===========================================================================
@@ -275,20 +274,16 @@ static void patterns_allocate(int patterns, int channels, int rows)
 
 static void memory_usage()
 {
-    // Calc patterns
-    //int oldsize = eventsinfo->patterns * sizeof(tPATTERN_DATA);
-
     // Count fmreg/vib/arp macros
     int nfmregs = 0, nvib = 0, narp = 0;
     for (int i = 0; i < 255; i++) {
-        nfmregs += (fmreg_table[i] ? 1 : 0);
+        nfmregs += (instruments[i].fmreg ? 1 : 0);
         nvib += (vibrato_table[i] ? 1 : 0);
         narp += (arpeggio_table[i] ? 1 : 0);
     }
 
     printf("Memory usage:\n");
-    printf("\tSongdata: %d bytes\n", sizeof(tSONGINFO));
-    //printf("\tPatterns * %d: %d bytes (old)\n", eventsinfo->patterns, oldsize);
+    printf("\tSonginfo: %d bytes\n", sizeof(tSONGINFO));
     printf("\tPatterns * %d: %d bytes\n", eventsinfo->patterns, eventsinfo->size);
     printf("\tInstruments * 255: %d bytes\n", sizeof(tINSTR_DATA_EXT[255]));
     printf("\tFmreg * %d: %d bytes\n", nfmregs, nfmregs * sizeof(tFMREG_TABLE));
@@ -868,7 +863,7 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
     uint8_t arp_table = instruments[ins - 1].arpeggio;
     ch->macro_table[chan].fmreg_pos = 0;
     ch->macro_table[chan].fmreg_duration = 0;
-    ch->macro_table[chan].fmreg_ins = ins; // todo: check against fmreg_table[ins - 1]->length
+    ch->macro_table[chan].fmreg_ins = ins; // todo: check against instruments[ins - 1].fmreg->length
     ch->macro_table[chan].arpg_count = 1;
     ch->macro_table[chan].arpg_pos = 0;
     ch->macro_table[chan].arpg_table = arp_table;
@@ -3444,7 +3439,7 @@ static int a2t_read_disabled_fmregs(char *src)
 
     a2t_depack(src, len[3], *dis_fmregs);
 
-    disabled_fmregs_allocate(255, *dis_fmregs);
+    disabled_fmregs_import(255, *dis_fmregs);
 
     free(dis_fmregs);
 
@@ -3903,7 +3898,7 @@ static int a2m_read_songdata(char *src)
         // v11
         // NOTE: not used anywhere
         //memcpy(songdata->pattern_names, data->pattern_names, 128 * 43);
-        disabled_fmregs_allocate(255, data->dis_fmreg_col);
+        disabled_fmregs_import(255, data->dis_fmreg_col);
 
         // v12-13
         // NOTE: not used anywhere
