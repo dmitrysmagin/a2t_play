@@ -8,6 +8,7 @@
     - Rework all variables layout:
         * Put *fmreg and dis_fmreg into tINSTR_DATA_EXT
         * After that drop _table suffix for all included data
+        * Use tINSTRINFO instead of plain instruments[255]
 
 */
 #include <stdio.h>
@@ -91,10 +92,10 @@ typedef struct {
     uint8_t arpeggio;
     // TODO:
     // tFMREG_TABLE *fmreg;
-    // uint32_t dis_fmreg_cols;
+    uint32_t dis_fmreg_cols;
 } tINSTR_DATA_EXT;
 
-C_ASSERT(sizeof(tINSTR_DATA_EXT) == 16);
+C_ASSERT(sizeof(tINSTR_DATA_EXT) == 20);
 
 // NOTE: doesn't map to a2m songdata structure anymore!
 typedef struct {
@@ -117,6 +118,13 @@ tCHDATA _ch, *ch = &_ch;
 tSONGINFO _song, *songdata = &_song;
 
 // Helpers for instruments ========================================================================
+
+// TODO: Use this with dynamic number of instruments
+typedef struct {
+    int count;
+    size_t size;
+    tINSTR_DATA_EXT *instruments; // instruments[n]
+} tINSTRINFO;
 
 tINSTR_DATA_EXT instruments[255] = { };
 
@@ -153,7 +161,6 @@ static inline tINSTR_DATA *get_instr_data(uint8_t ins)
 
 // fmreg/arpeggio/vibrato macro tables
 tFMREG_TABLE *fmreg_table[255] = { 0 };
-uint32_t dis_fmreg_table[255] = { 0 };
 tVIBRATO_TABLE *vibrato_table[255] = { 0 };
 tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
 
@@ -178,7 +185,7 @@ static void disabled_fmregs_allocate(size_t n, bool dis_fmregs[n][28])
         for (unsigned int bit = 0; bit < 28; bit++) {
             result |= (dis_fmregs[i][bit] & 1) << bit;
         }
-        dis_fmreg_table[i] = result;
+        instruments[i].dis_fmreg_cols = result;
     }
 }
 
@@ -1942,8 +1949,6 @@ static void generate_custom_vibrato(uint8_t value)
 static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
 {
     // Check if second effect is ZFF - force no restart
-    //bool is_norestart = ((((event->eff[slot ^ 1].def << 8) | event->eff[slot ^ 1].val)) ==
-    //		    ((ef_Extended << 8) | (ef_ex_ExtendedCmd2 << 4) | ef_ex_cmd2_NoRestart));
     bool is_norestart = (event->eff[slot ^ 1].def == ef_Extended) &&
                         (event->eff[slot ^ 1].val == (ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart));
 
@@ -2766,7 +2771,7 @@ static void macro_poll_proc()
 
                     if (mt->fmreg_duration) {
                         tREGISTER_TABLE_DEF *d = &rt->data[mt->fmreg_pos - 1];
-                        uint32_t disabled = dis_fmreg_table[mt->fmreg_ins - 1];
+                        uint32_t disabled = instruments[mt->fmreg_ins - 1].dis_fmreg_cols;
 
                         // force KEY-ON with missing ADSR instrument data
                         force_macro_keyon = FALSE;
