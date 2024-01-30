@@ -85,7 +85,7 @@ uint8_t tremolo_depth, vibrato_depth;
 bool volume_scaling, percussion_mode;
 uint8_t last_order;
 
-bool editor_mode = FALSE;
+bool editor_mode = FALSE; // TRUE to allocate max resources
 
 typedef struct {
     tINSTR_DATA instr_data;
@@ -115,7 +115,7 @@ typedef struct {
 
 // This would be later moved to class or struct
 tCHDATA _ch, *ch = &_ch;
-tSONGINFO _song, *songdata = &_song;
+tSONGINFO _song, *songinfo = &_song;
 
 // Helpers for instruments ========================================================================
 
@@ -126,13 +126,21 @@ typedef struct {
     tINSTR_DATA_EXT *instruments; // instruments[n]
 } tINSTR_INFO;
 
+tINSTR_INFO _insinfo = {0}, *insinfo = &_insinfo;
+
 tINSTR_DATA_EXT instruments[255] = { };
 
 static void instruments_allocate(size_t number)
 {
-    /*if (editor_mode) {
+    if (editor_mode) {
         number = 255; // Allocate max possible
-    }*/
+    }
+
+    size_t size = number * sizeof(tINSTR_DATA_EXT);
+    insinfo->instruments = calloc(1, size);
+    assert(insinfo->instruments);
+    insinfo->count = number;
+    insinfo->size = size;
 
     // TODO: perhaps use tINSTR_DATA_EXT **instruments;
     memset(instruments, 0, sizeof(instruments));
@@ -253,11 +261,11 @@ static void patterns_free()
 
 static void patterns_allocate(int patterns, int channels, int rows)
 {
-    /*if (editor_mode) { // allocate max possible
+    if (editor_mode) { // allocate max possible
         patterns = 128;
         channels = 20;
         rows = 256;
-    }*/
+    }
 
     patterns_free();
 
@@ -841,7 +849,7 @@ static void reset_ins_volume(int chan)
 
 static void set_global_volume()
 {
-    for (int chan = 0; chan < songdata->nm_tracks; chan++) {
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
         if (_4op_vol_valid_chan(chan)) {
             set_ins_volume_4op(BYTE_NULL, chan);
         } else if (ch->carrier_vol[chan] || ch->modulator_vol[chan]) {
@@ -899,7 +907,7 @@ static void set_ins_data(uint8_t ins, int chan)
     if ((ins != ch->event_table[chan].instr_def) || ch->reset_chan[chan]) {
         ch->panning_table[chan] = !ch->pan_lock[chan]
                                   ? i->panning
-                                  : songdata->lock_flags[chan] & 3;
+                                  : songinfo->lock_flags[chan] & 3;
 
         uint16_t m = regoffs_m(chan);
         uint16_t c = regoffs_c(chan);
@@ -993,7 +1001,7 @@ static inline bool is_4op_chan(int chan) // 0..19
     6  - %unused%
     7  - %unused%
 */
-    return (chan > 14 ? FALSE : !!(songdata->flag_4op & mask[chan]));
+    return (chan > 14 ? FALSE : !!(songinfo->flag_4op & mask[chan]));
 }
 
 static inline bool is_4op_chan_hi(int chan)
@@ -1216,7 +1224,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             }
 
             // shouldn't it be int c = 0 ??
-            for (int c = chan; c < songdata->nm_tracks; c++) {
+            for (int c = chan; c < songinfo->nm_tracks; c++) {
                 ch->fslide_table[slot][c] = val;
                 ch->glfsld_table[slot][c].def = ch->effect_table[slot][chan].def;
                 ch->glfsld_table[slot][c].val = ch->effect_table[slot][chan].val;
@@ -1395,7 +1403,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         if (no_loop(chan, current_line)) {
             pattern_break = TRUE;
             // seek_pattern_break = TRUE; // TODO
-            next_line = max(val, songdata->patt_len - 1);
+            next_line = max(val, songinfo->patt_len - 1);
         }
         break;
 
@@ -1827,7 +1835,7 @@ static void play_line()
         last_order = current_order;
     }
 
-    for (int chan = 0; chan < songdata->nm_tracks; chan++) {
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
         // save effect_table into last_effect
         for (int slot = 0; slot < 2; slot++) {
             if (ch->effect_table[slot][chan].def | ch->effect_table[slot][chan].val) {
@@ -2488,7 +2496,7 @@ static void update_effects_slot(int slot, int chan)
 
 static void update_effects()
 {
-    for (int chan = 0; chan < songdata->nm_tracks; chan++) {
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
         update_effects_slot(0, chan);
         update_effects_slot(1, chan);
     }
@@ -2567,7 +2575,7 @@ static void update_extra_fine_effects_slot(int slot, int chan)
 
 static void update_extra_fine_effects()
 {
-    for (int chan = 0; chan < songdata->nm_tracks; chan++) {
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
         update_extra_fine_effects_slot(0, chan);
         update_extra_fine_effects_slot(1, chan);
     }
@@ -2583,10 +2591,10 @@ static int calc_following_order(uint8_t order)
     jump_count = 0;
 
     do {
-        if (songdata->pattern_order[index] < 0x80) {
+        if (songinfo->pattern_order[index] < 0x80) {
             result = index;
         } else {
-            index = songdata->pattern_order[index] - 0x80;
+            index = songinfo->pattern_order[index] - 0x80;
             jump_count++;
         }
     } while (!((jump_count > 0x7f) || (result != -1)));
@@ -2603,10 +2611,10 @@ static int calc_order_jump()
     temp = 0;
 
     do {
-        if (songdata->pattern_order[current_order] > 0x7f)
-            current_order = songdata->pattern_order[current_order] - 0x80;
+        if (songinfo->pattern_order[current_order] > 0x7f)
+            current_order = songinfo->pattern_order[current_order] - 0x80;
         temp++;
-    } while (!((temp > 0x7f) || (songdata->pattern_order[current_order] < 0x80)));
+    } while (!((temp > 0x7f) || (songinfo->pattern_order[current_order] < 0x80)));
 
     if (temp > 0x7f) {
         a2t_stop();
@@ -2618,7 +2626,7 @@ static int calc_order_jump()
 
 static void update_song_position()
 {
-    if ((current_line < songdata->patt_len - 1) && !pattern_break) {
+    if ((current_line < songinfo->patt_len - 1) && !pattern_break) {
         current_line++;
     } else {
         if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
@@ -2650,11 +2658,11 @@ static void update_song_position()
             }
         }
 
-        if ((songdata->pattern_order[current_order] > 0x7f) &&
+        if ((songinfo->pattern_order[current_order] > 0x7f) &&
             (calc_order_jump() == -1))
             return;
 
-        current_pattern = songdata->pattern_order[current_order];
+        current_pattern = songinfo->pattern_order[current_order];
         if (!pattern_break) {
             current_line = 0;
         } else {
@@ -2663,7 +2671,7 @@ static void update_song_position()
         }
     }
 
-    for (int chan = 0; chan < songdata->nm_tracks; chan++) {
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
         ch->glfsld_table[0][chan].def = 0;
         ch->glfsld_table[0][chan].val = 0;
         ch->glfsld_table[1][chan].def = 0;
@@ -2672,8 +2680,8 @@ static void update_song_position()
 
     if ((current_line == 0) &&
         (current_order == calc_following_order(0)) && speed_update) {
-        tempo = songdata->tempo;
-        speed = songdata->speed;
+        tempo = songinfo->tempo;
+        speed = songinfo->speed;
         update_timer(tempo);
     }
 }
@@ -3051,21 +3059,21 @@ static void init_buffers()
         memset(ch->volume_lock, 0, sizeof(ch->volume_lock));
     } else {
         for (int i = 0; i < 20; i++)
-            ch->volume_lock[i] = (bool)((songdata->lock_flags[i] >> 4) & 1);
+            ch->volume_lock[i] = (bool)((songinfo->lock_flags[i] >> 4) & 1);
     }
 
     if (!panlock) {
         memset(ch->panning_table, 0, sizeof(ch->panning_table));
     } else {
         for (int i = 0; i < 20; i++)
-              ch->panning_table[i] = songdata->lock_flags[i] & 3;
+              ch->panning_table[i] = songinfo->lock_flags[i] & 3;
     }
 
     if (!lockVP) {
         memset(ch->peak_lock, 0, sizeof(ch->peak_lock));
     } else {
         for (int i = 0; i < 20; i++)
-              ch->peak_lock[i] = (bool)((songdata->lock_flags[i] >> 5) & 1);
+              ch->peak_lock[i] = (bool)((songinfo->lock_flags[i] >> 5) & 1);
     }
 
     static uint8_t _4op_main_chan[6] = { 1, 3, 5, 10, 12, 14 }; // 0-based
@@ -3073,13 +3081,13 @@ static void init_buffers()
     memset(ch->vol4op_lock, FALSE, sizeof(ch->vol4op_lock));
     for (int i = 0; i < 6; i++) {
         ch->vol4op_lock[_4op_main_chan[i]] =
-            ((songdata->lock_flags[_4op_main_chan[i]] | 0x40) == songdata->lock_flags[_4op_main_chan[i]]);
+            ((songinfo->lock_flags[_4op_main_chan[i]] | 0x40) == songinfo->lock_flags[_4op_main_chan[i]]);
         ch->vol4op_lock[_4op_main_chan[i] - 1] =
-            ((songdata->lock_flags[_4op_main_chan[i] - 1] | 0x40) == songdata->lock_flags[_4op_main_chan[i] - 1]);
+            ((songinfo->lock_flags[_4op_main_chan[i] - 1] | 0x40) == songinfo->lock_flags[_4op_main_chan[i] - 1]);
     }
 
     for (int i = 0; i < 20; i++)
-        ch->volslide_type[i] = (songdata->lock_flags[i] >> 2) & 3;
+        ch->volslide_type[i] = (songinfo->lock_flags[i] >> 2) & 3;
 }
 
 static void init_player()
@@ -3102,8 +3110,8 @@ static void init_player()
     opl2out(0x01, 0x20);
     opl2out(0x08, 0x40);
     opl3exp(0x0105);
-    opl3exp(0x04 + (songdata->flag_4op << 8));
-    printf("flag_4op: %04x\n", songdata->flag_4op);
+    opl3exp(0x04 + (songinfo->flag_4op << 8));
+    printf("flag_4op: %04x\n", songinfo->flag_4op);
 
     key_off(16);
     key_off(17);
@@ -3157,22 +3165,22 @@ void a2t_stop()
     update_timer(50);
 }
 
-/* Clean songdata before importing a2t tune */
+/* Clean songinfo before importing a2t tune */
 static void init_songdata()
 {
     if (play_status != isStopped)
         a2t_stop();
 
-    memset(songdata, 0, sizeof(*songdata));
-    memset(songdata->pattern_order, 0x80, sizeof(songdata->pattern_order));
+    memset(songinfo, 0, sizeof(*songinfo));
+    memset(songinfo->pattern_order, 0x80, sizeof(songinfo->pattern_order));
 
     IRQ_freq_shift = 0;
     playback_speed_shift = 0;
-    songdata->patt_len = 64;
-    songdata->nm_tracks = 18;
-    songdata->tempo = tempo;
-    songdata->speed = speed;
-    songdata->macro_speedup = 1;
+    songinfo->patt_len = 64;
+    songinfo->nm_tracks = 18;
+    songinfo->tempo = tempo;
+    songinfo->speed = speed;
+    songinfo->macro_speedup = 1;
     speed_update = FALSE;
     lockvol = FALSE;
     panlock = FALSE;
@@ -3195,11 +3203,11 @@ void a2t_play(char *tune) // start_playing()
 
     init_player();
 
-    if ((songdata->pattern_order[current_order] > 0x7f) &&
+    if ((songinfo->pattern_order[current_order] > 0x7f) &&
         (calc_order_jump() == -1))
         return;
 
-    current_pattern = songdata->pattern_order[current_order];
+    current_pattern = songinfo->pattern_order[current_order];
     current_line = 0;
     pattern_break = FALSE;
     pattern_delay = FALSE;
@@ -3211,9 +3219,9 @@ void a2t_play(char *tune) // start_playing()
 
     ticklooper = 0;
     macro_ticklooper = 0;
-    speed = songdata->speed;
-    macro_speedup = songdata->macro_speedup;
-    update_timer(songdata->tempo);
+    speed = songinfo->speed;
+    macro_speedup = songinfo->macro_speedup;
+    update_timer(songinfo->tempo);
 }
 
 /* LOADER FOR A2M/A2T */
@@ -3277,37 +3285,37 @@ static int a2t_read_varheader(char *blockptr)
             len[i] = UINT16LE(varheader->v1234.len[i]);
         return sizeof(A2T_VARHEADER_V1234);
     case 5 ... 8:
-        songdata->common_flag = varheader->v5678.common_flag;
+        songinfo->common_flag = varheader->v5678.common_flag;
         for (int i = 0; i < 10; i++)
             len[i] = UINT16LE(varheader->v5678.len[i]);
         return sizeof(A2T_VARHEADER_V5678);
     case 9:
-        songdata->common_flag = varheader->v9.common_flag;
-        songdata->patt_len = UINT16LE(varheader->v9.patt_len);
-        songdata->nm_tracks = varheader->v9.nm_tracks;
-        songdata->macro_speedup = UINT16LE(varheader->v9.macro_speedup);
+        songinfo->common_flag = varheader->v9.common_flag;
+        songinfo->patt_len = UINT16LE(varheader->v9.patt_len);
+        songinfo->nm_tracks = varheader->v9.nm_tracks;
+        songinfo->macro_speedup = UINT16LE(varheader->v9.macro_speedup);
         for (int i = 0; i < 20; i++)
             len[i] = UINT32LE(varheader->v9.len[i]);
         return sizeof(A2T_VARHEADER_V9);
     case 10:
-        songdata->common_flag = varheader->v10.common_flag;
-        songdata->patt_len = UINT16LE(varheader->v10.patt_len);
-        songdata->nm_tracks = varheader->v10.nm_tracks;
-        songdata->macro_speedup = UINT16LE(varheader->v10.macro_speedup);
-        songdata->flag_4op = varheader->v10.flag_4op;
+        songinfo->common_flag = varheader->v10.common_flag;
+        songinfo->patt_len = UINT16LE(varheader->v10.patt_len);
+        songinfo->nm_tracks = varheader->v10.nm_tracks;
+        songinfo->macro_speedup = UINT16LE(varheader->v10.macro_speedup);
+        songinfo->flag_4op = varheader->v10.flag_4op;
         for (int i = 0; i < 20; i++)
-            songdata->lock_flags[i] = varheader->v10.lock_flags[i];
+            songinfo->lock_flags[i] = varheader->v10.lock_flags[i];
         for (int i = 0; i < 20; i++)
             len[i] = UINT32LE(varheader->v10.len[i]);
         return sizeof(A2T_VARHEADER_V10);
     case 11 ... 14:
-        songdata->common_flag = varheader->v11.common_flag;
-        songdata->patt_len = UINT16LE(varheader->v11.patt_len);
-        songdata->nm_tracks = varheader->v11.nm_tracks;
-        songdata->macro_speedup = UINT16LE(varheader->v11.macro_speedup);
-        songdata->flag_4op = varheader->v11.flag_4op;
+        songinfo->common_flag = varheader->v11.common_flag;
+        songinfo->patt_len = UINT16LE(varheader->v11.patt_len);
+        songinfo->nm_tracks = varheader->v11.nm_tracks;
+        songinfo->macro_speedup = UINT16LE(varheader->v11.macro_speedup);
+        songinfo->flag_4op = varheader->v11.flag_4op;
         for (int i = 0; i < 20; i++)
-            songdata->lock_flags[i] = varheader->v10.lock_flags[i];
+            songinfo->lock_flags[i] = varheader->v10.lock_flags[i];
         for (int i = 0; i < 21; i++)
             len[i] = UINT32LE(varheader->v11.len[i]);
         return sizeof(A2T_VARHEADER_V11);
@@ -3345,14 +3353,14 @@ static int a2t_read_instruments(char *src)
     a2t_depack(src, len[0], dst);
 
     if (ffver == 14) {
-        //memcpy(&songdata->bpm_data, dst, sizeof(songdata->bpm_data));
+        //memcpy(&songinfo->bpm_data, dst, sizeof(songinfo->bpm_data));
         dst += sizeof(tBPM_DATA);
     }
 
     if (ffver >= 12 && ffver <= 14) {
-        //memcpy(&songdata->ins_4op_flags, dst, sizeof(songdata->ins_4op_flags));
+        //memcpy(&songinfo->ins_4op_flags, dst, sizeof(songinfo->ins_4op_flags));
         dst += sizeof(tINS_4OP_FLAGS);
-        //memcpy(&songdata->reserved_data, dst, sizeof(songdata->reserved_data));
+        //memcpy(&songinfo->reserved_data, dst, sizeof(songinfo->reserved_data));
         dst += sizeof(tRESERVED);
     }
 
@@ -3404,7 +3412,7 @@ static int a2t_read_fmregtable(char *src)
 
 #if 0
     FILE *f = fopen("1_inst_macro.dmp", "wb");
-    fwrite(songdata->fmreg_table, 1, sizeof(songdata->fmreg_table), f);
+    fwrite(songinfo->fmreg_table, 1, sizeof(songinfo->fmreg_table), f);
     fclose(f);
 #endif
 
@@ -3424,7 +3432,7 @@ static int a2t_read_arpvibtable(char *src)
 
 #if 0
     FILE *f = fopen("2_macrotable.dmp", "wb");
-    fwrite(songdata->macro_table, 1, sizeof(songdata->macro_table), f);
+    fwrite(songinfo->macro_table, 1, sizeof(songinfo->macro_table), f);
     fclose(f);
 #endif
 
@@ -3457,11 +3465,11 @@ static int a2t_read_order(char *src)
     int blocknum[14] = {1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4, 4, 4, 4};
     int i = blocknum[ffver - 1];
 
-    a2t_depack(src, len[i], songdata->pattern_order);
+    a2t_depack(src, len[i], songinfo->pattern_order);
 
 #if 0
     FILE *f = fopen("4_order.dmp", "wb");
-    fwrite(songdata->pattern_order, 1, sizeof(songdata->pattern_order), f);
+    fwrite(songinfo->pattern_order, 1, sizeof(songinfo->pattern_order), f);
     fclose(f);
 #endif
 
@@ -3747,23 +3755,23 @@ static void a2t_import(char *tune)
     memset(len, 0, sizeof(len));
 
     ffver = header->ffver;
-    songdata->tempo = header->tempo;
-    songdata->speed = header->speed;
-    songdata->patt_len = 64;
-    songdata->nm_tracks = 18;
-    songdata->macro_speedup = 1;
+    songinfo->tempo = header->tempo;
+    songinfo->speed = header->speed;
+    songinfo->patt_len = 64;
+    songinfo->nm_tracks = 18;
+    songinfo->macro_speedup = 1;
 
     // Read variable part after header, fill len[] with values
     blockptr += a2t_read_varheader(blockptr);
 
-    speed_update    = (songdata->common_flag >> 0) & 1;
-    lockvol         = (songdata->common_flag >> 1) & 1;
-    lockVP          = (songdata->common_flag >> 2) & 1;
-    tremolo_depth   = (songdata->common_flag >> 3) & 1;
-    vibrato_depth   = (songdata->common_flag >> 4) & 1;
-    panlock         = (songdata->common_flag >> 5) & 1;
-    percussion_mode = (songdata->common_flag >> 6) & 1;
-    volume_scaling  = (songdata->common_flag >> 7) & 1;
+    speed_update    = (songinfo->common_flag >> 0) & 1;
+    lockvol         = (songinfo->common_flag >> 1) & 1;
+    lockVP          = (songinfo->common_flag >> 2) & 1;
+    tremolo_depth   = (songinfo->common_flag >> 3) & 1;
+    vibrato_depth   = (songinfo->common_flag >> 4) & 1;
+    panlock         = (songinfo->common_flag >> 5) & 1;
+    percussion_mode = (songinfo->common_flag >> 6) & 1;
+    volume_scaling  = (songinfo->common_flag >> 7) & 1;
 
     // Read instruments; all versions
     blockptr += a2t_read_instruments(blockptr);
@@ -3781,15 +3789,15 @@ static void a2t_import(char *tune)
     blockptr += a2t_read_order(blockptr);
 
     // Allocate patterns
-    patterns_allocate(header->npatt, songdata->nm_tracks, songdata->patt_len);
+    patterns_allocate(header->npatt, songinfo->nm_tracks, songinfo->patt_len);
 
     // Read patterns
     a2t_read_patterns(blockptr);
 
     printf("A2T version: %d\n", header->ffver);
     printf("Number of patterns: %d\n", header->npatt);
-    printf("Rows per pattern: %d\n", songdata->patt_len);
-    printf("Voices per pattern: %d\n", songdata->nm_tracks);
+    printf("Rows per pattern: %d\n", songinfo->patt_len);
+    printf("Voices per pattern: %d\n", songinfo->nm_tracks);
     printf("Tempo: %d\n", header->tempo);
     printf("Speed: %d\n", header->speed);
     printf("Volume scaling: %d\n", volume_scaling);
@@ -3836,24 +3844,24 @@ static int a2m_read_songdata(char *src)
         A2M_SONGDATA_V1_8 *data = malloc(sizeof(*data));
         a2t_depack(src, len[0], data);
 
-        memcpy(songdata->songname, data->songname, 43);
-        memcpy(songdata->composer, data->composer, 43);
+        memcpy(songinfo->songname, data->songname, 43);
+        memcpy(songinfo->composer, data->composer, 43);
 
         // TODO: Calculate the real number of used instruments
         instruments_allocate(250);
 
         for (int i = 0; i < 250; i++) {
-            memcpy(songdata->instr_names[i], data->instr_names[i] + 1, 32);
+            memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 32);
             instrument_import_v1_8(i + 1, &data->instr_data[i]);
         }
 
-        memcpy(songdata->pattern_order, data->pattern_order, 128);
+        memcpy(songinfo->pattern_order, data->pattern_order, 128);
 
-        songdata->tempo = data->tempo;
-        songdata->speed = data->speed;
+        songinfo->tempo = data->tempo;
+        songinfo->speed = data->speed;
 
         if (ffver > 4) { // 5 - 8
-            songdata->common_flag = data->common_flag;
+            songinfo->common_flag = data->common_flag;
         }
 
         free(data);
@@ -3861,14 +3869,14 @@ static int a2m_read_songdata(char *src)
         A2M_SONGDATA_V9_14 *data = malloc(sizeof(*data));
         a2t_depack(src, len[0], data);
 
-        memcpy(songdata->songname, data->songname, 43);
-        memcpy(songdata->composer, data->composer, 43);
+        memcpy(songinfo->songname, data->songname, 43);
+        memcpy(songinfo->composer, data->composer, 43);
 
         // TODO: Calculate the real number of used instruments
         instruments_allocate(255);
 
         for (int i = 0; i < 255; i++) {
-            memcpy(songdata->instr_names[i], data->instr_names[i] + 1, 42);
+            memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 42);
             instrument_import(i + 1, &data->instr_data[i]);
 
             // Instrument arpegio/vibrato references
@@ -3882,50 +3890,50 @@ static int a2m_read_songdata(char *src)
         // Allocate arpeggio/vibrato macro tables
         arpvib_tables_allocate(255, data->arpvib_table);
 
-        memcpy(songdata->pattern_order, data->pattern_order, 128);
+        memcpy(songinfo->pattern_order, data->pattern_order, 128);
 
-        songdata->tempo = data->tempo;
-        songdata->speed = data->speed;
-        songdata->common_flag = data->common_flag;
-        songdata->patt_len = UINT16LE(data->patt_len);
-        songdata->nm_tracks = data->nm_tracks;
-        songdata->macro_speedup = UINT16LE(data->macro_speedup);
+        songinfo->tempo = data->tempo;
+        songinfo->speed = data->speed;
+        songinfo->common_flag = data->common_flag;
+        songinfo->patt_len = UINT16LE(data->patt_len);
+        songinfo->nm_tracks = data->nm_tracks;
+        songinfo->macro_speedup = UINT16LE(data->macro_speedup);
 
         // v10
-        songdata->flag_4op = data->flag_4op;
-        memcpy(songdata->lock_flags, data->lock_flags, sizeof(data->lock_flags));
+        songinfo->flag_4op = data->flag_4op;
+        memcpy(songinfo->lock_flags, data->lock_flags, sizeof(data->lock_flags));
 
         // v11
         // NOTE: not used anywhere
-        //memcpy(songdata->pattern_names, data->pattern_names, 128 * 43);
+        //memcpy(songinfo->pattern_names, data->pattern_names, 128 * 43);
         disabled_fmregs_import(255, data->dis_fmreg_col);
 
         // v12-13
         // NOTE: not used anywhere
-        //songdata->ins_4op_flags.num_4op = data->ins_4op_flags.num_4op;
-        //memcpy(songdata->ins_4op_flags.idx_4op, data->ins_4op_flags.idx_4op, 128);
-        //memcpy(songdata->reserved_data, data->reserved_data, 1024);
+        //songinfo->ins_4op_flags.num_4op = data->ins_4op_flags.num_4op;
+        //memcpy(songinfo->ins_4op_flags.idx_4op, data->ins_4op_flags.idx_4op, 128);
+        //memcpy(songinfo->reserved_data, data->reserved_data, 1024);
 
         // v14
         // NOTE: not used anywhere
-        //songdata->bpm_data.rows_per_beat = data->bpm_data.rows_per_beat;
-        //songdata->bpm_data.tempo_finetune = INT16LE(data->bpm_data.tempo_finetune);
+        //songinfo->bpm_data.rows_per_beat = data->bpm_data.rows_per_beat;
+        //songinfo->bpm_data.tempo_finetune = INT16LE(data->bpm_data.tempo_finetune);
 
         free(data);
     }
 
-    speed_update    = (songdata->common_flag >> 0) & 1;
-    lockvol         = (songdata->common_flag >> 1) & 1;
-    lockVP          = (songdata->common_flag >> 2) & 1;
-    tremolo_depth   = (songdata->common_flag >> 3) & 1;
-    vibrato_depth   = (songdata->common_flag >> 4) & 1;
-    panlock         = (songdata->common_flag >> 5) & 1;
-    percussion_mode = (songdata->common_flag >> 6) & 1;
-    volume_scaling  = (songdata->common_flag >> 7) & 1;
+    speed_update    = (songinfo->common_flag >> 0) & 1;
+    lockvol         = (songinfo->common_flag >> 1) & 1;
+    lockVP          = (songinfo->common_flag >> 2) & 1;
+    tremolo_depth   = (songinfo->common_flag >> 3) & 1;
+    vibrato_depth   = (songinfo->common_flag >> 4) & 1;
+    panlock         = (songinfo->common_flag >> 5) & 1;
+    percussion_mode = (songinfo->common_flag >> 6) & 1;
+    volume_scaling  = (songinfo->common_flag >> 7) & 1;
 
 #if 0
-    FILE *f = fopen("songdata.dmp", "wb");
-    fwrite(songdata, 1, sizeof(*songdata), f);
+    FILE *f = fopen("songinfo.dmp", "wb");
+    fwrite(songinfo, 1, sizeof(*songinfo), f);
     fclose(f);
 #endif
 
@@ -3947,14 +3955,14 @@ static void a2m_import(char *tune)
     if(strncmp(header->id, "_A2module_", 10))
         return;
 
-    memset(songdata, 0, sizeof(*songdata));
+    memset(songinfo, 0, sizeof(*songinfo));
 
     memset(len, 0, sizeof(len));
 
     ffver = header->ffver;
-    songdata->patt_len = 64;
-    songdata->nm_tracks = 18;
-    songdata->macro_speedup = 1;
+    songinfo->patt_len = 64;
+    songinfo->nm_tracks = 18;
+    songinfo->macro_speedup = 1;
 
     // Read variable part after header, fill len[] with values
     blockptr += a2m_read_varheader(blockptr, header->npatt);
@@ -3963,17 +3971,17 @@ static void a2m_import(char *tune)
     blockptr += a2m_read_songdata(blockptr);
 
     // Allocate patterns
-    patterns_allocate(header->npatt, songdata->nm_tracks, songdata->patt_len);
+    patterns_allocate(header->npatt, songinfo->nm_tracks, songinfo->patt_len);
 
     // Read patterns
     a2m_read_patterns(blockptr);
 
     printf("A2M version: %d\n", header->ffver);
     printf("Number of patterns: %d\n", header->npatt);
-    printf("Rows per pattern: %d\n", songdata->patt_len);
-    printf("Voices per pattern: %d\n", songdata->nm_tracks);
-    printf("Tempo: %d\n", songdata->tempo);
-    printf("Speed: %d\n", songdata->speed);
+    printf("Rows per pattern: %d\n", songinfo->patt_len);
+    printf("Voices per pattern: %d\n", songinfo->nm_tracks);
+    printf("Tempo: %d\n", songinfo->tempo);
+    printf("Speed: %d\n", songinfo->speed);
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
     printf("Track volume lock: %d\n", lockvol);
