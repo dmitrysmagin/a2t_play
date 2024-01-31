@@ -86,46 +86,16 @@ uint8_t last_order;
 
 bool editor_mode = FALSE; // TRUE to allocate max resources
 
-typedef struct {
-    tINSTR_DATA instr_data;
-    uint8_t vibrato;
-    uint8_t arpeggio;
-    tFMREG_TABLE *fmreg;
-    uint32_t dis_fmreg_cols;
-} tINSTR_DATA_EXT;
+// Used by the player
 
-C_ASSERT(sizeof(tINSTR_DATA_EXT) == 20 + sizeof(tFMREG_TABLE *));
-
-// NOTE: doesn't map to a2m songdata structure anymore!
-typedef struct {
-    char            songname[43];        // pascal String[42];
-    char            composer[43];        // pascal String[42];
-    char            instr_names[255][43];// array[1..255] of String[42];
-    uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
-    uint8_t         tempo;
-    uint8_t         speed;
-    uint8_t         common_flag;
-    uint16_t        patt_len;
-    uint8_t         nm_tracks;
-    uint16_t        macro_speedup;
-    uint8_t         flag_4op;
-    uint8_t         lock_flags[20];
-} tSONGINFO;
-
-// This would be later moved to class or struct
-tCHDATA _ch, *ch = &_ch;
 tSONGINFO _song, *songinfo = &_song;
+tINSTR_INFO _instrinfo = { 0 }, *instrinfo = &_instrinfo;
+tVIBRATO_TABLE *vibrato_table[255] = { 0 };
+tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
+tEVENTS_INFO _eventsinfo = { 0 }, *eventsinfo = &_eventsinfo;
+tCHDATA _ch, *ch = &_ch;
 
 // Helpers for instruments ========================================================================
-
-// TODO: Use this with dynamic number of instruments
-typedef struct {
-    int count;
-    size_t size;
-    tINSTR_DATA_EXT *instruments;
-} tINSTR_INFO;
-
-tINSTR_INFO _instrinfo = { 0 }, *instrinfo = &_instrinfo;
 
 static void instruments_free()
 {
@@ -191,16 +161,14 @@ static inline tINSTR_DATA *get_instr_data(uint8_t ins)
 
 // Helpers for macro tables =======================================================================
 
-// arpeggio/vibrato macro tables
-tVIBRATO_TABLE *vibrato_table[255] = { 0 };
-tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
-
 // use VLA feature
 static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
 {
+    n = editor_mode ? 255 : n;
+
     // Note: for editor_mode allocate max entries possible
     for (unsigned int i = 0; i < n; i++) {
-        if (rt[i].length) {
+        if (editor_mode || rt[i].length) {
             tINSTR_DATA_EXT *instrument = get_instr(i + 1);
             assert(instrument);
             if (!instrument)
@@ -215,6 +183,8 @@ static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
 
 static void disabled_fmregs_import(size_t n, bool dis_fmregs[n][28])
 {
+    n = editor_mode ? 255 : n;
+
     // shrink bool[255][28] to uint32_t[255], use bits as enable/disable flag
     for (unsigned int i = 0; i < n; i++) {
         uint32_t result = 0; // all enabled by default
@@ -233,14 +203,16 @@ static void disabled_fmregs_import(size_t n, bool dis_fmregs[n][28])
 
 static void arpvib_tables_allocate(size_t n, tARPVIB_TABLE mt[n])
 {
+    n = editor_mode ? 255 : n;
+
     // Note: for editor_mode allocate max entries possible
     for (unsigned int i = 0; i < n; i++) {
-        if (mt[i].vibrato.length) {
+        if (editor_mode || mt[i].vibrato.length) {
             vibrato_table[i] = calloc(1, sizeof(tVIBRATO_TABLE));
             assert(vibrato_table[i]);
             *vibrato_table[i] = mt[i].vibrato; // copy struct
         }
-        if (mt[i].arpeggio.length) {
+        if (editor_mode || mt[i].arpeggio.length) {
             arpeggio_table[i] = calloc(1, sizeof(tARPEGGIO_TABLE));
             assert(arpeggio_table[i]);
             *arpeggio_table[i] = mt[i].arpeggio; // copy struct
@@ -266,14 +238,6 @@ static tFMREG_TABLE *get_fmreg_table(uint8_t fmreg_ins)
 }
 
 // Helpers for patterns ===========================================================================
-
-typedef struct {
-    int patterns, rows, channels;
-    size_t size;
-    tADTRACK2_EVENT *events;
-} tEVENTS_INFO;
-
-tEVENTS_INFO _eventsinfo = { 0 }, *eventsinfo = &_eventsinfo;
 
 // event = pattern * (channels * rows) + ch * rows + row
 static tADTRACK2_EVENT *get_event_p(int pattern, int channel, int row)

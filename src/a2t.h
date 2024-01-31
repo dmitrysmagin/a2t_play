@@ -91,7 +91,7 @@ typedef struct {
     uint8_t loop_begin;
     uint8_t loop_length;
     uint8_t keyoff_pos;
-    uint8_t data[255]; // array[1..255] of Byte;
+    uint8_t data[255];
 } tARPEGGIO_TABLE;
 
 typedef struct {
@@ -478,7 +478,32 @@ typedef struct {
 
 C_ASSERT(sizeof(A2M_SONGDATA_V9_14) == 1138338);
 
-/* Extern data*/
+/* Player data */
+
+typedef struct {
+    tINSTR_DATA instr_data;
+    uint8_t vibrato;
+    uint8_t arpeggio;
+    tFMREG_TABLE *fmreg;
+    uint32_t dis_fmreg_cols;
+} tINSTR_DATA_EXT;
+
+C_ASSERT(sizeof(tINSTR_DATA_EXT) == 20 + sizeof(tFMREG_TABLE *));
+
+typedef struct {
+    char            songname[43];        // pascal String[42];
+    char            composer[43];        // pascal String[42];
+    char            instr_names[255][43];// array[1..255] of String[42];
+    uint8_t         pattern_order[0x80]; // array[0..0x7f] of Byte;
+    uint8_t         tempo;
+    uint8_t         speed;
+    uint8_t         common_flag;
+    uint16_t        patt_len;
+    uint8_t         nm_tracks;
+    uint16_t        macro_speedup;
+    uint8_t         flag_4op;
+    uint8_t         lock_flags[20];
+} tSONGINFO;
 
 typedef struct {
     uint16_t freq;
@@ -556,6 +581,20 @@ typedef struct {
     bool reset_chan[20];
     tCH_MACRO_TABLE macro_table[20];
 } tCHDATA;
+
+typedef struct {
+    int count;
+    size_t size;
+    tINSTR_DATA_EXT *instruments;
+} tINSTR_INFO;
+
+typedef struct {
+    int patterns, rows, channels;
+    size_t size;
+    tADTRACK2_EVENT *events;
+} tEVENTS_INFO;
+
+/* Extern data */
 
 extern tCHDATA *ch;
 
