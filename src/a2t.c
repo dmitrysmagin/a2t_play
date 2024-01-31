@@ -202,6 +202,7 @@ static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
     for (unsigned int i = 0; i < n; i++) {
         if (rt[i].length) {
             tINSTR_DATA_EXT *instrument = get_instr(i + 1);
+            assert(instrument);
             if (!instrument)
                 continue;
 
@@ -222,6 +223,7 @@ static void disabled_fmregs_import(size_t n, bool dis_fmregs[n][28])
         }
 
         tINSTR_DATA_EXT *instrument = get_instr(i + 1);
+        assert(instrument);
         if (!instrument)
             continue;
 
@@ -3400,19 +3402,23 @@ static int a2t_read_instruments(char *src)
         dst += sizeof(tRESERVED);
     }
 
-    // TODO: Calculate the real number of used instruments
-    instruments_allocate(instnum);
+    // Calculate the real number of used instruments
+    int count = instnum;
+    while (count && is_data_empty(dst + (count - 1) * instsize, instsize))
+        count--;
+
+    instruments_allocate(count);
 
     if (ffver < 9) {
         tINSTR_DATA_V1_8 *instr_data = (tINSTR_DATA_V1_8 *)dst;
 
-        for (int i = 0; i < 250; i++) {
+        for (int i = 0; i < count; i++) {
             instrument_import_v1_8(i + 1, &instr_data[i]);
         }
     } else {
         tINSTR_DATA *instr_data = (tINSTR_DATA *)dst;
 
-        for (int i = 0; i < instnum; i++) {
+        for (int i = 0; i < count; i++) {
             instrument_import(i + 1, &instr_data[i]);
         }
     }
@@ -3435,10 +3441,12 @@ static int a2t_read_fmregtable(char *src)
     tFMREG_TABLE *data = (tFMREG_TABLE *)calloc(255, sizeof(tFMREG_TABLE));
     a2t_depack(src, len[1], data);
 
-    // Allocate fmreg macro tables
-    fmreg_table_allocate(255, data);
+    int count = instrinfo->count;
 
-    for (int i = 0; i < 255; i++) {
+    // Allocate fmreg macro tables
+    fmreg_table_allocate(count, data);
+
+    for (int i = 0; i < count; i++) {
         // Instrument arpegio/vibrato references
         tINSTR_DATA_EXT *dst = get_instr(i + 1);
         assert(dst);
@@ -3485,7 +3493,7 @@ static int a2t_read_disabled_fmregs(char *src)
 
     a2t_depack(src, len[3], *dis_fmregs);
 
-    disabled_fmregs_import(255, *dis_fmregs);
+    disabled_fmregs_import(instrinfo->count, *dis_fmregs);
 
     free(dis_fmregs);
 
@@ -3890,13 +3898,12 @@ static int a2m_read_songdata(char *src)
         while (count && is_data_empty(&data->instr_data[count - 1], sizeof(tINSTR_DATA_V1_8)))
             count--;
 
-        printf("INSTRUMENT COUNT=%d\n", count);
-
         instruments_allocate(count);
 
-        for (int i = 0; i < count; i++) {
-            // Note: names can be present with zeroed instruments!
+        for (int i = 0; i < 250; i++)
             memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 32);
+
+        for (int i = 0; i < count; i++) {
             instrument_import_v1_8(i + 1, &data->instr_data[i]);
         }
 
@@ -3922,13 +3929,12 @@ static int a2m_read_songdata(char *src)
         while (count && is_data_empty(&data->instr_data[count - 1], sizeof(tINSTR_DATA)))
             count--;
 
-        printf("INSTRUMENT COUNT=%d\n", count);
-
         instruments_allocate(count);
 
-        for (int i = 0; i < count; i++) {
-            // Note: names can be present with zeroed instruments!
+        for (int i = 0; i < 255; i++)
             memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 42);
+
+        for (int i = 0; i < count; i++) {
             instrument_import(i + 1, &data->instr_data[i]);
 
             // Instrument arpegio/vibrato references
