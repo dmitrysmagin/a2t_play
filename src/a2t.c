@@ -125,14 +125,16 @@ typedef struct {
     tINSTR_DATA_EXT *instruments;
 } tINSTR_INFO;
 
-tINSTR_INFO _instrinfo = {0}, *instrinfo = &_instrinfo;
+tINSTR_INFO _instrinfo = { 0 }, *instrinfo = &_instrinfo;
 
 static void instruments_free()
 {
     if (instrinfo->instruments) {
         for (int i = 0; i < instrinfo->count; i++) {
-            if (instrinfo->instruments[i].fmreg)
+            if (instrinfo->instruments[i].fmreg) {
                 free(instrinfo->instruments[i].fmreg);
+                instrinfo->instruments[i].fmreg = NULL;
+            }
         }
 
         free(instrinfo->instruments);
@@ -2759,11 +2761,6 @@ static void macro_poll_proc()
 
     for (chan = 0; chan < 20; chan++) {
         finished_flag = ch->keyoff_loop[chan] ? IDLE : FINISHED;
-        /*if (!ch->keyoff_loop[chan]) {
-            finished_flag = FINISHED;
-        } else {
-            finished_flag = IDLE;
-        }*/
 
         tCH_MACRO_TABLE *mt = &ch->macro_table[chan];
         tFMREG_TABLE *rt = get_fmreg_table(mt->fmreg_ins);
@@ -2775,8 +2772,8 @@ static void macro_poll_proc()
                 mt->fmreg_duration--;
             } else {
                 if (mt->fmreg_pos <= rt->length) {
-                    if ((rt->loop_begin != 0) && (rt->loop_length != 0)) {
-                        if (mt->fmreg_pos == rt->loop_begin + (rt->loop_length-1)) {
+                    if (rt->loop_begin && rt->loop_length) {
+                        if (mt->fmreg_pos == rt->loop_begin + rt->loop_length - 1) {
                             mt->fmreg_pos = rt->loop_begin;
                         } else {
                             if (mt->fmreg_pos < rt->length) {
@@ -3371,12 +3368,6 @@ static void instrument_import_v1_8(int ins, tINSTR_DATA_V1_8 *instr_s)
     instr_d->fm = instr_s->fm; // copy struct
     instr_d->panning = instr_s->panning;
     instr_d->fine_tune = instr_s->fine_tune;
-
-    tINSTR_DATA_EXT *i = get_instr(ins);
-    assert(i);
-    i->instr_data.fm = instr_s->fm; // copy struct
-    i->instr_data.panning = instr_s->panning;
-    i->instr_data.fine_tune = instr_s->fine_tune;
 }
 
 static void instrument_import(int ins, tINSTR_DATA *instr_s)
@@ -3385,10 +3376,6 @@ static void instrument_import(int ins, tINSTR_DATA *instr_s)
     assert(instr_d);
 
     *instr_d = *instr_s; // copy struct
-
-    tINSTR_DATA_EXT *i = get_instr(ins);
-    assert(i);
-    i->instr_data = *instr_s; // copy struct
 }
 
 static int a2t_read_instruments(char *src)
@@ -3898,10 +3885,17 @@ static int a2m_read_songdata(char *src)
         memcpy(songinfo->songname, data->songname, 43);
         memcpy(songinfo->composer, data->composer, 43);
 
-        // TODO: Calculate the real number of used instruments
-        instruments_allocate(250);
+        // Calculate the real number of used instruments
+        int count = 250;
+        while (count && is_data_empty(&data->instr_data[count - 1], sizeof(tINSTR_DATA_V1_8)))
+            count--;
 
-        for (int i = 0; i < 250; i++) {
+        printf("INSTRUMENT COUNT=%d\n", count);
+
+        instruments_allocate(count);
+
+        for (int i = 0; i < count; i++) {
+            // Note: names can be present with zeroed instruments!
             memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 32);
             instrument_import_v1_8(i + 1, &data->instr_data[i]);
         }
@@ -3923,10 +3917,17 @@ static int a2m_read_songdata(char *src)
         memcpy(songinfo->songname, data->songname, 43);
         memcpy(songinfo->composer, data->composer, 43);
 
-        // TODO: Calculate the real number of used instruments
-        instruments_allocate(255);
+        // Calculate the real number of used instruments
+        int count = 255;
+        while (count && is_data_empty(&data->instr_data[count - 1], sizeof(tINSTR_DATA)))
+            count--;
 
-        for (int i = 0; i < 255; i++) {
+        printf("INSTRUMENT COUNT=%d\n", count);
+
+        instruments_allocate(count);
+
+        for (int i = 0; i < count; i++) {
+            // Note: names can be present with zeroed instruments!
             memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 42);
             instrument_import(i + 1, &data->instr_data[i]);
 
@@ -3938,7 +3939,7 @@ static int a2m_read_songdata(char *src)
         }
 
         // Allocate fmreg macro tables
-        fmreg_table_allocate(255, data->fmreg_table);
+        fmreg_table_allocate(count, data->fmreg_table);
 
         // Allocate arpeggio/vibrato macro tables
         arpvib_tables_allocate(255, data->arpvib_table);
@@ -3959,7 +3960,7 @@ static int a2m_read_songdata(char *src)
         // v11
         // NOTE: not used anywhere
         //memcpy(songinfo->pattern_names, data->pattern_names, 128 * 43);
-        disabled_fmregs_import(255, data->dis_fmreg_col);
+        disabled_fmregs_import(count, data->dis_fmreg_col);
 
         // v12-13
         // NOTE: not used anywhere
@@ -3971,7 +3972,11 @@ static int a2m_read_songdata(char *src)
         // NOTE: not used anywhere
         //songinfo->bpm_data.rows_per_beat = data->bpm_data.rows_per_beat;
         //songinfo->bpm_data.tempo_finetune = INT16LE(data->bpm_data.tempo_finetune);
-
+#if 0
+        FILE *f = fopen("instruments.dmp", "wb");
+        fwrite(data->instr_data, 1, sizeof(data->instr_data), f);
+        fclose(f);
+#endif
         free(data);
     }
 
