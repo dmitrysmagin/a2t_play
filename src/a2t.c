@@ -317,8 +317,11 @@ static void memory_usage()
 {
     // Count fmreg/vib/arp macros
     int nfmregs = 0, nvib = 0, narp = 0;
-    for (int i = 0; i < 255; i++) {
+
+    for (int i = 0; i < instrinfo->count; i++)
         nfmregs += (instrinfo->instruments[i].fmreg ? 1 : 0);
+
+    for (int i = 0; i < 255; i++) {
         nvib += (vibrato_table[i] ? 1 : 0);
         narp += (arpeggio_table[i] ? 1 : 0);
     }
@@ -326,7 +329,7 @@ static void memory_usage()
     printf("Memory usage:\n");
     printf("\tSonginfo: %d bytes\n", sizeof(tSONGINFO));
     printf("\tPatterns * %d: %d bytes\n", eventsinfo->patterns, eventsinfo->size);
-    printf("\tInstruments * 255: %d bytes\n", sizeof(tINSTR_DATA_EXT[255]));
+    printf("\tInstruments * %d: %d bytes\n", instrinfo->count, instrinfo->size);
     printf("\tFmreg * %d: %d bytes\n", nfmregs, nfmregs * sizeof(tFMREG_TABLE));
     printf("\tVibrato * %d: %d bytes\n", nvib, nvib * sizeof(tVIBRATO_TABLE));
     printf("\tArpeggio * %d: %d bytes\n", narp, narp * sizeof(tARPEGGIO_TABLE));
@@ -2056,7 +2059,7 @@ static void portamento_down(int chan, uint16_t slide, uint16_t limit)
 static void macro_vibrato__porta_up(int chan, uint8_t depth)
 {
     uint16_t freq = calc_freq_shift_up(ch->macro_table[chan].vib_freq & 0x1fff, depth);
-    uint16_t newfreq = freq <= nFreq(12*8+1) ? freq : nFreq(12*8+1); 
+    uint16_t newfreq = freq <= nFreq(12*8+1) ? freq : nFreq(12*8+1);
 
     change_freq(chan, newfreq);
 }
