@@ -4,6 +4,7 @@
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
     In order to get into Adplug:
+    - Refactor _4op_data_flag()
     - Reduce the memory used for a tune
     - Rework all variables layout:
         * After that drop _table suffix for all included data
@@ -677,9 +678,10 @@ static uint32_t _4op_data_flag(uint8_t chan)
 static bool _4op_vol_valid_chan(int chan)
 {
     uint32_t _4op_flag = _4op_data_flag(chan);
-    return ((_4op_flag & 1) && ch->vol4op_lock[chan] &&
-            ((_4op_flag >> 11) & 1) &&
-            ((_4op_flag >> 19) & 1));
+    return ((_4op_flag & 1) &&
+             ch->vol4op_lock[chan] &&
+            ((_4op_flag >> 11) & 0xff) &&
+            ((_4op_flag >> 19) & 0xff));
 }
 
 // TODO here: fade_out_volume
@@ -992,7 +994,7 @@ static void update_fmpar(int chan)
 
 static inline bool is_4op_chan(int chan) // 0..19
 {
-    char mask[20] = {
+    static char mask[20] = {
         (1<<0), (1<<0), (1<<1), (1<<1), (1<<2), (1<<2), 0, 0, 0,
         (1<<3), (1<<3), (1<<4), (1<<4), (1<<5), (1<<5), 0, 0, 0, 0, 0
     };
@@ -1030,7 +1032,7 @@ static inline bool is_4op_chan_lo(int chan)
     return _4op_lo[chan];
 }
 
-static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, bool restart_adsr/*, bool force_no_restart*/)
+static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro, bool restart_adsr)
 {
     uint16_t freq;
 
@@ -1066,10 +1068,10 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
         if (restart_macro) {
             // Check if no ZFF - force no restart
             bool force_no_restart = (
-                    ((ch->effect_table[0][chan].def == ef_Extended) &&
-                     (ch->effect_table[0][chan].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) ||
-                    ((ch->effect_table[1][chan].def == ef_Extended) &&
-                     (ch->effect_table[1][chan].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart))
+                    ((ch->event_table[chan].eff[0].def == ef_Extended) &&
+                     (ch->event_table[chan].eff[0].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart)) ||
+                    ((ch->event_table[chan].eff[1].def == ef_Extended) &&
+                     (ch->event_table[chan].eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart))
                 );
             if (!force_no_restart) {
                 init_macro_table(chan, note, ins, freq);
