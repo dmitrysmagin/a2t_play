@@ -4,7 +4,8 @@
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
     In order to get into Adplug:
-    - Refactor _4op_data_flag()
+    - Refactor _4op_data_flag(), set_ins_volume_4op()
+    - Merge set_volume and set_ins_volume?
     - Reduce the memory used for a tune
     - Rework all variables layout:
         * After that drop _table suffix for all included data
@@ -636,25 +637,27 @@ static uint32_t _4op_data_flag(uint8_t chan)
 
     _4op_mode = FALSE;
 
-    if (is_4op_chan(chan)) {
+    if (!is_4op_chan(chan))
+        return 0;
+
+    _4op_mode = TRUE;
+    if (is_4op_chan_hi(chan)) {
+        _4op_ch1 = chan;
+        _4op_ch2 = chan + 1;
+    } else {
+        _4op_ch1 = chan - 1;
+        _4op_ch2 = chan;
+    }
+    _4op_ins1 = ch->event_table[_4op_ch1].instr_def;
+    if (_4op_ins1 == 0) _4op_ins1 = ch->voice_table[_4op_ch1];
+
+    _4op_ins2 = ch->event_table[_4op_ch2].instr_def;
+    if (_4op_ins2 == 0) _4op_ins2 = ch->voice_table[_4op_ch2];
+
+    if (_4op_ins1 && _4op_ins2) {
         _4op_mode = TRUE;
-        if (is_4op_chan_hi(chan)) {
-            _4op_ch1 = chan;
-            _4op_ch2 = chan + 1;
-        } else {
-            _4op_ch1 = chan - 1;
-            _4op_ch2 = chan;
-        }
-        _4op_ins1 = ch->event_table[_4op_ch1].instr_def;
-        if (_4op_ins1 == 0) _4op_ins1 = ch->voice_table[_4op_ch1];
-
-        _4op_ins2 = ch->event_table[_4op_ch2].instr_def;
-        if (_4op_ins2 == 0) _4op_ins2 = ch->voice_table[_4op_ch2];
-
-        if (_4op_ins1 && _4op_ins2) {
-            _4op_mode = TRUE;
-            _4op_conn = (get_instr_data(_4op_ins1)->fm.connect << 1) | get_instr_data(_4op_ins2)->fm.connect;
-        }
+        _4op_conn = (get_instr_data(_4op_ins1)->fm.connect << 1) | get_instr_data(_4op_ins2)->fm.connect;
+    }
 /*
   {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
   { BIT  |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0 }
@@ -663,16 +666,13 @@ static uint32_t _4op_data_flag(uint8_t chan)
   {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
 */
 
-        return
-            (_4op_mode ? 1 : 0) |		// {1-bit: A0}
-            ((_4op_conn & 3) << 1) |	// {2-bit: B1-B0}
-            ((_4op_ch1 & 15) << 3) |	// {4-bit: C3-C0}
-            ((_4op_ch2 & 15) << 7) |	// {4-bit: D3-D0}
-            (_4op_ins1 << 11) |		    // {8-bit: E7-E0}
-            (_4op_ins2 << 19);			// {8-bit: F7-F0}
-    }
-
-    return 0;
+    return
+        (_4op_mode ? 1 : 0) |       // {1-bit: A0}
+        ((_4op_conn & 3) << 1) |    // {2-bit: B1-B0}
+        ((_4op_ch1 & 15) << 3) |    // {4-bit: C3-C0}
+        ((_4op_ch2 & 15) << 7) |    // {4-bit: D3-D0}
+        (_4op_ins1 << 11) |         // {8-bit: E7-E0}
+        (_4op_ins2 << 19);          // {8-bit: F7-F0}
 }
 
 static bool _4op_vol_valid_chan(int chan)
@@ -680,8 +680,8 @@ static bool _4op_vol_valid_chan(int chan)
     uint32_t _4op_flag = _4op_data_flag(chan);
     return ((_4op_flag & 1) &&
              ch->vol4op_lock[chan] &&
-            ((_4op_flag >> 11) & 0xff) &&
-            ((_4op_flag >> 19) & 0xff));
+            ((_4op_flag >> 11) & 0xff) && // _4op_ins1 != 0
+            ((_4op_flag >> 19) & 0xff));  // _4op_ins2 != 0
 }
 
 // TODO here: fade_out_volume
@@ -798,44 +798,55 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
     _4op_ch1 = (_4op_flag >> 3) & 15;
     _4op_ch2 = (_4op_flag >> 7) & 15;
 
-    if (_4op_vol_valid_chan(chan)) {
-        switch (_4op_conn) {
-            case 0: // FM/FM
-                if (volume == BYTE_NULL) {
-                    set_volume(BYTE_NULL, ch->fmpar_table[_4op_ch1].volC, _4op_ch1);
-                } else {
-                    set_volume(BYTE_NULL, volume, _4op_ch1);
-                }
-                break;
-            case 1: // FM/AM
-                if (volume == BYTE_NULL) {
-                    set_volume(BYTE_NULL, ch->fmpar_table[_4op_ch1].volC, _4op_ch1);
-                    set_volume(ch->fmpar_table[_4op_ch2].volM, BYTE_NULL, _4op_ch2);
-                } else {
-                    set_volume(BYTE_NULL, volume, _4op_ch1);
-                    set_volume(volume, BYTE_NULL, _4op_ch2);
-                }
-                break;
-            case 2: // AM/FM
-                if (volume == BYTE_NULL) {
-                    set_volume(BYTE_NULL, ch->fmpar_table[_4op_ch1].volC, _4op_ch1);
-                    set_volume(BYTE_NULL, ch->fmpar_table[_4op_ch2].volC, _4op_ch2);
-                } else {
-                    set_volume(BYTE_NULL, volume, _4op_ch1);
-                    set_volume(BYTE_NULL, volume, _4op_ch2);
-                }
-                break;
-            case 3:// AM/AM
-                if (volume == BYTE_NULL) {
-                    set_volume(ch->fmpar_table[_4op_ch1].volM, ch->fmpar_table[_4op_ch1].volC, _4op_ch1);
-                    set_volume(ch->fmpar_table[_4op_ch2].volM, BYTE_NULL, _4op_ch2);
-                } else {
-                    set_volume(volume, volume, _4op_ch1);
-                    set_volume(volume, BYTE_NULL, _4op_ch2);
-                }
-                break;
+    if (!_4op_vol_valid_chan(chan))
+        return;
+
+    printf("set_ins_volume_4op(%d)\n", volume);
+    uint8_t volM1 = BYTE_NULL;
+    uint8_t volC1 = BYTE_NULL;
+    uint8_t volM2 = BYTE_NULL;
+    uint8_t volC2 = BYTE_NULL;
+
+    switch (_4op_conn) {
+    case 0: // FM/FM
+        if (volume == BYTE_NULL) {
+            volC1 = ch->fmpar_table[_4op_ch1].volC;
+        } else {
+            volC1 = volume;
         }
+        break;
+    case 1: // FM/AM
+        if (volume == BYTE_NULL) {
+            volC1 = ch->fmpar_table[_4op_ch1].volC;
+            volM2 = ch->fmpar_table[_4op_ch2].volM;
+        } else {
+            volC1 = volume;
+            volM2 = volume;
+        }
+        break;
+    case 2: // AM/FM
+        if (volume == BYTE_NULL) {
+            volC1 = ch->fmpar_table[_4op_ch1].volC;
+            volC2 = ch->fmpar_table[_4op_ch2].volC;
+        } else {
+            volC1 = volume;
+            volC2 = volume;
+        }
+        break;
+    case 3:// AM/AM
+        if (volume == BYTE_NULL) {
+            volM1 = ch->fmpar_table[_4op_ch1].volM;
+            volC1 = ch->fmpar_table[_4op_ch1].volC;
+        } else {
+            volM1 = volume;
+            volC1 = volume;
+            volM2 = volume;
+        }
+        break;
     }
+
+    set_volume(volM1, volC1, _4op_ch1);
+    set_volume(volM2, volC2, _4op_ch2);
 }
 
 static void reset_ins_volume(int chan)
