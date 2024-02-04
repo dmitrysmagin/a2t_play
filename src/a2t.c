@@ -793,13 +793,13 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
     uint32_t _4op_flag;
     uint8_t _4op_conn, _4op_ch1, _4op_ch2;
 
+    if (!_4op_vol_valid_chan(chan))
+        return;
+
     _4op_flag = _4op_data_flag(chan);
     _4op_conn = (_4op_flag >> 1) & 3;
     _4op_ch1 = (_4op_flag >> 3) & 15;
     _4op_ch2 = (_4op_flag >> 7) & 15;
-
-    if (!_4op_vol_valid_chan(chan))
-        return;
 
     printf("set_ins_volume_4op(%d)\n", volume);
     uint8_t volM1 = BYTE_NULL;
@@ -807,41 +807,20 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
     uint8_t volM2 = BYTE_NULL;
     uint8_t volC2 = BYTE_NULL;
 
+    volC1 = volume == BYTE_NULL ? ch->fmpar_table[_4op_ch1].volC : volume;
+
     switch (_4op_conn) {
-    case 0: // FM/FM
-        if (volume == BYTE_NULL) {
-            volC1 = ch->fmpar_table[_4op_ch1].volC;
-        } else {
-            volC1 = volume;
-        }
+    case 0: // FM/FM ins1=FM, ins2=FM
         break;
-    case 1: // FM/AM
-        if (volume == BYTE_NULL) {
-            volC1 = ch->fmpar_table[_4op_ch1].volC;
-            volM2 = ch->fmpar_table[_4op_ch2].volM;
-        } else {
-            volC1 = volume;
-            volM2 = volume;
-        }
+    case 1: // FM/AM ins1=FM, ins2=AM
+        volM2 = volume == BYTE_NULL ? ch->fmpar_table[_4op_ch2].volM : volume;
         break;
-    case 2: // AM/FM
-        if (volume == BYTE_NULL) {
-            volC1 = ch->fmpar_table[_4op_ch1].volC;
-            volC2 = ch->fmpar_table[_4op_ch2].volC;
-        } else {
-            volC1 = volume;
-            volC2 = volume;
-        }
+    case 2: // AM/FM ins1=AM, ins2=FM
+        volC2 = volume == BYTE_NULL ? ch->fmpar_table[_4op_ch2].volC : volume;
         break;
-    case 3:// AM/AM
-        if (volume == BYTE_NULL) {
-            volM1 = ch->fmpar_table[_4op_ch1].volM;
-            volC1 = ch->fmpar_table[_4op_ch1].volC;
-        } else {
-            volM1 = volume;
-            volC1 = volume;
-            volM2 = volume;
-        }
+    case 3:// AM/AM ins1=AM, ins2=AM
+        volM1 = volume == BYTE_NULL ? ch->fmpar_table[_4op_ch1].volM : volume;
+        volM2 = volume;
         break;
     }
 
