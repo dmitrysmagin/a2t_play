@@ -4,7 +4,7 @@
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
     In order to get into Adplug:
-    - Refactor _4op_data_flag(), set_ins_volume_4op()
+    - Refactor set_ins_volume_4op()
     - Merge set_volume and set_ins_volume?
     - Reduce the memory used for a tune
     - Rework all variables layout:
@@ -452,6 +452,7 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 static void change_freq(int chan, uint16_t freq)
 {
     if (is_4op_chan(chan) && is_4op_chan_hi(chan)) {
+        ch->freq_table[chan + 1] = ch->freq_table[chan];
         chan++;
     }
 
@@ -628,60 +629,46 @@ static uint8_t scale_volume(uint8_t volume, uint8_t scale_factor)
     return 63 - ((63 - volume) * (63 - scale_factor) / 63);
 }
 
-static uint32_t _4op_data_flag(uint8_t chan)
-{
-    uint8_t _4op_conn = 0;
-    bool _4op_mode;
-    uint8_t _4op_ch1, _4op_ch2;
-    uint8_t _4op_ins1, _4op_ins2;
+typedef struct _4op_data {
+    uint32_t mode: 1, conn: 3, ch1: 4, ch2: 4, ins1: 8, ins2: 8;
+} t4OP_DATA;
 
-    _4op_mode = FALSE;
+// former _4op_data_flag()
+static t4OP_DATA get_4op_data(uint8_t chan)
+{
+    t4OP_DATA d = { FALSE, 0, 0, 0, 0, 0 };
 
     if (!is_4op_chan(chan))
-        return 0;
+        return d;
 
-    _4op_mode = TRUE;
+    d.mode = TRUE;
+
     if (is_4op_chan_hi(chan)) {
-        _4op_ch1 = chan;
-        _4op_ch2 = chan + 1;
+        d.ch1 = chan;
+        d.ch2 = chan + 1;
     } else {
-        _4op_ch1 = chan - 1;
-        _4op_ch2 = chan;
+        d.ch1 = chan - 1;
+        d.ch2 = chan;
     }
-    _4op_ins1 = ch->event_table[_4op_ch1].instr_def;
-    if (_4op_ins1 == 0) _4op_ins1 = ch->voice_table[_4op_ch1];
 
-    _4op_ins2 = ch->event_table[_4op_ch2].instr_def;
-    if (_4op_ins2 == 0) _4op_ins2 = ch->voice_table[_4op_ch2];
+    d.ins1 = ch->event_table[d.ch1].instr_def;
+    if (d.ins1 == 0) d.ins1 = ch->voice_table[d.ch1];
 
-    if (_4op_ins1 && _4op_ins2) {
-        _4op_mode = TRUE;
-        _4op_conn = (get_instr_data(_4op_ins1)->fm.connect << 1) | get_instr_data(_4op_ins2)->fm.connect;
+    d.ins2 = ch->event_table[d.ch2].instr_def;
+    if (d.ins2 == 0) d.ins2 = ch->voice_table[d.ch2];
+
+    if (d.ins1 && d.ins2) {
+        d.conn = (get_instr_data(d.ins1)->fm.connect << 1) | get_instr_data(d.ins2)->fm.connect;
     }
-/*
-  {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
-  { BIT  |31|30|29|28|27|26|25|24|23|22|21|20|19|18|17|16|15|14|13|12|11|10| 9| 8| 7| 6| 5| 4| 3| 2| 1| 0 }
-  {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
-  { DATA |..|..|..|..|..|F7|F6|F5|F4|F3|F2|F1|F0|E7|E6|E5|E4|E3|E2|E1|E0|D3|D2|D1|D0|C3|C2|C1|C0|B1|B0|A0 }
-  {------+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+---}
-*/
 
-    return
-        (_4op_mode ? 1 : 0) |       // {1-bit: A0}
-        ((_4op_conn & 3) << 1) |    // {2-bit: B1-B0}
-        ((_4op_ch1 & 15) << 3) |    // {4-bit: C3-C0}
-        ((_4op_ch2 & 15) << 7) |    // {4-bit: D3-D0}
-        (_4op_ins1 << 11) |         // {8-bit: E7-E0}
-        (_4op_ins2 << 19);          // {8-bit: F7-F0}
+    return d;
 }
 
 static bool _4op_vol_valid_chan(int chan)
 {
-    uint32_t _4op_flag = _4op_data_flag(chan);
-    return ((_4op_flag & 1) &&
-             ch->vol4op_lock[chan] &&
-            ((_4op_flag >> 11) & 0xff) && // _4op_ins1 != 0
-            ((_4op_flag >> 19) & 0xff));  // _4op_ins2 != 0
+    t4OP_DATA d = get_4op_data(chan);
+
+    return d.mode && ch->vol4op_lock[chan] && d.ins1 && d.ins2;
 }
 
 // TODO here: fade_out_volume
@@ -790,42 +777,35 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 
 static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
 {
-    uint32_t _4op_flag;
-    uint8_t _4op_conn, _4op_ch1, _4op_ch2;
+    t4OP_DATA d = get_4op_data(chan);
 
     if (!_4op_vol_valid_chan(chan))
         return;
 
-    _4op_flag = _4op_data_flag(chan);
-    _4op_conn = (_4op_flag >> 1) & 3;
-    _4op_ch1 = (_4op_flag >> 3) & 15;
-    _4op_ch2 = (_4op_flag >> 7) & 15;
-
-    printf("set_ins_volume_4op(%d)\n", volume);
     uint8_t volM1 = BYTE_NULL;
     uint8_t volC1 = BYTE_NULL;
     uint8_t volM2 = BYTE_NULL;
     uint8_t volC2 = BYTE_NULL;
 
-    volC1 = volume == BYTE_NULL ? ch->fmpar_table[_4op_ch1].volC : volume;
+    volC1 = volume == BYTE_NULL ? ch->fmpar_table[d.ch1].volC : volume;
 
-    switch (_4op_conn) {
+    switch (d.conn) {
     case 0: // FM/FM ins1=FM, ins2=FM
         break;
     case 1: // FM/AM ins1=FM, ins2=AM
-        volM2 = volume == BYTE_NULL ? ch->fmpar_table[_4op_ch2].volM : volume;
+        volM2 = volume == BYTE_NULL ? ch->fmpar_table[d.ch2].volM : volume;
         break;
     case 2: // AM/FM ins1=AM, ins2=FM
-        volC2 = volume == BYTE_NULL ? ch->fmpar_table[_4op_ch2].volC : volume;
+        volC2 = volume == BYTE_NULL ? ch->fmpar_table[d.ch2].volC : volume;
         break;
     case 3:// AM/AM ins1=AM, ins2=AM
-        volM1 = volume == BYTE_NULL ? ch->fmpar_table[_4op_ch1].volM : volume;
-        volM2 = volume;
+        volM1 = volume == BYTE_NULL ? ch->fmpar_table[d.ch1].volM : volume;
+        volM2 = volume == BYTE_NULL ? ch->fmpar_table[d.ch2].volM : volume;
         break;
     }
 
-    set_volume(volM1, volC1, _4op_ch1);
-    set_volume(volM2, volC2, _4op_ch2);
+    set_volume(volM1, volC1, d.ch1);
+    set_volume(volM2, volC2, d.ch2);
 }
 
 static void reset_ins_volume(int chan)
@@ -1054,6 +1034,11 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
         if (is_4op_chan(chan) && is_4op_chan_lo(chan)) {
             ch->event_table[chan - 1].note = note;
         }
+
+        // Do we need that?
+        /*if (is_4op_chan(chan) && is_4op_chan_hi(chan)) {
+            ch->event_table[chan + 1].note = note;
+        }*/
 
         if (restart_macro) {
             // Check if no ZFF - force no restart
@@ -2061,19 +2046,8 @@ static void slide_modulator_volume_up(uint8_t chan, uint8_t slide, uint8_t limit
 
 static void slide_volume_up(int chan, uint8_t slide)
 {
-    tINSTR_DATA *i = get_instr_data_by_ch(chan);
     uint8_t limit1 = 0, limit2 = 0;
-    uint32_t _4op_flag;
-    uint8_t _4op_conn;
-    uint8_t _4op_ch1, _4op_ch2;
-    uint8_t _4op_ins1, _4op_ins2;
-
-    _4op_flag = _4op_data_flag(chan);
-    _4op_conn = (_4op_flag >> 1) & 3;
-    _4op_ch1 = (_4op_flag >> 3) & 15;
-    _4op_ch2 = (_4op_flag > 7) & 15;
-    _4op_ins1 = (uint8_t)(_4op_flag >> 11) & 0xff;
-    _4op_ins2 = (uint8_t)(_4op_flag >> 19) & 0xff;
+    t4OP_DATA d = get_4op_data(chan);
 
     if (!_4op_vol_valid_chan(chan)) {
         tINSTR_DATA *ins = get_instr_data(ch->event_table[chan].instr_def);
@@ -2085,39 +2059,42 @@ static void slide_volume_up(int chan, uint8_t slide)
     switch (ch->volslide_type[chan]) {
     case 0:
         if (!_4op_vol_valid_chan(chan)) {
+            tINSTR_DATA *i = get_instr_data_by_ch(chan);
+
             slide_carrier_volume_up(chan, slide, limit1);
 
             if (i->fm.connect || (percussion_mode && (chan >= 16)))  // in [17..20]
                slide_modulator_volume_up(chan, slide, limit2);
         } else {
-            tINSTR_DATA *ins1 = get_instr_data(_4op_ins1);
-            tINSTR_DATA *ins2 = get_instr_data(_4op_ins2);
+            // Can use get_instr_data_by_ch()
+            tINSTR_DATA *ins1 = get_instr_data(d.ins1);
+            tINSTR_DATA *ins2 = get_instr_data(d.ins2);
 
-            uint8_t limit1_volC = ch->peak_lock[_4op_ch1] ? ins1->fm.volC : 0;
-            uint8_t limit1_volM = ch->peak_lock[_4op_ch1] ? ins1->fm.volM : 0;
-            uint8_t limit2_volC = ch->peak_lock[_4op_ch2] ? ins2->fm.volC : 0;
-            uint8_t limit2_volM = ch->peak_lock[_4op_ch2] ? ins2->fm.volM : 0;
+            uint8_t limit1_volC = ch->peak_lock[d.ch1] ? ins1->fm.volC : 0;
+            uint8_t limit1_volM = ch->peak_lock[d.ch1] ? ins1->fm.volM : 0;
+            uint8_t limit2_volC = ch->peak_lock[d.ch2] ? ins2->fm.volC : 0;
+            uint8_t limit2_volM = ch->peak_lock[d.ch2] ? ins2->fm.volM : 0;
 
-            switch (_4op_conn) {
+            switch (d.conn) {
             // FM/FM
             case 0:
-                slide_carrier_volume_up(_4op_ch1, slide, limit1_volC);
+                slide_carrier_volume_up(d.ch1, slide, limit1_volC);
                 break;
             // FM/AM
             case 1:
-                slide_carrier_volume_up(_4op_ch1, slide, limit1_volC);
-                slide_modulator_volume_up(_4op_ch2, slide, limit2_volM);
+                slide_carrier_volume_up(d.ch1, slide, limit1_volC);
+                slide_modulator_volume_up(d.ch2, slide, limit2_volM);
                 break;
             // AM/FM
             case 2:
-                slide_carrier_volume_up(_4op_ch1, slide, limit1_volC);
-                slide_carrier_volume_up(_4op_ch2, slide, limit2_volC);
+                slide_carrier_volume_up(d.ch1, slide, limit1_volC);
+                slide_carrier_volume_up(d.ch2, slide, limit2_volC);
                 break;
             // AM/AM
             case 3:
-                slide_carrier_volume_up(_4op_ch1, slide, limit1_volC);
-                slide_modulator_volume_up(_4op_ch1, slide, limit1_volM);
-                slide_modulator_volume_up(_4op_ch2, slide, limit2_volM);
+                slide_carrier_volume_up(d.ch1, slide, limit1_volC);
+                slide_modulator_volume_up(d.ch1, slide, limit1_volM);
+                slide_modulator_volume_up(d.ch2, slide, limit2_volM);
                 break;
            }
         }
@@ -2156,45 +2133,39 @@ static void slide_modulator_volume_down(uint8_t chan, uint8_t slide)
 
 static void slide_volume_down(int chan, uint8_t slide)
 {
-    tINSTR_DATA *i = get_instr_data_by_ch(chan);
-    uint32_t _4op_flag;
-    uint8_t _4op_conn;
-    uint8_t _4op_ch1, _4op_ch2;
-
-    _4op_flag = _4op_data_flag(chan);
-    _4op_conn = (_4op_flag >> 1) & 3;
-    _4op_ch1 = (_4op_flag >> 3) & 15;
-    _4op_ch2 = (_4op_flag >> 7) & 15;
+    t4OP_DATA d = get_4op_data(chan);
 
     switch (ch->volslide_type[chan]) {
     case 0:
         if (!_4op_vol_valid_chan(chan)) {
+            tINSTR_DATA *i = get_instr_data_by_ch(chan);
+
             slide_carrier_volume_down(chan, slide);
 
             if (i->fm.connect || (percussion_mode && (chan >= 16))) { //in [17..20]
                slide_modulator_volume_down(chan, slide);
             }
         } else {
-            switch (_4op_conn) {
+            switch (d.conn) {
             // FM/FM
             case 0:
-                slide_carrier_volume_down(_4op_ch1, slide);
+                slide_carrier_volume_down(d.ch1, slide);
                 break;
             // FM/AM
             case 1:
-                slide_carrier_volume_down(_4op_ch1, slide);
-                slide_modulator_volume_down(_4op_ch2, slide);
+                slide_carrier_volume_down(d.ch1, slide);
+                slide_modulator_volume_down(d.ch2, slide);
                 break;
             // AM/FM
             case 2:
-                slide_carrier_volume_down(_4op_ch1, slide);
-                slide_carrier_volume_down(_4op_ch2, slide);
+                slide_carrier_volume_down(d.ch1, slide);
+                slide_carrier_volume_down(d.ch2, slide);
                 break;
             // AM/AM
             case 3:
-                slide_carrier_volume_down(_4op_ch1, slide);
-                slide_modulator_volume_down(_4op_ch1, slide);
-                slide_modulator_volume_down(_4op_ch2, slide);
+                slide_carrier_volume_down(d.ch1, slide);
+                slide_modulator_volume_down(d.ch1, slide);
+                slide_modulator_volume_down(d.ch2, slide);
                 break;
             }
         }

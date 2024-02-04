@@ -11,8 +11,7 @@ os_sblas.a2m - wrong 4op instrument when 1st channel has only ins, but second ha
 tunes/madbrain/sinner.a2m - void pattern in the order is beyond max patters
 
 tunes/mlf/pink.a2t - x00 after non-compatible command
-
-tunes/mlf/fm-troni.a2m - version 14
+tunes/mlf/fm-troni.a2m - version 14, set_ins_volume_4op, uses FFF at the end
 tunes/mlf/ishtar.a2m - version 13
 
 mario.a2m - version 1
