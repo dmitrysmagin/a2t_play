@@ -13,7 +13,7 @@
 #include <sys/types.h>
 #include <string.h>
 
-#include "lzh.h"
+#include "unlzh.h"
 
 typedef unsigned short ush;
 typedef unsigned char uch;

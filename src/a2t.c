@@ -21,7 +21,7 @@
 
 #include "depack.h"
 #include "sixpack.h"
-#include "lzh.h"
+#include "unlzh.h"
 #include "opl3.h"
 #include "a2t.h"
 
