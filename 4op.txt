@@ -1,7 +1,7 @@
 mmori.a2m - ef_GlobalFSlideUp/ef_GlobalFSlideDown
-badapple.a2m - macro-vib, some missing notes (volume?)
+badapple.a2m - macro-vib
 crisis.a2m - 4op, macro-fm, macro-arp
-fank5.a2m - 4op, macro-fm, macro-vib
+fank5.a2m - version 11, 4op, macro-fm, macro-vib
 
 fm63b_rv.a2m - 4op, macro-fm, swap-vibrato command (@00)
 fm63b_rv.a2t - instrument #0B has fm macro which is not present in fm63b_rv.a2m
@@ -12,9 +12,21 @@ tunes/madbrain/sinner.a2m - void pattern in the order is beyond max patters
 
 tunes/mlf/pink.a2t - x00 after non-compatible command
 tunes/mlf/fm-troni.a2m - version 14, set_ins_volume_4op, uses FFF at the end
-tunes/mlf/ishtar.a2m - version 13
+tunes/mlf/ishtar.a2m - version 13 - test more, in adplug gives different results on testing
 
 mario.a2m - version 1
 adven.a2m - version 5
 OLD_001.A2M - version 5
 newtune.a2m - version 5
+
+depack.c
+https://ibsensoftware.com/products_aPLib.html
+https://ibsensoftware.com/files/aPLib-1.1.1.zip
+
+sixpack.c
+https://www.sac.sk/download/pack/ddjcompr.zip
+https://github.com/70MM13/Step5Archive/blob/main/resources/sixpack/sixpack.c
+
+unlzh.c
+http://fileformats.archiveteam.org/wiki/Ar_(Haruhiko_Okumura)
+http://cd.textfiles.com/sourcecode/msdos/arc_lbr/ar002.zip

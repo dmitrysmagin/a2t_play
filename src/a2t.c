@@ -4,9 +4,9 @@
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
     In order to get into Adplug:
-    - Refactor set_ins_volume_4op()
+    - Use stdbool.h
+    - Refactor update_song_position(), calc_following_order() and calc_order_jump()
     - Merge set_volume and set_ins_volume?
-    - Reduce the memory used for a tune
     - Rework all variables layout:
         * After that drop _table suffix for all included data
 
@@ -96,6 +96,17 @@ tVIBRATO_TABLE *vibrato_table[255] = { 0 };
 tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
 tEVENTS_INFO _eventsinfo = { 0 }, *eventsinfo = &_eventsinfo;
 tCHDATA _ch, *ch = &_ch;
+
+// Timer
+int ticks, tickD, tickXF;
+int ticklooper, macro_ticklooper;
+
+// Loader
+int ffver = 1;
+int len[21];
+bool adsr_carrier[9]; // For importing from a2m v1234
+
+bool songend = FALSE;
 
 // Helpers for instruments ========================================================================
 
@@ -355,8 +366,6 @@ static inline uint16_t regoffs_c(int chan)
 
     return _ch_c[!!percussion_mode][chan];
 }
-
-int ticks, tickD, tickXF;
 
 #define FreqStart   0x156
 #define FreqEnd     0x2ae
@@ -2949,8 +2958,6 @@ static void macro_poll_proc()
     }
 }
 
-static int ticklooper, macro_ticklooper;
-
 static void newtimer()
 {
     if ((ticklooper == 0) && (irq_mode))
@@ -2991,34 +2998,6 @@ static void done_irq()
 static void init_buffers()
 {
     memset(ch, 0, sizeof(*ch));
-
-    //memset(fmpar_table, 0, sizeof(fmpar_table));
-    //memset(pan_lock, panlock, sizeof(pan_lock));
-    //memset(modulator_vol, 0, sizeof(modulator_vol));
-    //memset(carrier_vol, 0, sizeof(carrier_vol));
-    //memset(event_table, 0, sizeof(event_table));
-    //memset(freq_table, 0, sizeof(freq_table));
-    //memset(zero_fq_table, 0, sizeof(zero_fq_table));
-    //memset(effect_table, 0, sizeof(effect_table));
-    //memset(fslide_table, 0, sizeof(fslide_table));
-    //memset(glfsld_table, 0, sizeof(glfsld_table));
-    //memset(porta_table, 0, sizeof(porta_table));
-    //memset(portaFK_table, FALSE, sizeof(portaFK_table));
-    //memset(arpgg_table, 0, sizeof(arpgg_table));
-    //memset(vibr_table, 0, sizeof(vibr_table));
-    //memset(trem_table, 0, sizeof(trem_table));
-    //memset(retrig_table, 0, sizeof(retrig_table));
-    //memset(tremor_table, 0, sizeof(tremor_table));
-    //memset(last_effect, 0, sizeof(last_effect));
-    //memset(voice_table, 0, sizeof(voice_table));
-    //memset(notedel_table, BYTE_NULL, sizeof(notedel_table));
-    //memset(notecut_table, BYTE_NULL, sizeof(notecut_table));
-    //memset(ftune_table, 0, sizeof(ftune_table));
-    //memset(loopbck_table, BYTE_NULL, sizeof(loopbck_table));
-    //memset(loop_table, BYTE_NULL, sizeof(loop_table));
-    //memset(reset_chan, FALSE, sizeof(reset_chan));
-    //memset(keyoff_loop, FALSE, sizeof(keyoff_loop));
-    //memset(macro_table, 0, sizeof(macro_table));
 
     if (!lockvol) {
         memset(ch->volume_lock, 0, sizeof(ch->volume_lock));
@@ -3190,9 +3169,6 @@ void a2t_play(char *tune) // start_playing()
 }
 
 /* LOADER FOR A2M/A2T */
-
-int ffver = 1;
-int len[21];
 
 char *a2t_load(char *name)
 {
@@ -3448,9 +3424,6 @@ static int a2t_read_order(char *src)
 
     return len[i];
 }
-
-// For importing from a2m v1234
-bool adsr_carrier[9];
 
 void convert_v1234_event(tADTRACK2_EVENT_V1234 *ev, int chan)
 {
@@ -4027,7 +4000,6 @@ void a2t_shut()
 // 'len' is the buffer length in bytes, not samples!
 void a2t_update(unsigned char *stream, int len)
 {
-    static int ticklooper, macro_ticklooper;
     static int cnt = 0;
 
     if (play_status != isPlaying) {
@@ -4040,8 +4012,8 @@ void a2t_update(unsigned char *stream, int len)
             cnt = 0;
             if (ticklooper == 0) {
                 poll_proc();
-                if (irq_freq != tempo * macro_speedup) {
-                    irq_freq = (tempo < 18 ? 18 : tempo) * macro_speedup;
+                if (irq_freq != tempo * _macro_speedup()) {
+                    irq_freq = (tempo < 18 ? 18 : tempo) * _macro_speedup();
                     framesmpl = freqhz / irq_freq;
                 }
             }
@@ -4054,7 +4026,7 @@ void a2t_update(unsigned char *stream, int len)
                 ticklooper = 0;
 
             macro_ticklooper++;
-            if (macro_ticklooper >= irq_freq / (tempo * macro_speedup))
+            if (macro_ticklooper >= irq_freq / (tempo * _macro_speedup()))
                 macro_ticklooper = 0;
         }
 
