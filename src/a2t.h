@@ -2,6 +2,7 @@
 #define _A2T_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 void a2t_init(int);
 void a2t_shut();
@@ -23,9 +24,11 @@ extern uint8_t current_line;
 typedef signed char bool;
 #endif
 
-#ifndef FALSE
-#define FALSE 0
-#define TRUE !FALSE
+#ifndef false
+#define false 0
+#endif
+#ifndef true
+#define true 1
 #endif
 
 // Macros for extracting little-endian integers from filedata
@@ -470,7 +473,7 @@ typedef struct {
     uint8_t flag_4op;              // A2M_SONGDATA_V10
     uint8_t lock_flags[20];        // A2M_SONGDATA_V10
     char pattern_names[128][43];   // A2M_SONGDATA_V11
-    int8_t dis_fmreg_col[255][28]; // A2M_SONGDATA_V11
+    bool dis_fmreg_col[255][28]; // A2M_SONGDATA_V11
     tINS_4OP_FLAGS ins_4op_flags;  // A2M_SONGDATA_V12_13
     tRESERVED reserved_data;       // A2M_SONGDATA_V12_13
     tBPM_DATA bpm_data;            // A2M_SONGDATA_V14

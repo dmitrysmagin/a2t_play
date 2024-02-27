@@ -4,7 +4,6 @@
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
     In order to get into Adplug:
-    - Use stdbool.h
     - Refactor update_song_position(), calc_following_order() and calc_order_jump()
     - Merge set_volume and set_ins_volume?
     - Rework all variables layout:
@@ -14,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <sys/types.h>
 #include <string.h>
 #include <assert.h>
@@ -35,15 +35,15 @@ uint8_t tempo = 50;
 uint8_t speed = 6;
 
 uint16_t macro_speedup = 1;
-bool irq_mode = FALSE;
+bool irq_mode = false;
 
 int16_t IRQ_freq = 50;
 int IRQ_freq_shift = 0;
-bool irq_initialized = FALSE;
-bool timer_fix = TRUE;
+bool irq_initialized = false;
+bool timer_fix = true;
 
-bool pattern_break = FALSE;
-bool pattern_delay = FALSE;
+bool pattern_break = false;
+bool pattern_delay = false;
 uint8_t next_line = 0;
 
 int playback_speed_shift = 0;
@@ -86,7 +86,7 @@ uint8_t tremolo_depth, vibrato_depth;
 bool volume_scaling, percussion_mode;
 uint8_t last_order;
 
-bool editor_mode = FALSE; // TRUE to allocate max resources
+bool editor_mode = false; // true to allocate max resources
 
 // Used by the player
 
@@ -106,7 +106,7 @@ int ffver = 1;
 int len[21];
 bool adsr_carrier[9]; // For importing from a2m v1234
 
-bool songend = FALSE;
+bool songend = false;
 
 // Helpers for instruments ========================================================================
 
@@ -506,10 +506,10 @@ static bool is_data_empty(void *data, unsigned int size)
 {
     while (size--) {
         if (*(char *)data++)
-            return FALSE;
+            return false;
     }
 
-    return TRUE;
+    return true;
 }
 
 static inline uint16_t max(uint16_t value, uint16_t maximum)
@@ -519,7 +519,7 @@ static inline uint16_t max(uint16_t value, uint16_t maximum)
 
 static void change_frequency(int chan, uint16_t freq)
 {
-    ch->macro_table[chan].vib_paused = TRUE;
+    ch->macro_table[chan].vib_paused = true;
     change_freq(chan, freq);
 
     if (is_4op_chan(chan)) {
@@ -528,13 +528,13 @@ static void change_frequency(int chan, uint16_t freq)
         ch->macro_table[chan + i].vib_count = 1;
         ch->macro_table[chan + i].vib_pos = 0;
         ch->macro_table[chan + i].vib_freq = freq;
-        ch->macro_table[chan + i].vib_paused = FALSE;
+        ch->macro_table[chan + i].vib_paused = false;
     }
 
     ch->macro_table[chan].vib_count = 1;
     ch->macro_table[chan].vib_pos = 0;
     ch->macro_table[chan].vib_freq = freq;
-    ch->macro_table[chan].vib_paused = FALSE;
+    ch->macro_table[chan].vib_paused = false;
 }
 
 static inline uint16_t _macro_speedup()
@@ -629,7 +629,7 @@ static void release_sustaining_sound(int chan)
 
     key_off(chan);
     ch->event_table[chan].instr_def = 0;
-    ch->reset_chan[chan] = TRUE;
+    ch->reset_chan[chan] = true;
 }
 
 // inverted volume here
@@ -645,12 +645,12 @@ typedef struct _4op_data {
 // former _4op_data_flag()
 static t4OP_DATA get_4op_data(uint8_t chan)
 {
-    t4OP_DATA d = { FALSE, 0, 0, 0, 0, 0 };
+    t4OP_DATA d = { false, 0, 0, 0, 0, 0 };
 
     if (!is_4op_chan(chan))
         return d;
 
-    d.mode = TRUE;
+    d.mode = true;
 
     if (is_4op_chan_hi(chan)) {
         d.ch1 = chan;
@@ -869,7 +869,7 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
     uint8_t vib_delay = vib ? vib->delay : 0;
 
     ch->macro_table[chan].vib_count = 1;
-    ch->macro_table[chan].vib_paused = FALSE;
+    ch->macro_table[chan].vib_paused = false;
     ch->macro_table[chan].vib_pos = 0;
     ch->macro_table[chan].vib_table = vib_table;
     ch->macro_table[chan].vib_freq = freq;
@@ -918,12 +918,12 @@ static void set_ins_data(uint8_t ins, int chan)
 
         // Stop instr macro if resetting voice
         if (!ch->reset_chan[chan])
-            ch->keyoff_loop[chan] = FALSE;
+            ch->keyoff_loop[chan] = false;
 
         if (ch->reset_chan[chan]) {
             ch->voice_table[chan] = ins;
             reset_ins_volume(chan);
-            ch->reset_chan[chan] = FALSE;
+            ch->reset_chan[chan] = false;
         }
 
         uint8_t note = ch->event_table[chan].note & 0x7f;
@@ -988,14 +988,14 @@ static inline bool is_4op_chan(int chan) // 0..19
     6  - %unused%
     7  - %unused%
 */
-    return (chan > 14 ? FALSE : !!(songinfo->flag_4op & mask[chan]));
+    return (chan > 14 ? false : !!(songinfo->flag_4op & mask[chan]));
 }
 
 static inline bool is_4op_chan_hi(int chan)
 {
     static bool _4op_hi[20] = {
-        TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE,					// 0, 2, 4
-        TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE	// 9, 10, 13
+        true, false, true, false, true, false, false, false, false,					// 0, 2, 4
+        true, false, true, false, true, false, false, false, false, false, false	// 9, 10, 13
     };
 
     return _4op_hi[chan];
@@ -1004,8 +1004,8 @@ static inline bool is_4op_chan_hi(int chan)
 static inline bool is_4op_chan_lo(int chan)
 {
     static bool _4op_lo[20] = {
-        FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE,					// 1, 3, 5
-        FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE	// 10, 12, 14
+        false, true, false, true, false, true, false, false, false,					// 1, 3, 5
+        false, true, false, true, false, true, false, false, false, false, false	// 10, 12, 14
     };
 
     return _4op_lo[chan];
@@ -1073,10 +1073,10 @@ static bool no_loop(uint8_t current_chan, uint8_t current_line)
     for (int chan = 0; chan < current_chan; chan++) {
         if ((ch->loop_table[chan][current_line] != 0) &&
             (ch->loop_table[chan][current_line] != BYTE_NULL))
-            return FALSE;
+            return false;
     }
 
-    return TRUE;
+    return true;
 }
 
 static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan); // forward
@@ -1325,7 +1325,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
         if ((event->eff[slot ^ 1].def == ef_Extended) &&
             (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
-            ch->vibr_table[slot][chan].fine = TRUE;
+            ch->vibr_table[slot][chan].fine = true;
         }
 
         ch->vibr_table[slot][chan].speed = val / 16;
@@ -1338,7 +1338,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
         if ((event->eff[slot ^ 1].def == ef_Extended) &&
             (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
-            ch->trem_table[slot][chan].fine = TRUE;
+            ch->trem_table[slot][chan].fine = true;
         }
 
         ch->trem_table[slot][chan].speed = val / 16;
@@ -1351,7 +1351,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
         if ((event->eff[slot ^ 1].def == ef_Extended) &&
             (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS))
-            ch->vibr_table[slot][chan].fine = TRUE;
+            ch->vibr_table[slot][chan].fine = true;
         break;
 
     case ef_SetCarrierVol:
@@ -1386,15 +1386,15 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 
     case ef_PositionJump:
         if (no_loop(chan, current_line)) {
-            pattern_break = TRUE;
+            pattern_break = true;
             next_line = pattern_break_flag + chan;
         }
         break;
 
     case ef_PatternBreak:
         if (no_loop(chan, current_line)) {
-            pattern_break = TRUE;
-            // seek_pattern_break = TRUE; // TODO
+            pattern_break = true;
+            // seek_pattern_break = true; // TODO
             next_line = max(val, songinfo->patt_len - 1);
         }
         break;
@@ -1547,7 +1547,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                         ch->loop_table[chan][current_line] = val % 16;
 
                     if (ch->loop_table[chan][current_line] != 0) {
-                        pattern_break = TRUE;
+                        pattern_break = true;
                         next_line = pattern_loop_flag + chan;
                     } else {
                         if (val / 16 == ef_ex_PatternLoopRec)
@@ -1558,28 +1558,28 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             break;
         case ef_ex_ExtendedCmd:
             switch (val & 0x0f) {
-            case ef_ex_cmd_MKOffLoopDi: ch->keyoff_loop[chan] = FALSE;		break;
-            case ef_ex_cmd_MKOffLoopEn: ch->keyoff_loop[chan] = TRUE;		break;
-            case ef_ex_cmd_TPortaFKdis: ch->portaFK_table[chan] = FALSE;	break;
-            case ef_ex_cmd_TPortaFKenb: ch->portaFK_table[chan] = TRUE;		break;
+            case ef_ex_cmd_MKOffLoopDi: ch->keyoff_loop[chan] = false;		break;
+            case ef_ex_cmd_MKOffLoopEn: ch->keyoff_loop[chan] = true;		break;
+            case ef_ex_cmd_TPortaFKdis: ch->portaFK_table[chan] = false;	break;
+            case ef_ex_cmd_TPortaFKenb: ch->portaFK_table[chan] = true;		break;
             case ef_ex_cmd_RestartEnv:
                 key_on(chan);
                 change_freq(chan, ch->freq_table[chan]);
                 break;
             case ef_ex_cmd_4opVlockOff:
                 if (is_4op_chan(chan)) {
-                    ch->vol4op_lock[chan] = FALSE;
+                    ch->vol4op_lock[chan] = false;
                     int i = is_4op_chan_hi(chan) ? 1 : -1;
 
-                    ch->vol4op_lock[chan + i] = FALSE;
+                    ch->vol4op_lock[chan + i] = false;
                 }
                 break;
             case ef_ex_cmd_4opVlockOn:
                 if (is_4op_chan(chan)) {
-                    ch->vol4op_lock[chan] = TRUE;
+                    ch->vol4op_lock[chan] = true;
                     int i = is_4op_chan_hi(chan) ? 1 : -1;
 
-                    ch->vol4op_lock[chan + i] = TRUE;
+                    ch->vol4op_lock[chan + i] = true;
                 }
                 break;
             }
@@ -1588,13 +1588,13 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             switch (val % 16) {
             case ef_ex_cmd2_RSS:        release_sustaining_sound(chan); break;
             case ef_ex_cmd2_ResetVol:   reset_ins_volume(chan); break;
-            case ef_ex_cmd2_LockVol:    ch->volume_lock  [chan] = TRUE; break;
-            case ef_ex_cmd2_UnlockVol:  ch->volume_lock  [chan] = FALSE; break;
-            case ef_ex_cmd2_LockVP:     ch->peak_lock    [chan] = TRUE; break;
-            case ef_ex_cmd2_UnlockVP:   ch->peak_lock    [chan] = FALSE; break;
+            case ef_ex_cmd2_LockVol:    ch->volume_lock  [chan] = true; break;
+            case ef_ex_cmd2_UnlockVol:  ch->volume_lock  [chan] = false; break;
+            case ef_ex_cmd2_LockVP:     ch->peak_lock    [chan] = true; break;
+            case ef_ex_cmd2_UnlockVP:   ch->peak_lock    [chan] = false; break;
             case ef_ex_cmd2_VSlide_def: ch->volslide_type[chan] = 0; break;
-            case ef_ex_cmd2_LockPan:    ch->pan_lock     [chan] = TRUE; break;
-            case ef_ex_cmd2_UnlockPan:  ch->pan_lock     [chan] = FALSE; break;
+            case ef_ex_cmd2_LockPan:    ch->pan_lock     [chan] = true; break;
+            case ef_ex_cmd2_UnlockPan:  ch->pan_lock     [chan] = false; break;
             case ef_ex_cmd2_VibrOff:    change_frequency(chan, ch->freq_table[chan]); break;
             case ef_ex_cmd2_TremOff:
                 if (is_4op_chan(chan)) {
@@ -1630,12 +1630,12 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_Extended2:
         switch (val / 16) {
         case ef_ex2_PatDelayFrame:
-            pattern_delay = TRUE;
+            pattern_delay = true;
             tickD = val % 16;
             break;
 
         case ef_ex2_PatDelayRow:
-            pattern_delay = TRUE;
+            pattern_delay = true;
             tickD = speed * (val % 16);
             break;
 
@@ -1802,14 +1802,14 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
     }
 
     if (!tporta_flag) {
-        output_note(event->note, ch->voice_table[chan], chan, TRUE, no_swap_and_restart(event));
+        output_note(event->note, ch->voice_table[chan], chan, true, no_swap_and_restart(event));
         return;
     }
 
     // if previous note was off'ed or restart_adsr enabled for channel
     // and we are doing portamento to a new note
     if (ch->event_table[chan].note & keyoff_flag || ch->portaFK_table[chan]) {
-        output_note(ch->event_table[chan].note & ~keyoff_flag, ch->voice_table[chan], chan, FALSE, TRUE);
+        output_note(ch->event_table[chan].note & ~keyoff_flag, ch->voice_table[chan], chan, false, true);
     } else {
         ch->event_table[chan].note = event->note;
     }
@@ -2385,7 +2385,7 @@ static void update_effects_slot(int slot, int chan)
     case ef_RetrigNote:
         if (ch->retrig_table[slot][chan] >= val) {
             ch->retrig_table[slot][chan] = 0;
-            output_note(ch->event_table[chan].note, ch->event_table[chan].instr_def, chan, TRUE, TRUE);
+            output_note(ch->event_table[chan].note, ch->event_table[chan].instr_def, chan, true, true);
         } else {
             ch->retrig_table[slot][chan]++;
         }
@@ -2423,7 +2423,7 @@ static void update_effects_slot(int slot, int chan)
             }
 
             ch->retrig_table[slot][chan] = 0;
-            output_note(ch->event_table[chan].note, ch->event_table[chan].instr_def, chan, TRUE, TRUE);
+            output_note(ch->event_table[chan].note, ch->event_table[chan].instr_def, chan, true, true);
         } else {
             ch->retrig_table[slot][chan]++;
         }
@@ -2452,7 +2452,7 @@ static void update_effects_slot(int slot, int chan)
         case ef_ex2_NoteDelay:
             if (ch->notedel_table[chan] == 0) {
                 ch->notedel_table[chan] = BYTE_NULL;
-                output_note(ch->event_table[chan].note,	ch->event_table[chan].instr_def, chan, TRUE, TRUE);
+                output_note(ch->event_table[chan].note,	ch->event_table[chan].instr_def, chan, true, true);
             } else if (ch->notedel_table[chan] != BYTE_NULL) {
                 ch->notedel_table[chan]--;
             }
@@ -2629,7 +2629,7 @@ static void update_song_position()
                 } else {
                     current_order = ch->event_table[next_line - pattern_break_flag].eff[0].val;
                 }
-                pattern_break = FALSE;
+                pattern_break = false;
             } else {
                 if (current_order >= 0x7f)
                     current_order = 0;
@@ -2644,7 +2644,7 @@ static void update_song_position()
         if (!pattern_break) {
             current_line = 0;
         } else {
-            pattern_break = FALSE;
+            pattern_break = false;
             current_line = next_line;
         }
     }
@@ -2671,7 +2671,7 @@ static void poll_proc()
         if (tickD > 1) {
             tickD--;
         } else {
-            pattern_delay = FALSE;
+            pattern_delay = false;
         }
     } else {
         if (ticks == 0) {
@@ -2703,7 +2703,7 @@ static void macro_poll_proc()
         tCH_MACRO_TABLE *mt = &ch->macro_table[chan];
         tFMREG_TABLE *rt = get_fmreg_table(mt->fmreg_ins);
 
-        bool force_macro_keyon = FALSE;
+        bool force_macro_keyon = false;
 
         if (rt && rt->length /* && (speed != 0)*/) { // FIXME: what speed?
             if (mt->fmreg_duration > 1) {
@@ -2751,12 +2751,12 @@ static void macro_poll_proc()
                         uint32_t disabled = instrinfo->instruments[mt->fmreg_ins - 1].dis_fmreg_cols;
 
                         // force KEY-ON with missing ADSR instrument data
-                        force_macro_keyon = FALSE;
+                        force_macro_keyon = false;
                         if (mt->fmreg_pos == 1) {
                             uint32_t adsr_disabled = disabled & ((1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) |
                                 (1 << 12) | (1 << 13) | (1 << 14) | (1 << 15));
                             if (is_ins_adsr_data_empty(ch->voice_table[chan]) && !adsr_disabled) {
-                                force_macro_keyon = TRUE;
+                                force_macro_keyon = true;
                             }
                         }
 
@@ -2805,7 +2805,7 @@ static void macro_poll_proc()
                         if (force_macro_keyon || (macro_flags & 0x80)) { // MACRO_NOTE_RETRIG_FLAG
                             if (!((is_4op_chan(chan) && is_4op_chan_hi(chan)))) {
                                 output_note(ch->event_table[chan].note,
-                                            ch->event_table[chan].instr_def, chan, FALSE, TRUE);
+                                            ch->event_table[chan].instr_def, chan, false, true);
                                 if (is_4op_chan(chan) && is_4op_chan_lo(chan))
                                     init_macro_table(chan - 1, 0, ch->voice_table[chan - 1], 0);
                             }
@@ -2980,7 +2980,7 @@ static void init_irq()
     if (irq_initialized)
         return;
 
-    irq_initialized = TRUE;
+    irq_initialized = true;
     update_timer(50);
 }
 
@@ -2989,10 +2989,10 @@ static void done_irq()
     if(!irq_initialized)
         return;
 
-    irq_initialized = FALSE;
-    irq_mode = TRUE;
+    irq_initialized = false;
+    irq_mode = true;
     update_timer(0);
-    irq_mode = FALSE;
+    irq_mode = false;
 }
 
 static void init_buffers()
@@ -3022,7 +3022,7 @@ static void init_buffers()
 
     static uint8_t _4op_main_chan[6] = { 1, 3, 5, 10, 12, 14 }; // 0-based
 
-    memset(ch->vol4op_lock, FALSE, sizeof(ch->vol4op_lock));
+    memset(ch->vol4op_lock, false, sizeof(ch->vol4op_lock));
     for (int i = 0; i < 6; i++) {
         ch->vol4op_lock[_4op_main_chan[i]] =
             ((songinfo->lock_flags[_4op_main_chan[i]] | 0x40) == songinfo->lock_flags[_4op_main_chan[i]]);
@@ -3083,12 +3083,12 @@ void a2t_stop()
     if (play_status == isStopped)
         return;
 
-    irq_mode = FALSE;
+    irq_mode = false;
     play_status = isStopped;
     global_volume = 63;
     current_tremolo_depth = tremolo_depth;
     current_vibrato_depth = vibrato_depth;
-    pattern_break = FALSE;
+    pattern_break = false;
     current_order = 0;
     current_pattern = 0;
     current_line = 0;
@@ -3100,9 +3100,9 @@ void a2t_stop()
     opl2out(0xbd, 0);
     opl3exp(0x0004);
     opl3exp(0x0005);
-    lockvol = FALSE;
-    panlock = FALSE;
-    lockVP = FALSE;
+    lockvol = false;
+    panlock = false;
+    lockVP = false;
     init_buffers();
 
     speed = 4;
@@ -3125,14 +3125,14 @@ static void init_songdata()
     songinfo->tempo = tempo;
     songinfo->speed = speed;
     songinfo->macro_speedup = 1;
-    speed_update = FALSE;
-    lockvol = FALSE;
-    panlock = FALSE;
-    lockVP  = FALSE;
+    speed_update = false;
+    lockvol = false;
+    panlock = false;
+    lockVP  = false;
     tremolo_depth = 0;
     vibrato_depth = 0;
-    volume_scaling = FALSE;
-    percussion_mode = FALSE;
+    volume_scaling = false;
+    percussion_mode = false;
 }
 
 static int a2_import(char *tune); // forward def
@@ -3153,12 +3153,12 @@ void a2t_play(char *tune) // start_playing()
 
     current_pattern = songinfo->pattern_order[current_order];
     current_line = 0;
-    pattern_break = FALSE;
-    pattern_delay = FALSE;
+    pattern_break = false;
+    pattern_delay = false;
     tickXF = 0;
     ticks = 0;
     next_line = 0;
-    irq_mode = TRUE;
+    irq_mode = true;
     play_status = isPlaying;
 
     ticklooper = 0;
@@ -3543,7 +3543,7 @@ void convert_v1234_event(tADTRACK2_EVENT_V1234 *ev, int chan)
             ev->effect = ef_ex_ExtendedCmd2 << 4;
             if ((ev->effect & 0x0f) < 10) {
                 // FIXME: Should be a parameter
-                bool whole_song = FALSE;
+                bool whole_song = false;
 
                 switch (ev->effect & 0x0f) {
                 case 0: ev->effect |= ef_ex_cmd2_RSS;       break;
@@ -3554,12 +3554,12 @@ void convert_v1234_event(tADTRACK2_EVENT_V1234 *ev, int chan)
                 case 5:
                     ev->effect_def = (whole_song ? 255 : 0);
                     ev->effect = 0;
-                    adsr_carrier[chan] = TRUE;
+                    adsr_carrier[chan] = true;
                     break;
                 case 6:
                     ev->effect_def = (whole_song ? 255 : 0);
                     ev->effect = (whole_song ? 1 : 0);
-                    adsr_carrier[chan] = FALSE;
+                    adsr_carrier[chan] = false;
                     break;
                 case 7: ev->effect |= ef_ex_cmd2_VSlide_car; break;
                 case 8: ev->effect |= ef_ex_cmd2_VSlide_mod; break;
@@ -3587,7 +3587,7 @@ static int a2_read_patterns(char *src, int s)
         {
         tPATTERN_DATA_V1234 *old = calloc(16, sizeof(*old));
 
-        memset(adsr_carrier, FALSE, sizeof(adsr_carrier));
+        memset(adsr_carrier, false, sizeof(adsr_carrier));
 
         for (int i = 0; i < 4; i++) {
             if (!len[i+s]) continue;
