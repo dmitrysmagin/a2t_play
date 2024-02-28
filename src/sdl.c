@@ -122,7 +122,7 @@ void show_eff(char *name, tEFFECT_TABLE table[2][20])
     }
 }
 
-void show_info()
+int show_info()
 {
     printf("Order %03d, Pattern %03d, Row %03d\n", current_order, current_pattern, current_line);
     printf("VOIC: ");
@@ -145,6 +145,9 @@ void show_info()
     for (int i = 0; i < 20; i++) {
         printf("%02x%02x%s", ch->macro_table[i].vib_pos & 0xff, ch->macro_table[i].vib_count, i < 19 ? "|" : "\n");
     }
+    printf("songend: %d\n", songend);
+
+    return 13;
 }
 
 #undef main
@@ -188,9 +191,9 @@ int main(int argc, char *argv[])
     printf("Playing - press anything to exit\n");
 
     while (!kbhit()) {
-        show_info();
-        rewind_console(12);
-        SDL_Delay(10);
+        int lines = show_info();
+        rewind_console(lines);
+        SDL_Delay(20);
     }
 
     show_info();

@@ -2589,8 +2589,10 @@ static int calc_order_jump()
     temp = 0;
 
     do {
-        if (songinfo->pattern_order[current_order] > 0x7f)
+        if (songinfo->pattern_order[current_order] > 0x7f) {
             current_order = songinfo->pattern_order[current_order] - 0x80;
+            songend = true;
+        }
         temp++;
     } while (!((temp > 0x7f) || (songinfo->pattern_order[current_order] < 0x80)));
 
@@ -3146,6 +3148,8 @@ void a2t_play(char *tune) // start_playing()
         return;
 
     init_player();
+
+    songend = false;
 
     if ((songinfo->pattern_order[current_order] > 0x7f) &&
         (calc_order_jump() == -1))

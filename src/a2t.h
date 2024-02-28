@@ -600,5 +600,6 @@ typedef struct {
 /* Extern data */
 
 extern tCHDATA *ch;
+extern bool songend;
 
 #endif // _A2T_H_
