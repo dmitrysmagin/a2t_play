@@ -597,6 +597,10 @@ typedef struct {
     tADTRACK2_EVENT *events;
 } tEVENTS_INFO;
 
+typedef struct _4op_data {
+    uint32_t mode: 1, conn: 3, ch1: 4, ch2: 4, ins1: 8, ins2: 8;
+} t4OP_DATA;
+
 /* Extern data */
 
 extern tCHDATA *ch;

@@ -108,6 +108,15 @@ bool adsr_carrier[9]; // For importing from a2m v1234
 
 bool songend = false;
 
+// Forward function declarations ==================================================================
+static void opl_out(uint8_t port, uint8_t val);
+static inline bool is_4op_chan(int chan);
+static inline bool is_4op_chan_hi(int chan);
+static inline bool is_4op_chan_lo(int chan);
+static void update_fine_effects(int slot, int chan);
+static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan);
+static int calc_following_order(uint8_t order);
+static bool a2_import(char *tune);
 // Helpers for instruments ========================================================================
 
 static void instruments_free()
@@ -372,12 +381,6 @@ static inline uint16_t regoffs_c(int chan)
 #define FreqRange   (FreqEnd - FreqStart)
 
 /* PLAYER */
-static void opl_out(uint8_t port, uint8_t val); // forward def
-static inline bool is_4op_chan(int chan); // forward def
-static inline bool is_4op_chan_hi(int chan); // forward def
-static inline bool is_4op_chan_lo(int chan); // forward def
-
-
 static void opl2out(uint16_t reg, uint16_t data)
 {
     opl_out(0, reg);
@@ -637,10 +640,6 @@ static uint8_t scale_volume(uint8_t volume, uint8_t scale_factor)
 {
     return 63 - ((63 - volume) * (63 - scale_factor) / 63);
 }
-
-typedef struct _4op_data {
-    uint32_t mode: 1, conn: 3, ch1: 4, ch2: 4, ins1: 8, ins2: 8;
-} t4OP_DATA;
 
 // former _4op_data_flag()
 static t4OP_DATA get_4op_data(uint8_t chan)
@@ -1066,8 +1065,6 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
     }
 }
 
-static void update_fine_effects(int slot, int chan); // forward
-
 static bool no_loop(uint8_t current_chan, uint8_t current_line)
 {
     for (int chan = 0; chan < current_chan; chan++) {
@@ -1078,8 +1075,6 @@ static bool no_loop(uint8_t current_chan, uint8_t current_line)
 
     return true;
 }
-
-static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan); // forward
 
 static int get_effect_group(uint8_t def)
 {
@@ -1814,8 +1809,6 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
         ch->event_table[chan].note = event->note;
     }
 }
-
-static int calc_following_order(uint8_t order);
 
 static void play_line()
 {
@@ -3137,14 +3130,12 @@ static void init_songdata()
     percussion_mode = false;
 }
 
-static int a2_import(char *tune); // forward def
-
 void a2t_play(char *tune) // start_playing()
 {
     a2t_stop();
-    int err = a2_import(tune);
+    bool err = a2_import(tune);
 
-    if (err)
+    if (!err)
         return;
 
     init_player();
@@ -3692,19 +3683,24 @@ static int a2t_read_patterns(char *src)
     return 0;
 }
 
-static void a2t_import(char *tune)
+static bool a2t_import(char *tune)
 {
     A2T_HEADER *header = (A2T_HEADER *)tune;
     char *blockptr = tune + sizeof(A2T_HEADER);
 
-    if(strncmp(header->id, "_A2tiny_module_", 15))
-        return;
+    if (strncmp(header->id, "_A2tiny_module_", 15))
+        return false;
 
     init_songdata();
 
     memset(len, 0, sizeof(len));
 
     ffver = header->ffver;
+
+    // Support versions 1, 4, 5, 8 ... 14
+    if (!ffver || ffver > 14 || ffver == 2 || ffver == 3 || ffver == 6 || ffver == 7)
+        return false;
+
     songinfo->tempo = header->tempo;
     songinfo->speed = header->speed;
     songinfo->patt_len = 64;
@@ -3754,6 +3750,8 @@ static void a2t_import(char *tune)
     printf("Percussion mode: %d\n", percussion_mode);
 
     memory_usage();
+
+    return true;
 }
 
 typedef uint8_t (tUINT16)[2];
@@ -3915,19 +3913,24 @@ static int a2m_read_patterns(char *src)
     return 0;
 }
 
-static void a2m_import(char *tune)
+static bool a2m_import(char *tune)
 {
     A2M_HEADER *header = (A2M_HEADER *)tune;
     char *blockptr = tune + sizeof(A2M_HEADER);
 
-    if(strncmp(header->id, "_A2module_", 10))
-        return;
+    if (strncmp(header->id, "_A2module_", 10))
+        return false;
 
     memset(songinfo, 0, sizeof(*songinfo));
 
     memset(len, 0, sizeof(len));
 
     ffver = header->ffver;
+
+    // Support versions 1, 4, 5, 8 ... 14
+    if (!ffver || ffver > 14 || ffver == 2 || ffver == 3 || ffver == 6 || ffver == 7)
+        return false;
+
     songinfo->patt_len = 64;
     songinfo->nm_tracks = 18;
     songinfo->macro_speedup = 1;
@@ -3955,21 +3958,21 @@ static void a2m_import(char *tune)
     printf("Track volume lock: %d\n", lockvol);
 
     memory_usage();
+
+    return true;
 }
 
-static int a2_import(char *tune)
+static bool a2_import(char *tune)
 {
-    if(!strncmp(tune, "_A2module_", 10)) {
-        a2m_import(tune);
-        return 0;
+    if (!strncmp(tune, "_A2module_", 10)) {
+        return a2m_import(tune);
     }
 
-    if(!strncmp(tune, "_A2tiny_module_", 15)) {
-        a2t_import(tune);
-        return 0;
+    if (!strncmp(tune, "_A2tiny_module_", 15)) {
+        return a2t_import(tune);
     }
 
-    return -1;
+    return false;
 }
 
 static int freqhz = 44100;
