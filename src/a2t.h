@@ -285,7 +285,7 @@ C_ASSERT(sizeof(tPATTERN_DATA) == 20 * 256 * 6);
 
 /* Data for importing A2T format */
 typedef struct {
-    char id[15];	// '_a2tiny_module_'
+    char id[15];    // '_a2tiny_module_'
     uint8_t crc[4]; // uint32_t
     uint8_t ffver;
     uint8_t npatt;
@@ -296,7 +296,7 @@ typedef struct {
 C_ASSERT(sizeof(A2T_HEADER) == 23);
 
 typedef struct {
-    char id[10];	// '_a2module_'
+    char id[10];    // '_a2module_'
     uint8_t crc[4]; // uint32_t
     uint8_t ffver;
     uint8_t npatt;
