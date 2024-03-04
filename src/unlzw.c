@@ -300,7 +300,7 @@ static int decode(int code, FILE * outputFile) {
 #include <stdint.h>
 
 static uint8_t le76, le77;
-static uint16_t le6a, le6c, le6e, le70, le72, le74, bitshift, le82a, prevcode;
+static uint16_t le6a, le6c, le6e, le70, le72, le74, bitshift, prevshift, prevcode;
 
 static uint16_t bitmask[5] = { 0x1ff, 0x3ff, 0x7ff, 0xfff, 0x1fff };
 
@@ -311,19 +311,19 @@ static int output_size;
 
 static int nextcode()
 {
-    uint16_t code, bx = 0, cx = 0;
+    uint16_t code, shift, cx;
     uint32_t bitstring;
 
-    bx = le82a;
+    shift = prevshift;
     code = prevcode;
-    bitstring = ((code << 16) + bx) + bitshift;
+    bitstring = (code << 16) + shift + bitshift;
 
-    le82a = bitstring & 0xffff;
+    prevshift = bitstring & 0xffff;
     prevcode = bitstring >> 16;
-    cx = bx & 7;
+    cx = shift & 7;
 
-    bx = bitstring = ((code << 16) + bx) >> 3;
-    bitstring = input_ptr[bx] + (input_ptr[bx+1] << 8) + (input_ptr[bx+2] << 16);
+    shift = ((code << 16) + shift) >> 3;
+    bitstring = input_ptr[shift] + (input_ptr[shift+1] << 8) + (input_ptr[shift+2] << 16);
 
     bitstring >>= cx;
 
@@ -351,7 +351,7 @@ static void LZW_decode()
     le6e = 0;
     le76 = 0;
     le77 = 0;
-    le82a = 0;
+    prevshift = 0;
     prevcode = 0;
 
     for (;;) {
