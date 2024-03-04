@@ -2,7 +2,7 @@
 /*  SIXPACK.C -- Data compression program   */
 /*  Written by Philip G. Gage, April 1991   */
 /********************************************/
-// This code is imported as-is from adplug 2.2.1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
