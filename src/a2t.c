@@ -3193,7 +3193,8 @@ static inline void a2t_depack(void *src, int srcsize, void *dst)
         sixdepak(src, dst, srcsize);
         break;
     case 2:
-    case 6: LZW_decompress(src, dst, srcsize);
+    case 6: // lzw
+        LZW_decompress(src, dst, srcsize);
         break;
     case 3:
     case 7: // FIXME: lzss

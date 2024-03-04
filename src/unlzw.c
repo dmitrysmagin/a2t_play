@@ -300,54 +300,48 @@ static int decode(int code, FILE * outputFile) {
 #include <stdint.h>
 
 static uint8_t le76, le77;
-static uint16_t le6a, le6c, le6e, le70, le72, le74, le78, le82a, le82b;
+static uint16_t le6a, le6c, le6e, le70, le72, le74, bitshift, le82a, prevcode;
 
-static uint16_t le7a[5] = { 0x1ff, 0x3ff, 0x7ff, 0xfff, 0x1fff };
-static uint8_t stack[65536];
-static unsigned char *input_ptr, *work_ptr;
+static uint16_t bitmask[5] = { 0x1ff, 0x3ff, 0x7ff, 0xfff, 0x1fff };
+
+static unsigned char *input_ptr;
 static int input_size;
 static unsigned char *output_ptr;
 static int output_size;
 
-static int NextCode()
+static int nextcode()
 {
-    uint16_t ax = 0, bx = 0, cx = 0;
-    uint32_t td;
+    uint16_t code, bx = 0, cx = 0;
+    uint32_t bitstring;
 
     bx = le82a;
-    ax = le82b;
-    td = (ax << 16) + bx;
-    td = td + le78;
-    le82a = td & 0xffff;
-    le82b = td >> 16;
+    code = prevcode;
+    bitstring = ((code << 16) + bx) + bitshift;
+
+    le82a = bitstring & 0xffff;
+    prevcode = bitstring >> 16;
     cx = bx & 7;
-    td = (ax << 16) + bx;
-    td = td >> 1;
-    td = td >> 1;
-    td = td >> 1;
-    bx = td;
-    td = input_ptr[bx] + (input_ptr[bx+1] << 8) + (input_ptr[bx+2] << 16);
 
-    while (cx > 0) {
-        td = td >> 1;
-        cx--;
-    }
+    bx = bitstring = ((code << 16) + bx) >> 3;
+    bitstring = input_ptr[bx] + (input_ptr[bx+1] << 8) + (input_ptr[bx+2] << 16);
 
-    bx = le78;
-    bx -= 9;
-    ax = td & le7a[bx];
+    bitstring >>= cx;
 
-    return ax;
+    return bitstring & bitmask[bitshift - 9];
 }
 
 static void LZW_decode()
 {
-    uint16_t ax=0, bx=0, cx=0;
+    uint8_t *stack = calloc(1, 65636);
+    uint8_t *work_ptr = calloc(1, 65636);
+
+    uint16_t ax = 0, bx = 0, cx = 0;
     uint32_t edi;
 
-    int sp = sizeof(stack) - 1;
+    int sp = 65536 - 1;
+
     le72 = 0;
-    le78 = 9;
+    bitshift = 9;
     le70 = 0x102;
     le74 = 0x200;
     edi = 0;
@@ -358,18 +352,18 @@ static void LZW_decode()
     le76 = 0;
     le77 = 0;
     le82a = 0;
-    le82b = 0;
+    prevcode = 0;
 
     for (;;) {
-        ax = NextCode();
+        ax = nextcode();
         if (ax == 0x101)
             break;
 
         if (ax == 0x100) {
-            le78 = 9;
+            bitshift = 9;
             le74 = 0x200;
             le70 = 0x102;
-            ax = NextCode();
+            ax = nextcode();
             le6a = ax;
             le6c = ax;
             le77 = ax;
@@ -431,13 +425,15 @@ static void LZW_decode()
         le6c = ax;
         bx = le70;
 
-        if (bx >= le74 && le78 != 14) {
-            le78++;
+        if (bx >= le74 && bitshift < 14) {
+            bitshift++;
             le74 = le74 << 1;
         }
     }
 
     output_size = edi;
+    free(stack);
+    free(work_ptr);
 }
 #endif
 
@@ -453,9 +449,8 @@ int LZW_decompress(char *source, char *dest, int size)
   input_ptr = (unsigned char *)source;
   input_size = size;
   output_ptr = (unsigned char *)dest;
-  work_ptr = calloc(1, 64*1024);
+
   LZW_decode();
-  free(work_ptr);
 #endif
 
     return output_size;
