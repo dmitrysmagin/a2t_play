@@ -8,7 +8,7 @@
 #include <stdint.h>
 
 static uint8_t le76, le77;
-static uint16_t le6a, le6c, le6e, le70, stringlength, le74, bitshift, prevshift, prevcode;
+static uint16_t le6a, le6c, le6e, le70, stringlength, le74, bitshift;
 static uint32_t prevbitstring;
 
 static uint16_t bitmask[5] = { 0x1ff, 0x3ff, 0x7ff, 0xfff, 0x1fff };
@@ -20,24 +20,15 @@ static int output_size;
 
 static int nextcode()
 {
-    uint16_t code, shift, cx;
+    uint16_t shift;
     uint32_t bitstring;
 
-    shift = prevshift;
-    //code = prevcode;
-    bitstring = prevbitstring/*(code << 16) + shift*/ + bitshift;
+    shift = prevbitstring >> 3;
+    bitstring = input_ptr[shift + 0] +
+               (input_ptr[shift + 1] << 8) +
+               (input_ptr[shift + 2] << 16);
 
-
-    prevshift = bitstring & 0xffff;
-    prevcode = bitstring >> 16;
-
-    cx = shift & 7;
-
-    shift = prevbitstring/*((code << 16) + shift)*/ >> 3;
-    bitstring = input_ptr[shift] + (input_ptr[shift+1] << 8) + (input_ptr[shift+2] << 16);
-
-    bitstring >>= cx;
-
+    bitstring >>= prevbitstring & 7;
     prevbitstring += bitshift;
 
     return bitstring & bitmask[bitshift - 9];
@@ -65,8 +56,6 @@ static void LZW_decode()
     le76 = 0;
     le77 = 0;
     prevbitstring = 0;
-    prevshift = 0;
-    prevcode = 0;
 
     for (;;) {
         code = nextcode();
