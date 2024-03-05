@@ -1,14 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include "unlzw.h"
 
-#define CIMPL 0
-
-#include <stdint.h>
-
-static uint8_t le76, le77;
-static uint16_t le6a, le6c, le6e, le70, stringlength, le74, bitshift;
+static uint16_t bitshift;
 static uint32_t prevbitstring;
 
 static uint16_t bitmask[5] = { 0x1ff, 0x3ff, 0x7ff, 0xfff, 0x1fff };
@@ -20,13 +16,13 @@ static int output_size;
 
 static int nextcode()
 {
-    uint16_t shift;
+    int input_idx;
     uint32_t bitstring;
 
-    shift = prevbitstring >> 3;
-    bitstring = input_ptr[shift + 0] +
-               (input_ptr[shift + 1] << 8) +
-               (input_ptr[shift + 2] << 16);
+    input_idx = prevbitstring >> 3;
+    bitstring = input_ptr[input_idx + 0] +
+               (input_ptr[input_idx + 1] << 8) +
+               (input_ptr[input_idx + 2] << 16);
 
     bitstring >>= prevbitstring & 7;
     prevbitstring += bitshift;
@@ -39,8 +35,11 @@ static void LZW_decode()
     uint8_t *stack = calloc(1, 65636);
     uint8_t *work_ptr = calloc(1, 65636);
 
-    uint16_t code;
-    uint32_t output_idx;
+    uint8_t le76, le77;
+    uint16_t le6a, le6c, le6e, le70, stringlength, le74;
+
+    int code;
+    int output_idx;
 
     int sp = 65536 - 1;
 
@@ -110,9 +109,9 @@ static void LZW_decode()
 
         stringlength = 0;
 
-        work_ptr[(le70 * 3) + 2] = le77;
-        work_ptr[(le70 * 3) + 1] = le6c >> 8;
         work_ptr[(le70 * 3) + 0] = le6c;
+        work_ptr[(le70 * 3) + 1] = le6c >> 8;
+        work_ptr[(le70 * 3) + 2] = le77;
         le70++;
 
         code = le6e;
