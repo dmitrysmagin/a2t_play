@@ -18,24 +18,6 @@ static uint32_t ebx, edi;
 #define N           (1 << N_BITS)
 #define F           ((1 << F_BITS) + THRESHOLD)
 
-static char GetChar() {
-    if (ibufCount < ibufSize) {
-        al = input_ptr[ibufCount];
-        ibufCount++;
-        cf = 0;
-    } else {
-        cf = 1;
-    }
-
-    return al;
-}
-
-static void PutChar()
-{
-    output_ptr[output_size] = al;
-    output_size++;
-}
-
 static void LZSS_decode() {
     ibufCount = 0;
     ibufSize = input_size;
@@ -44,54 +26,66 @@ static void LZSS_decode() {
     ebx = 0;
     dx = 0;
     edi = N - F;
-j1:
-    dx = dx >> 1;
-    if ((dx >> 8) != 0)
-        goto j2;
-    GetChar();
-    if (cf == 1) goto j5;
-    dx = 0xff00 | al;
 
-j2:
-    if ((dx & 1) == 0)
-        goto j3;
-    GetChar();
-    if (cf == 1) goto j5;
+    for (;;) {
+        dx = dx >> 1;
+        if ((dx >> 8) != 0)
+            goto j2;
 
-    work_ptr[edi] = al;
+        if (ibufCount >= ibufSize)
+            break;
 
-    edi = (edi + 1) & (N - 1);
+        al = input_ptr[ibufCount++];
 
-    PutChar();
-    goto j1;
-j3:
-    GetChar();
-    if (cf == 1) goto j5;
-    ch = al;
-    GetChar();
-    if (cf == 1) goto j5;
+        dx = 0xff00 | al;
 
-    ebx = (al << 4) & 0xff00;
-    ebx = ebx | ch;
+    j2:
+        if ((dx & 1) == 0)
+            goto j3;
 
-    cl = (al & 0x0f) + THRESHOLD;
-    cl++;
-j4:
-    ebx = ebx & (N - 1);
+        if (ibufCount >= ibufSize)
+            break;
 
-    al = work_ptr[ebx];
+        al = input_ptr[ibufCount++];
 
-    work_ptr[edi] = al;
+        work_ptr[edi] = al;
 
-    edi++;
-    edi = edi & (N - 1);
-    PutChar();
-    ebx++;
-    cl--;
-    if (cl > 0) goto j4;
-    goto j1;
-j5:
-    ;
+        edi = (edi + 1) & (N - 1);
+
+        output_ptr[output_size++] = al;
+        continue;
+    j3:
+        if (ibufCount >= ibufSize)
+            break;
+
+        al = input_ptr[ibufCount++];
+        ch = al;
+
+        if (ibufCount >= ibufSize)
+            break;
+
+        al = input_ptr[ibufCount++];
+
+        ebx = (al << 4) & 0xff00;
+        ebx = ebx | ch;
+
+        cl = (al & 0x0f) + THRESHOLD;
+        cl++;
+    j4:
+        ebx = ebx & (N - 1);
+
+        al = work_ptr[ebx];
+
+        work_ptr[edi] = al;
+
+        edi++;
+        edi = edi & (N - 1);
+
+        output_ptr[output_size++] = al;
+        ebx++;
+        cl--;
+        if (cl > 0) goto j4;
+    }
 }
 
 int LZSS_decompress(char *source, char *dest, int size)
