@@ -2627,7 +2627,8 @@ static void update_song_position()
                 } else {
                     current_order = ch->event_table[next_line - pattern_break_flag].eff[0].val;
                 }
-                songend = current_order <= old_order;
+                if (current_order <= old_order)
+                    songend = true;
                 pattern_break = false;
             } else {
                 if (current_order >= 0x7f)
