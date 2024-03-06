@@ -4,13 +4,8 @@
 #include <string.h>
 #include "unlzss.h"
 
-static int ibufCount, ibufSize;
 static int input_size, output_size;
 static unsigned char *input_ptr, *output_ptr, *work_ptr;
-
-static uint8_t al, cl, ch, cf;
-static uint16_t dx;
-static uint32_t ebx, edi;
 
 #define N_BITS      12
 #define F_BITS      4
@@ -19,6 +14,13 @@ static uint32_t ebx, edi;
 #define F           ((1 << F_BITS) + THRESHOLD)
 
 static void LZSS_decode() {
+    int ibufCount, ibufSize;
+    uint8_t al, cl, ch;
+    uint16_t dx;
+    uint32_t ebx, edi;
+
+    work_ptr = calloc(1, 65536);
+
     ibufCount = 0;
     ibufSize = input_size;
 
@@ -29,32 +31,30 @@ static void LZSS_decode() {
 
     for (;;) {
         dx = dx >> 1;
-        if ((dx >> 8) != 0)
-            goto j2;
 
-        if (ibufCount >= ibufSize)
-            break;
+        if ((dx >> 8) == 0) {
+            if (ibufCount >= ibufSize)
+                break;
 
-        al = input_ptr[ibufCount++];
+            al = input_ptr[ibufCount++];
 
-        dx = 0xff00 | al;
+            dx = 0xff00 | al;
+        }
 
-    j2:
-        if ((dx & 1) == 0)
-            goto j3;
+        if ((dx & 1) != 0) {
+            if (ibufCount >= ibufSize)
+                break;
 
-        if (ibufCount >= ibufSize)
-            break;
+            al = input_ptr[ibufCount++];
 
-        al = input_ptr[ibufCount++];
+            work_ptr[edi] = al;
 
-        work_ptr[edi] = al;
+            edi = (edi + 1) & (N - 1);
 
-        edi = (edi + 1) & (N - 1);
+            output_ptr[output_size++] = al;
+            continue;
+        }
 
-        output_ptr[output_size++] = al;
-        continue;
-    j3:
         if (ibufCount >= ibufSize)
             break;
 
@@ -71,21 +71,24 @@ static void LZSS_decode() {
 
         cl = (al & 0x0f) + THRESHOLD;
         cl++;
-    j4:
-        ebx = ebx & (N - 1);
 
-        al = work_ptr[ebx];
+        do {
+            ebx = ebx & (N - 1);
 
-        work_ptr[edi] = al;
+            al = work_ptr[ebx];
 
-        edi++;
-        edi = edi & (N - 1);
+            work_ptr[edi] = al;
 
-        output_ptr[output_size++] = al;
-        ebx++;
-        cl--;
-        if (cl > 0) goto j4;
+            edi++;
+            edi = edi & (N - 1);
+
+            output_ptr[output_size++] = al;
+            ebx++;
+            cl--;
+        } while (cl > 0);
     }
+
+    free(work_ptr);
 }
 
 int LZSS_decompress(char *source, char *dest, int size)
@@ -93,11 +96,8 @@ int LZSS_decompress(char *source, char *dest, int size)
     input_ptr = (unsigned char *)source;
     input_size = size;
     output_ptr = (unsigned char *)dest;
-    work_ptr = calloc(1, 65536);
-
+    
     LZSS_decode();
-
-    free(work_ptr);
 
     return output_size;
 }
