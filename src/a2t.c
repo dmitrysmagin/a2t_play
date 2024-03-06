@@ -2621,11 +2621,13 @@ static void update_song_position()
                 ch->loop_table[temp][current_line]--;
         } else {
             if (pattern_break && ((next_line & 0xf0) == pattern_break_flag)) {
+                uint8_t old_order = current_order;
                 if (ch->event_table[next_line - pattern_break_flag].eff[1].def == ef_PositionJump) {
                     current_order = ch->event_table[next_line - pattern_break_flag].eff[1].val;
                 } else {
                     current_order = ch->event_table[next_line - pattern_break_flag].eff[0].val;
                 }
+                songend = current_order <= old_order;
                 pattern_break = false;
             } else {
                 if (current_order >= 0x7f)
