@@ -15,7 +15,7 @@ static unsigned char *input_ptr, *output_ptr;
 
 static void LZSS_decode() {
     int input_idx = 0;
-    uint8_t al, ch;
+    uint8_t code, prevcode;
     uint16_t dx;
     uint32_t ebx, edi;
 
@@ -33,49 +33,39 @@ static void LZSS_decode() {
             if (input_idx >= input_size)
                 break;
 
-            al = input_ptr[input_idx++];
-
-            dx = 0xff00 | al;
+            code = input_ptr[input_idx++];
+            dx = 0xff00 | code;
         }
 
         if (dx & 1) {
             if (input_idx >= input_size)
                 break;
 
-            al = input_ptr[input_idx++];
-
-            work_ptr[edi] = al;
-
+            code = input_ptr[input_idx++];
+            work_ptr[edi] = code;
             edi = (edi + 1) & (N - 1);
-
-            output_ptr[output_size++] = al;
+            output_ptr[output_size++] = code;
             continue;
         }
 
         if (input_idx >= input_size)
             break;
 
-        al = input_ptr[input_idx++];
-        ch = al;
+        prevcode = code = input_ptr[input_idx++];
 
         if (input_idx >= input_size)
             break;
 
-        al = input_ptr[input_idx++];
+        code = input_ptr[input_idx++];
+        ebx = ((code << 4) & 0xff00) | prevcode;
 
-        ebx = (al << 4) & 0xff00;
-        ebx = ebx | ch;
-
-        int length = (al & 0x0f) + THRESHOLD + 1;
+        int length = (code & 0x0f) + THRESHOLD + 1;
 
         do {
-            al = work_ptr[ebx];
-            work_ptr[edi] = al;
+            output_ptr[output_size++] = work_ptr[edi] = work_ptr[ebx];
 
             ebx = (ebx + 1) & (N - 1);
             edi = (edi + 1) & (N - 1);
-
-            output_ptr[output_size++] = al;
         } while (--length > 0);
     }
 
