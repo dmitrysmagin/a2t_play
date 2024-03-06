@@ -23,6 +23,7 @@
 #include "sixpack.h"
 #include "unlzh.h"
 #include "unlzw.h"
+#include "unlzss.h"
 #include "opl3.h"
 #include "a2t.h"
 
@@ -3197,7 +3198,8 @@ static inline void a2t_depack(void *src, int srcsize, void *dst)
         LZW_decompress(src, dst, srcsize);
         break;
     case 3:
-    case 7: // FIXME: lzss
+    case 7: // lzss
+        LZSS_decompress(src, dst, srcsize);
         break;
     case 4:
     case 8: // unpacked
@@ -3699,8 +3701,7 @@ static bool a2t_import(char *tune)
 
     ffver = header->ffver;
 
-    // Support versions 1, 2, 4, 5, 6, 8 ... 14
-    if (!ffver || ffver > 14 || ffver == 3 || ffver == 7)
+    if (!ffver || ffver > 14)
         return false;
 
     songinfo->tempo = header->tempo;
@@ -3929,8 +3930,7 @@ static bool a2m_import(char *tune)
 
     ffver = header->ffver;
 
-    // Support versions 1, 2, 4, 5, 6, 8 ... 14
-    if (!ffver || ffver > 14 || ffver == 3 || ffver == 7)
+    if (!ffver || ffver > 14)
         return false;
 
     songinfo->patt_len = 64;

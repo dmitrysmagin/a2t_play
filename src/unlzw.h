@@ -11,4 +11,4 @@ int LZW_decompress(char *source, char *dest, int size);
 } /* extern "C" */
 #endif
 
-#endif /* _UNLZH_H_ */
+#endif /* _UNLZW_H_ */
