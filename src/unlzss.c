@@ -5,7 +5,7 @@
 #include "unlzss.h"
 
 static int input_size, output_size;
-static unsigned char *input_ptr, *output_ptr, *work_ptr;
+static unsigned char *input_ptr, *output_ptr;
 
 #define N_BITS      12
 #define F_BITS      4
@@ -14,15 +14,12 @@ static unsigned char *input_ptr, *output_ptr, *work_ptr;
 #define F           ((1 << F_BITS) + THRESHOLD)
 
 static void LZSS_decode() {
-    int ibufCount, ibufSize;
-    uint8_t al, cl, ch;
+    int input_idx = 0;
+    uint8_t al, ch;
     uint16_t dx;
     uint32_t ebx, edi;
 
-    work_ptr = calloc(1, 65536);
-
-    ibufCount = 0;
-    ibufSize = input_size;
+    unsigned char *work_ptr = calloc(1, 65536);
 
     output_size = 0;
     ebx = 0;
@@ -32,20 +29,20 @@ static void LZSS_decode() {
     for (;;) {
         dx = dx >> 1;
 
-        if ((dx >> 8) == 0) {
-            if (ibufCount >= ibufSize)
+        if (!(dx >> 8)) {
+            if (input_idx >= input_size)
                 break;
 
-            al = input_ptr[ibufCount++];
+            al = input_ptr[input_idx++];
 
             dx = 0xff00 | al;
         }
 
-        if ((dx & 1) != 0) {
-            if (ibufCount >= ibufSize)
+        if (dx & 1) {
+            if (input_idx >= input_size)
                 break;
 
-            al = input_ptr[ibufCount++];
+            al = input_ptr[input_idx++];
 
             work_ptr[edi] = al;
 
@@ -55,37 +52,31 @@ static void LZSS_decode() {
             continue;
         }
 
-        if (ibufCount >= ibufSize)
+        if (input_idx >= input_size)
             break;
 
-        al = input_ptr[ibufCount++];
+        al = input_ptr[input_idx++];
         ch = al;
 
-        if (ibufCount >= ibufSize)
+        if (input_idx >= input_size)
             break;
 
-        al = input_ptr[ibufCount++];
+        al = input_ptr[input_idx++];
 
         ebx = (al << 4) & 0xff00;
         ebx = ebx | ch;
 
-        cl = (al & 0x0f) + THRESHOLD;
-        cl++;
+        int length = (al & 0x0f) + THRESHOLD + 1;
 
         do {
-            ebx = ebx & (N - 1);
-
             al = work_ptr[ebx];
-
             work_ptr[edi] = al;
 
-            edi++;
-            edi = edi & (N - 1);
+            ebx = (ebx + 1) & (N - 1);
+            edi = (edi + 1) & (N - 1);
 
             output_ptr[output_size++] = al;
-            ebx++;
-            cl--;
-        } while (cl > 0);
+        } while (--length > 0);
     }
 
     free(work_ptr);
