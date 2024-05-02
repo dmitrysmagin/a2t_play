@@ -3829,6 +3829,12 @@ static int a2m_read_songdata(char *src)
         A2M_SONGDATA_V9_14 *data = malloc(sizeof(*data));
         a2t_depack(src, len[0], data);
 
+        #if 0
+            FILE *f = fopen("songdata_aplib.pck", "wb");
+            fwrite(src, 1, len[0], f);
+            fclose(f);
+        #endif
+
         memcpy(songinfo->songname, data->songname, 43);
         memcpy(songinfo->composer, data->composer, 43);
 
