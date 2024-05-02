@@ -58,7 +58,7 @@ typedef enum {
     That's why:
     1) only chars are used in structs to avoid any padding or alignment (default C/C++ behaviour)
     2) ints and longs are represented as arrays of chars, little-endian order is implied
-    3) statiSTATIC_ASSERT is used to make sure structs have the correct size
+    3) STATIC_ASSERT is used to make sure structs have the correct size
 */
 
 typedef struct {
