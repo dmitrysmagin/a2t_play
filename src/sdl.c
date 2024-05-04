@@ -185,7 +185,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    a2t_play(a2t);
+    bool result = a2t_play(a2t);
+    if (!result) {
+        printf("Corrupt file %s, unable to play.\n", argv[1]);
+        return 1;
+    }
+
     SDL_PauseAudio(0);
 
     printf("Playing - press anything to exit\n");

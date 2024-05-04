@@ -18,6 +18,7 @@
 #include <string.h>
 #include <assert.h>
 #include <math.h>
+#include <limits.h>
 
 #include "depack.h"
 #include "sixpack.h"
@@ -104,8 +105,10 @@ int ticks, tickD, tickXF;
 int ticklooper, macro_ticklooper;
 
 // Loader
+unsigned long filesize;
+char *fileptr;
 int ffver = 1;
-int len[21];
+unsigned int len[21];
 bool adsr_carrier[9]; // For importing from a2m v1234
 
 bool songend = false;
@@ -3135,13 +3138,13 @@ static void init_songdata()
     percussion_mode = false;
 }
 
-void a2t_play(char *tune) // start_playing()
+bool a2t_play(char *tune) // start_playing()
 {
     a2t_stop();
     bool err = a2_import(tune);
 
     if (!err)
-        return;
+        return false;
 
     init_player();
 
@@ -3149,7 +3152,7 @@ void a2t_play(char *tune) // start_playing()
 
     if ((songinfo->pattern_order[current_order] > 0x7f) &&
         (calc_order_jump() == -1))
-        return;
+        return false;
 
     current_pattern = songinfo->pattern_order[current_order];
     current_line = 0;
@@ -3166,6 +3169,8 @@ void a2t_play(char *tune) // start_playing()
     speed = songinfo->speed;
     macro_speedup = songinfo->macro_speedup;
     update_timer(songinfo->tempo);
+
+    return true;
 }
 
 /* LOADER FOR A2M/A2T */
@@ -3173,20 +3178,18 @@ void a2t_play(char *tune) // start_playing()
 char *a2t_load(char *name)
 {
     FILE *fh;
-    int fsize;
-    void *p;
 
     fh = fopen(name, "rb");
     if(!fh) return NULL;
 
     fseek(fh, 0, SEEK_END);
-    fsize = ftell(fh) ;
+    filesize = ftell(fh) ;
     fseek(fh, 0, SEEK_SET);
-    p = (void *)malloc(fsize);
-    fread(p, 1, fsize, fh);
+    fileptr = (void *)malloc(filesize);
+    fread(fileptr, 1, filesize, fh);
     fclose(fh);
 
-    return p;
+    return fileptr;
 }
 
 static inline void a2t_depack(void *src, int srcsize, void *dst)
@@ -3218,21 +3221,27 @@ static inline void a2t_depack(void *src, int srcsize, void *dst)
 }
 
 // read the variable part of the header
-static int a2t_read_varheader(char *blockptr)
+static int a2t_read_varheader(char *blockptr, unsigned long size)
 {
     A2T_VARHEADER *varheader = (A2T_VARHEADER *)blockptr;
 
     switch (ffver) {
     case 1 ... 4:
+        if (sizeof(A2T_VARHEADER_V1234) > size)
+            return INT_MAX;
         for (int i = 0; i < 6; i++)
             len[i] = UINT16LE(varheader->v1234.len[i]);
         return sizeof(A2T_VARHEADER_V1234);
     case 5 ... 8:
+        if (sizeof(A2T_VARHEADER_V5678) > size)
+            return INT_MAX;
         songinfo->common_flag = varheader->v5678.common_flag;
         for (int i = 0; i < 10; i++)
             len[i] = UINT16LE(varheader->v5678.len[i]);
         return sizeof(A2T_VARHEADER_V5678);
     case 9:
+        if (sizeof(A2T_VARHEADER_V9) > size)
+            return INT_MAX;
         songinfo->common_flag = varheader->v9.common_flag;
         songinfo->patt_len = UINT16LE(varheader->v9.patt_len);
         songinfo->nm_tracks = varheader->v9.nm_tracks;
@@ -3241,6 +3250,8 @@ static int a2t_read_varheader(char *blockptr)
             len[i] = UINT32LE(varheader->v9.len[i]);
         return sizeof(A2T_VARHEADER_V9);
     case 10:
+        if (sizeof(A2T_VARHEADER_V10) > size)
+            return INT_MAX;
         songinfo->common_flag = varheader->v10.common_flag;
         songinfo->patt_len = UINT16LE(varheader->v10.patt_len);
         songinfo->nm_tracks = varheader->v10.nm_tracks;
@@ -3252,6 +3263,8 @@ static int a2t_read_varheader(char *blockptr)
             len[i] = UINT32LE(varheader->v10.len[i]);
         return sizeof(A2T_VARHEADER_V10);
     case 11 ... 14:
+        if (sizeof(A2T_VARHEADER_V11) > size)
+            return INT_MAX;
         songinfo->common_flag = varheader->v11.common_flag;
         songinfo->patt_len = UINT16LE(varheader->v11.patt_len);
         songinfo->nm_tracks = varheader->v11.nm_tracks;
@@ -3264,7 +3277,7 @@ static int a2t_read_varheader(char *blockptr)
         return sizeof(A2T_VARHEADER_V11);
     }
 
-    return 0;
+    return INT_MAX;
 }
 
 static void instrument_import_v1_8(int ins, tINSTR_DATA_V1_8 *instr_s)
@@ -3285,13 +3298,15 @@ static void instrument_import(int ins, tINSTR_DATA *instr_s)
     *instr_d = *instr_s; // copy struct
 }
 
-static int a2t_read_instruments(char *src)
+static int a2t_read_instruments(char *src, unsigned long size)
 {
     int instnum = (ffver < 9 ? 250 : 255);
     int instsize = (ffver < 9 ? sizeof(tINSTR_DATA_V1_8) : sizeof(tINSTR_DATA));
     int dstsize = (instnum * instsize) +
                   (ffver > 11 ?  sizeof(tBPM_DATA) + sizeof(tINS_4OP_FLAGS) + sizeof(tRESERVED) : 0);
     char *dst = (char *)calloc(dstsize, 1);
+
+    if (len[0] > size) return INT_MAX;
 
     a2t_depack(src, len[0], dst);
 
@@ -3339,9 +3354,11 @@ static int a2t_read_instruments(char *src)
     return len[0];
 }
 
-static int a2t_read_fmregtable(char *src)
+static int a2t_read_fmregtable(char *src, unsigned long size)
 {
     if (ffver < 9) return 0;
+
+    if (len[1] > size) return INT_MAX;
 
     tFMREG_TABLE *data = (tFMREG_TABLE *)calloc(255, sizeof(tFMREG_TABLE));
     a2t_depack(src, len[1], data);
@@ -3370,9 +3387,11 @@ static int a2t_read_fmregtable(char *src)
     return len[1];
 }
 
-static int a2t_read_arpvibtable(char *src)
+static int a2t_read_arpvibtable(char *src, unsigned long size)
 {
     if (ffver < 9) return 0;
+
+    if (len[2] > size) return INT_MAX;
 
     tARPVIB_TABLE *arpvib_table = (tARPVIB_TABLE *)calloc(255, sizeof(tARPVIB_TABLE));
     a2t_depack(src, len[2], arpvib_table);
@@ -3390,9 +3409,11 @@ static int a2t_read_arpvibtable(char *src)
     return len[2];
 }
 
-static int a2t_read_disabled_fmregs(char *src)
+static int a2t_read_disabled_fmregs(char *src, unsigned long size)
 {
     if (ffver < 11) return 0;
+
+    if (len[3] > size) return INT_MAX;
 
     bool (*dis_fmregs)[255][28] = calloc(255, 28);
 
@@ -3411,10 +3432,12 @@ static int a2t_read_disabled_fmregs(char *src)
     return len[3];
 }
 
-static int a2t_read_order(char *src)
+static int a2t_read_order(char *src, unsigned long size)
 {
     int blocknum[14] = {1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4, 4, 4, 4};
     int i = blocknum[ffver - 1];
+
+    if (len[i] > size) return INT_MAX;
 
     a2t_depack(src, len[i], songinfo->pattern_order);
 
@@ -3582,8 +3605,10 @@ void convert_v1234_event(tADTRACK2_EVENT_V1234 *ev, int chan)
 }
 
 // common for both a2t/a2m
-static int a2_read_patterns(char *src, int s)
+static int a2_read_patterns(char *src, int s, unsigned long size)
 {
+    int retval = 0;
+
     switch (ffver) {
     case 1 ... 4: // [4][16][64][9][4]
         {
@@ -3593,6 +3618,8 @@ static int a2_read_patterns(char *src, int s)
 
         for (int i = 0; i < 4; i++) {
             if (!len[i+s]) continue;
+
+            if (len[i+s] > size) return INT_MAX;
 
             a2t_depack(src, len[i+s], old);
 
@@ -3614,6 +3641,8 @@ static int a2_read_patterns(char *src, int s)
             }
 
             src += len[i+s];
+            size -= len[i+s];
+            retval += len[i+s];
         }
 
         free(old);
@@ -3625,6 +3654,8 @@ static int a2_read_patterns(char *src, int s)
 
         for (int i = 0; i < 8; i++) {
             if (!len[i+s]) continue;
+
+            if (len[i+s] > size) return INT_MAX;
 
             a2t_depack(src, len[i+s], old);
 
@@ -3644,6 +3675,8 @@ static int a2_read_patterns(char *src, int s)
             }
 
             src += len[i+s];
+            size -= len[i+s];
+            retval += len[i+s];
         }
 
         free(old);
@@ -3656,8 +3689,12 @@ static int a2_read_patterns(char *src, int s)
         // 16 groups of 8 patterns
         for (int i = 0; i < 16; i++) {
             if (!len[i+s]) continue;
+            if (len[i+s] > size) return INT_MAX;
+
             a2t_depack(src, len[i+s], old);
             src += len[i+s];
+            size -= len[i+s];
+            retval += len[i+s];
 
             for (int p = 0; p < 8; p++) { // pattern
                 if (i * 8 + p >= eventsinfo->patterns)
@@ -3677,23 +3714,27 @@ static int a2_read_patterns(char *src, int s)
         }
     }
 
-    return 0;
+    return retval;
 }
 
-static int a2t_read_patterns(char *src)
+static int a2t_read_patterns(char *src, unsigned long size)
 {
     int blockstart[14] = {2, 2, 2, 2, 2, 2, 2, 2, 4, 4, 5, 5, 5, 5};
     int s = blockstart[ffver - 1];
 
-    a2_read_patterns(src, s);
+    a2_read_patterns(src, s, size);
 
     return 0;
 }
 
-static bool a2t_import(char *tune)
+static bool a2t_import(char *tune, unsigned long size)
 {
     A2T_HEADER *header = (A2T_HEADER *)tune;
     char *blockptr = tune + sizeof(A2T_HEADER);
+    int result;
+
+    if (sizeof(A2T_HEADER) > size)
+        return false;
 
     if (strncmp(header->id, "_A2tiny_module_", 15))
         return false;
@@ -3714,7 +3755,9 @@ static bool a2t_import(char *tune)
     songinfo->macro_speedup = 1;
 
     // Read variable part after header, fill len[] with values
-    blockptr += a2t_read_varheader(blockptr);
+    result = a2t_read_varheader(blockptr, size - (blockptr - tune));
+    if (result == INT_MAX) return false;
+    blockptr += result;
 
     speed_update    = (songinfo->common_flag >> 0) & 1;
     lockvol         = (songinfo->common_flag >> 1) & 1;
@@ -3726,25 +3769,36 @@ static bool a2t_import(char *tune)
     volume_scaling  = (songinfo->common_flag >> 7) & 1;
 
     // Read instruments; all versions
-    blockptr += a2t_read_instruments(blockptr);
+    result = a2t_read_instruments(blockptr, size - (blockptr - tune));
+    if (result == INT_MAX) return false;
+    blockptr += result;
 
     // Read instrument macro (v >= 9,10,11)
-    blockptr += a2t_read_fmregtable(blockptr);
+    result = a2t_read_fmregtable(blockptr, size - (blockptr - tune));
+    if (result == INT_MAX) return false;
+    blockptr += result;
 
     // Read arpeggio/vibrato macro table (v >= 9,10,11)
-    blockptr += a2t_read_arpvibtable(blockptr);
+    result = a2t_read_arpvibtable(blockptr, size - (blockptr - tune));
+    if (result == INT_MAX) return false;
+    blockptr += result;
 
     // Read disabled fm regs (v == 11)
-    blockptr += a2t_read_disabled_fmregs(blockptr);
+    result = a2t_read_disabled_fmregs(blockptr, size - (blockptr - tune));
+    if (result == INT_MAX) return false;
+    blockptr += result;
 
     // Read pattern_order
-    blockptr += a2t_read_order(blockptr);
+    result = a2t_read_order(blockptr, size - (blockptr - tune));
+    if (result == INT_MAX) return false;
+    blockptr += result;
 
     // Allocate patterns
     patterns_allocate(header->npatt, songinfo->nm_tracks, songinfo->patt_len);
 
     // Read patterns
-    a2t_read_patterns(blockptr);
+    result = a2t_read_patterns(blockptr, size - (blockptr - tune));
+    if (result == INT_MAX) return false;
 
     printf("A2T version: %d\n", header->ffver);
     printf("Number of patterns: %d\n", header->npatt);
@@ -3763,7 +3817,7 @@ static bool a2t_import(char *tune)
 typedef uint8_t (tUINT16)[2];
 typedef uint8_t (tUINT32)[4];
 
-static int a2m_read_varheader(char *blockptr, int npatt)
+static int a2m_read_varheader(char *blockptr, int npatt, unsigned long size)
 {
     int lensize;
     int maxblock = (ffver < 5 ? npatt / 16 : npatt / 8) + 1;
@@ -3777,24 +3831,30 @@ static int a2m_read_varheader(char *blockptr, int npatt)
 
     switch (ffver) {
     case 1 ... 8:
+        if (lensize * sizeof(tUINT16) > size) return INT_MAX;
+
         // skip possible rubbish (MARIO.A2M)
         for (int i = 0; (i < lensize) && (i <= maxblock); i++)
             len[i] = UINT16LE(src16[i]);
 
         return lensize * sizeof(tUINT16);
     case 9 ... 14:
+        if (lensize * sizeof(tUINT32) > size) return INT_MAX;
+
         for (int i = 0; i < lensize; i++)
             len[i] = UINT32LE(src32[i]);
 
         return lensize * sizeof(tUINT32);
     }
 
-    return 0;
+    return INT_MAX;
 }
 
-static int a2m_read_songdata(char *src)
+static int a2m_read_songdata(char *src, unsigned long size)
 {
     if (ffver < 9) { // 1 - 8
+        if (len[0] > size) return INT_MAX;
+
         A2M_SONGDATA_V1_8 *data = malloc(sizeof(*data));
         a2t_depack(src, len[0], data);
 
@@ -3826,6 +3886,8 @@ static int a2m_read_songdata(char *src)
 
         free(data);
     } else { // 9 - 14
+        if (len[0] > size) return INT_MAX;
+
         A2M_SONGDATA_V9_14 *data = malloc(sizeof(*data));
         a2t_depack(src, len[0], data);
 
@@ -3918,17 +3980,21 @@ static int a2m_read_songdata(char *src)
     return len[0];
 }
 
-static int a2m_read_patterns(char *src)
+static int a2m_read_patterns(char *src, unsigned long size)
 {
-    a2_read_patterns(src, 1);
+    a2_read_patterns(src, 1, size);
 
     return 0;
 }
 
-static bool a2m_import(char *tune)
+static bool a2m_import(char *tune, unsigned long size)
 {
     A2M_HEADER *header = (A2M_HEADER *)tune;
     char *blockptr = tune + sizeof(A2M_HEADER);
+    int result;
+
+    if (sizeof(A2M_HEADER) > size)
+        return false;
 
     if (strncmp(header->id, "_A2module_", 10))
         return false;
@@ -3947,16 +4013,21 @@ static bool a2m_import(char *tune)
     songinfo->macro_speedup = 1;
 
     // Read variable part after header, fill len[] with values
-    blockptr += a2m_read_varheader(blockptr, header->npatt);
+    result = a2m_read_varheader(blockptr, header->npatt, size - (blockptr - tune));
+    if (result == INT_MAX) return false;
+    blockptr += result;
 
     // Read songdata
-    blockptr += a2m_read_songdata(blockptr);
+    result = a2m_read_songdata(blockptr, size - (blockptr - tune));
+    if (result == INT_MAX) return false;
+    blockptr += result;
 
     // Allocate patterns
     patterns_allocate(header->npatt, songinfo->nm_tracks, songinfo->patt_len);
 
     // Read patterns
-    a2m_read_patterns(blockptr);
+    result = a2m_read_patterns(blockptr, size - (blockptr - tune));
+    if (result == INT_MAX) return false;
 
     printf("A2M version: %d\n", header->ffver);
     printf("Number of patterns: %d\n", header->npatt);
@@ -3975,12 +4046,12 @@ static bool a2m_import(char *tune)
 
 static bool a2_import(char *tune)
 {
-    if (!strncmp(tune, "_A2module_", 10)) {
-        return a2m_import(tune);
+    if ((filesize > 10) && !strncmp(tune, "_A2module_", 10)) {
+        return a2m_import(tune, filesize);
     }
 
-    if (!strncmp(tune, "_A2tiny_module_", 15)) {
-        return a2t_import(tune);
+    if ((filesize > 15) && !strncmp(tune, "_A2tiny_module_", 15)) {
+        return a2t_import(tune, filesize);
     }
 
     return false;

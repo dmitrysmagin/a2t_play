@@ -7,7 +7,7 @@
 void a2t_init(int);
 void a2t_shut();
 char *a2t_load(char *name);
-void a2t_play(char *tune);
+bool a2t_play(char *tune);
 void a2t_update(unsigned char *, int);
 void set_overall_volume(unsigned char level);
 void a2t_stop();
