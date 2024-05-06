@@ -589,7 +589,7 @@ typedef struct {
 } tCHDATA;
 
 typedef struct {
-    int count;
+    unsigned int count;
     size_t size;
     tINSTR_DATA_EXT *instruments;
 } tINSTR_INFO;
