@@ -3855,7 +3855,7 @@ static int a2m_read_songdata(char *src, unsigned long size)
     if (ffver < 9) { // 1 - 8
         if (len[0] > size) return INT_MAX;
 
-        A2M_SONGDATA_V1_8 *data = malloc(sizeof(*data));
+        A2M_SONGDATA_V1_8 *data = calloc(1, sizeof(*data));
         a2t_depack(src, len[0], data);
 
         memcpy(songinfo->songname, data->songname, 43);

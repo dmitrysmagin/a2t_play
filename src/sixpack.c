@@ -233,7 +233,7 @@ unsigned short sixdepak(unsigned short *source, unsigned char *dest,
 	if((unsigned int)size + 4096 > MAXBUF)
 		return 0;
 
-	buf = malloc(MAXSIZE); //buf = new unsigned char [MAXSIZE];
+	buf = calloc(1, MAXSIZE); //buf = new unsigned char [MAXSIZE];
 	input_size = size;
 	ibitcount = 0; ibitbuffer = 0;
 	obufcount = 0; ibufcount = 0;

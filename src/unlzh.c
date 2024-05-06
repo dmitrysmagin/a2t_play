@@ -435,7 +435,7 @@ int LZH_decompress(char *source, char *dest, int size)
 		//DIC_SIZE = DIC_SIZE_DEF; // (1U << 13)
 	}
 
-	ptr = calloc(DIC_SIZE, 1);
+	ptr = calloc(1, DIC_SIZE);
 
 	decode_start();
 	size = size_unpacked;

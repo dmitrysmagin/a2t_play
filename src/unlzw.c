@@ -32,8 +32,8 @@ static int nextcode()
 
 static void LZW_decode()
 {
-    uint8_t *stack = calloc(1, 65636);
-    uint8_t *work_ptr = calloc(1, 65636);
+    uint8_t *stack = calloc(1, 65536);
+    uint8_t *work_ptr = calloc(1, 65536);
 
     uint8_t le76, le77;
     uint16_t le6a, le6c, le6e, le70, stringlength, le74;
