@@ -127,7 +127,7 @@ static bool a2_import(char *tune);
 static void instruments_free()
 {
     if (instrinfo->instruments) {
-        for (int i = 0; i < instrinfo->count; i++) {
+        for (unsigned int i = 0; i < instrinfo->count; i++) {
             if (instrinfo->instruments[i].fmreg) {
                 free(instrinfo->instruments[i].fmreg);
                 instrinfo->instruments[i].fmreg = NULL;
@@ -313,7 +313,7 @@ static void memory_usage()
     // Count fmreg/vib/arp macros
     int nfmregs = 0, nvib = 0, narp = 0;
 
-    for (int i = 0; i < instrinfo->count; i++)
+    for (unsigned int i = 0; i < instrinfo->count; i++)
         nfmregs += (instrinfo->instruments[i].fmreg ? 1 : 0);
 
     for (int i = 0; i < 255; i++) {
@@ -824,6 +824,8 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
 static void reset_ins_volume(int chan)
 {
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
+    if (!instr) return;
+
     uint8_t vol_mod = instr->fm.volM;
     uint8_t vol_car = instr->fm.volC;
     uint8_t conn = instr->fm.connect;
@@ -3185,7 +3187,7 @@ char *a2t_load(char *name)
     fseek(fh, 0, SEEK_END);
     filesize = ftell(fh) ;
     fseek(fh, 0, SEEK_SET);
-    fileptr = (void *)malloc(filesize);
+    fileptr = (void *)calloc(1, filesize);
     fread(fileptr, 1, filesize, fh);
     fclose(fh);
 
@@ -3304,7 +3306,7 @@ static int a2t_read_instruments(char *src, unsigned long size)
     int instsize = (ffver < 9 ? sizeof(tINSTR_DATA_V1_8) : sizeof(tINSTR_DATA));
     int dstsize = (instnum * instsize) +
                   (ffver > 11 ?  sizeof(tBPM_DATA) + sizeof(tINS_4OP_FLAGS) + sizeof(tRESERVED) : 0);
-    char *dst = (char *)calloc(dstsize, 1);
+    char *dst = (char *)calloc(1, dstsize);
 
     if (len[0] > size) return INT_MAX;
 
@@ -3888,7 +3890,7 @@ static int a2m_read_songdata(char *src, unsigned long size)
     } else { // 9 - 14
         if (len[0] > size) return INT_MAX;
 
-        A2M_SONGDATA_V9_14 *data = malloc(sizeof(*data));
+        A2M_SONGDATA_V9_14 *data = calloc(1, sizeof(*data));
         a2t_depack(src, len[0], data);
 
         #if 0
