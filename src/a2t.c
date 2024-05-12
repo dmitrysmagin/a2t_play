@@ -95,8 +95,9 @@ bool editor_mode = false; // true to allocate max resources
 
 tSONGINFO _song, *songinfo = &_song;
 tINSTR_INFO _instrinfo = { 0 }, *instrinfo = &_instrinfo;
-tVIBRATO_TABLE *vibrato_table[255] = { 0 };
-tARPEGGIO_TABLE *arpeggio_table[255] = { 0 };
+unsigned int arpvib_count = 0;
+tVIBRATO_TABLE **vibrato_table = 0;
+tARPEGGIO_TABLE **arpeggio_table = 0;
 tEVENTS_INFO _eventsinfo = { 0 }, *eventsinfo = &_eventsinfo;
 tCHDATA _ch, *ch = &_ch;
 
@@ -158,7 +159,7 @@ static void instruments_allocate(size_t number)
 
 static tINSTR_DATA_EXT *get_instr(uint8_t ins)
 {
-    if (ins == 0 || ins > instrinfo->count ) {
+    if (ins == 0 || ins > instrinfo->count) {
         return NULL;
     }
 
@@ -228,20 +229,42 @@ static void disabled_fmregs_import(size_t n, bool dis_fmregs[n][28])
     }
 }
 
+static void arpvib_tables_free()
+{
+    if (!vibrato_table || !arpeggio_table)
+        return;
+
+    for (unsigned int i = 0; i < arpvib_count; i++) {
+        free(vibrato_table[i]);
+        free(arpeggio_table[i]);
+        vibrato_table[i] = 0;
+        arpeggio_table[i] = 0;
+    }
+
+    free(vibrato_table);
+    free(arpeggio_table);
+    vibrato_table = 0;
+    arpeggio_table = 0;
+}
+
 static void arpvib_tables_allocate(size_t n, tARPVIB_TABLE mt[n])
 {
-    n = editor_mode ? 255 : n;
+    arpvib_tables_free();
 
     // Note: for editor_mode allocate max entries possible
+    n = editor_mode ? 255 : n;
+
+    vibrato_table = calloc(n, sizeof(tVIBRATO_TABLE *));
+    arpeggio_table = calloc(n, sizeof(tARPEGGIO_TABLE *));
+    arpvib_count = n;
+
     for (unsigned int i = 0; i < n; i++) {
         if (editor_mode || mt[i].vibrato.length) {
             vibrato_table[i] = calloc(1, sizeof(tVIBRATO_TABLE));
-            assert(vibrato_table[i]);
             *vibrato_table[i] = mt[i].vibrato; // copy struct
         }
         if (editor_mode || mt[i].arpeggio.length) {
             arpeggio_table[i] = calloc(1, sizeof(tARPEGGIO_TABLE));
-            assert(arpeggio_table[i]);
             *arpeggio_table[i] = mt[i].arpeggio; // copy struct
         }
     }
@@ -249,12 +272,12 @@ static void arpvib_tables_allocate(size_t n, tARPVIB_TABLE mt[n])
 
 static tARPEGGIO_TABLE *get_arpeggio_table(uint8_t arp_table)
 {
-    return arp_table && arpeggio_table[arp_table - 1] ? arpeggio_table[arp_table - 1] : NULL;
+    return arp_table && arpeggio_table && arpeggio_table[arp_table - 1] ? arpeggio_table[arp_table - 1] : NULL;
 }
 
 static tVIBRATO_TABLE *get_vibrato_table(uint8_t vib_table)
 {
-    return vib_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1] : NULL;
+    return vib_table && vibrato_table && vibrato_table[vib_table - 1] ? vibrato_table[vib_table - 1] : NULL;
 }
 
 static tFMREG_TABLE *get_fmreg_table(uint8_t fmreg_ins)
@@ -317,8 +340,8 @@ static void memory_usage()
         nfmregs += (instrinfo->instruments[i].fmreg ? 1 : 0);
 
     for (int i = 0; i < 255; i++) {
-        nvib += (vibrato_table[i] ? 1 : 0);
-        narp += (arpeggio_table[i] ? 1 : 0);
+        nvib += (vibrato_table && vibrato_table[i] ? 1 : 0);
+        narp += (arpeggio_table && arpeggio_table[i] ? 1 : 0);
     }
 
     printf("Memory usage:\n");
@@ -689,6 +712,7 @@ static bool _4op_vol_valid_chan(int chan)
 static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 {
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
+    assert(instr);
 
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
@@ -746,6 +770,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
 static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
+    assert(instr);
 
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
@@ -845,6 +870,7 @@ static void set_global_volume()
             set_ins_volume_4op(BYTE_NULL, chan);
         } else if (ch->carrier_vol[chan] || ch->modulator_vol[chan]) {
             tINSTR_DATA *instr = get_instr_data_by_ch(chan);
+            if (!instr) continue;
 
             set_ins_volume(instr->fm.connect ? ch->fmpar_table[chan].volM : BYTE_NULL, ch->fmpar_table[chan].volC, chan);
         }
@@ -1135,6 +1161,7 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
 static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 {
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
+
     uint8_t def = event->eff[slot].def;
     uint8_t val = event->eff[slot].val;
 
@@ -2069,6 +2096,7 @@ static void slide_volume_up(int chan, uint8_t slide)
     case 0:
         if (!_4op_vol_valid_chan(chan)) {
             tINSTR_DATA *i = get_instr_data_by_ch(chan);
+            assert(i);
 
             slide_carrier_volume_up(chan, slide, limit1);
 
@@ -2078,6 +2106,8 @@ static void slide_volume_up(int chan, uint8_t slide)
             // Can use get_instr_data_by_ch()
             tINSTR_DATA *ins1 = get_instr_data(d.ins1);
             tINSTR_DATA *ins2 = get_instr_data(d.ins2);
+            assert(ins1);
+            assert(ins2);
 
             uint8_t limit1_volC = ch->peak_lock[d.ch1] ? ins1->fm.volC : 0;
             uint8_t limit1_volM = ch->peak_lock[d.ch1] ? ins1->fm.volM : 0;
@@ -2148,6 +2178,7 @@ static void slide_volume_down(int chan, uint8_t slide)
     case 0:
         if (!_4op_vol_valid_chan(chan)) {
             tINSTR_DATA *i = get_instr_data_by_ch(chan);
+            assert(i);
 
             slide_carrier_volume_down(chan, slide);
 
@@ -2281,6 +2312,7 @@ static void tremolo(int slot, int chan)
 static inline int chanvol(int chan)
 {
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
+    assert(instr);
 
     if (instr->fm.connect == 0)
         return 63 - ch->fmpar_table[chan].volC;
@@ -3398,6 +3430,7 @@ static int a2t_read_arpvibtable(char *src, unsigned long size)
     tARPVIB_TABLE *arpvib_table = (tARPVIB_TABLE *)calloc(255, sizeof(tARPVIB_TABLE));
     a2t_depack(src, len[2], arpvib_table);
 
+    // TODO: Calculate actual num of arp/vib tables
     arpvib_tables_allocate(255, arpvib_table);
 
     free(arpvib_table);
@@ -3926,6 +3959,7 @@ static int a2m_read_songdata(char *src, unsigned long size)
         fmreg_table_allocate(count, data->fmreg_table);
 
         // Allocate arpeggio/vibrato macro tables
+        // TODO: Calculate actual num of arp/vib tables
         arpvib_tables_allocate(255, data->arpvib_table);
 
         memcpy(songinfo->pattern_order, data->pattern_order, 128);
