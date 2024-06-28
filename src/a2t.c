@@ -3334,13 +3334,13 @@ static void instrument_import(int ins, tINSTR_DATA *instr_s)
 
 static int a2t_read_instruments(char *src, unsigned long size)
 {
+    if (len[0] > size) return INT_MAX;
+
     int instnum = (ffver < 9 ? 250 : 255);
     int instsize = (ffver < 9 ? sizeof(tINSTR_DATA_V1_8) : sizeof(tINSTR_DATA));
     int dstsize = (instnum * instsize) +
                   (ffver > 11 ?  sizeof(tBPM_DATA) + sizeof(tINS_4OP_FLAGS) + sizeof(tRESERVED) : 0);
     char *dst = (char *)calloc(1, dstsize);
-
-    if (len[0] > size) return INT_MAX;
 
     a2t_depack(src, len[0], dst);
 
@@ -3654,7 +3654,10 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
         for (int i = 0; i < 4; i++) {
             if (!len[i+s]) continue;
 
-            if (len[i+s] > size) return INT_MAX;
+            if (len[i+s] > size) {
+                free(old);
+                return INT_MAX;
+            }
 
             a2t_depack(src, len[i+s], old);
 
@@ -3690,7 +3693,10 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
         for (int i = 0; i < 8; i++) {
             if (!len[i+s]) continue;
 
-            if (len[i+s] > size) return INT_MAX;
+            if (len[i+s] > size) {
+                free(old);
+                return INT_MAX;
+            }
 
             a2t_depack(src, len[i+s], old);
 
@@ -3724,7 +3730,10 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
         // 16 groups of 8 patterns
         for (int i = 0; i < 16; i++) {
             if (!len[i+s]) continue;
-            if (len[i+s] > size) return INT_MAX;
+            if (len[i+s] > size) {
+                free(old);
+                return INT_MAX;
+            }
 
             a2t_depack(src, len[i+s], old);
             src += len[i+s];
