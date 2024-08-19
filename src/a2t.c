@@ -709,8 +709,12 @@ static bool _4op_vol_valid_chan(int chan)
 
 // TODO here: fade_out_volume
 // inverted volume here
-static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
+static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
+    assert(chan < 20);
+    if (chan >= 20)
+        return;
+
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
     assert(instr);
 
@@ -733,7 +737,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, int chan)
     if (modulator != BYTE_NULL) {
         uint8_t regm;
         bool is_perc_chan = instr->fm.connect ||
-                            (percussion_mode && (chan >= 16 && chan <= 19)); // in [17..20]
+                            (percussion_mode && chan >= 16); // in [17..20]
 
         ch->fmpar_table[chan].volM = modulator;
 
@@ -1502,6 +1506,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 current_tremolo_depth = 1;
                 break;
             }
+            break;
 
         case ef_ex_SetVibDepth:
             switch (val % 16) {
@@ -1515,6 +1520,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 current_vibrato_depth = 1;
                 break;
             }
+            break;
 
         case ef_ex_SetAttckRateM:
             ch->fmpar_table[chan].attckM = val % 16;
@@ -2591,6 +2597,12 @@ static void update_extra_fine_effects()
     }
 }
 
+static void set_current_order(uint8_t new_order)
+{
+    assert(new_order < 0x80);
+    current_order = new_order < 0x80 ? new_order : 0;
+}
+
 static int calc_following_order(uint8_t order)
 {
     int result;
@@ -2622,7 +2634,7 @@ static int calc_order_jump()
 
     do {
         if (songinfo->pattern_order[current_order] > 0x7f) {
-            current_order = songinfo->pattern_order[current_order] - 0x80;
+            set_current_order(songinfo->pattern_order[current_order] - 0x80);
             songend = true;
         }
         temp++;
@@ -2660,16 +2672,16 @@ static void update_song_position()
             if (pattern_break && ((next_line & 0xf0) == pattern_break_flag)) {
                 uint8_t old_order = current_order;
                 if (ch->event_table[next_line - pattern_break_flag].eff[1].def == ef_PositionJump) {
-                    current_order = ch->event_table[next_line - pattern_break_flag].eff[1].val;
+                    set_current_order(ch->event_table[next_line - pattern_break_flag].eff[1].val);
                 } else {
-                    current_order = ch->event_table[next_line - pattern_break_flag].eff[0].val;
+                    set_current_order(ch->event_table[next_line - pattern_break_flag].eff[0].val);
                 }
                 if (current_order <= old_order)
                     songend = true;
                 pattern_break = false;
             } else {
                 if (current_order >= 0x7f)
-                    current_order = 0;
+                    set_current_order(0);
             }
         }
 
@@ -2981,8 +2993,7 @@ static void macro_poll_proc()
                         (mt->vib_pos != IDLE) && (mt->vib_pos != finished_flag)) {
                         if (vt->data[mt->vib_pos - 1] > 0)
                             macro_vibrato__porta_up(chan, vt->data[mt->vib_pos]);
-                    } else {
-                        if (vt->data[mt->vib_pos - 1] < 0)
+                        else if (vt->data[mt->vib_pos - 1] < 0)
                             macro_vibrato__porta_down(chan, abs(vt->data[mt->vib_pos]));
                         else
                             change_freq(chan, mt->vib_freq);
@@ -3603,7 +3614,7 @@ void convert_v1234_event(tADTRACK2_EVENT_V1234 *ev, int chan)
             ev->effect = ef_ex_ExtendedCmd2 << 4;
             if ((ev->effect & 0x0f) < 10) {
                 // FIXME: Should be a parameter
-                bool whole_song = false;
+                const bool whole_song = false;
 
                 switch (ev->effect & 0x0f) {
                 case 0: ev->effect |= ef_ex_cmd2_RSS;       break;
