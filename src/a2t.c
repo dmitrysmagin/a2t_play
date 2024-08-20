@@ -932,6 +932,9 @@ static void set_ins_data(uint8_t ins, int chan)
                                   ? i->panning
                                   : songinfo->lock_flags[chan] & 3;
 
+        if (ch->panning_table[chan] >= sizeof (_panning))
+            ch->panning_table[chan] = 0; /* various code paths can lead to this value going out of the 0-2 range */
+
         uint16_t m = regoffs_m(chan);
         uint16_t c = regoffs_c(chan);
         uint16_t n = regoffs_n(chan);
@@ -3333,6 +3336,10 @@ static void instrument_import_v1_8(int ins, tINSTR_DATA_V1_8 *instr_s)
     instr_d->fm = instr_s->fm; // copy struct
     instr_d->panning = instr_s->panning;
     instr_d->fine_tune = instr_s->fine_tune;
+
+    if (instr_d->panning >= 3) {
+        instr_d->panning = 0;
+    }
 }
 
 static void instrument_import(int ins, tINSTR_DATA *instr_s)
@@ -3341,6 +3348,10 @@ static void instrument_import(int ins, tINSTR_DATA *instr_s)
     assert(instr_d);
 
     *instr_d = *instr_s; // copy struct
+
+    if (instr_d->panning >= 3) {
+        instr_d->panning = 0;
+    }
 }
 
 static int a2t_read_instruments(char *src, unsigned long size)
