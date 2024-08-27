@@ -8,9 +8,9 @@ fm63b_rv.a2t - instrument #0B has fm macro which is not present in fm63b_rv.a2m
 
 tunes/encore/amegas.a2t - completely wrong 1st inst
 os_sblas.a2m - wrong 4op instrument when 1st channel has only ins, but second has note and effects
-tunes/madbrain/sinner.a2m - void pattern in the order is beyond max patters
+tunes/madbrain/sinner.a2m - void pattern in the order is beyond max patterns
 
-tunes/mlf/pink.a2t - x00 after non-compatible command
+tunes/mlf/pink.a2t - x00 after non-compatible command, restart_adsr == false in output_note()
 tunes/mlf/fm-troni.a2m - version 14, set_ins_volume_4op, uses FFF at the end
 tunes/mlf/ishtar.a2m - version 13 - test more, in adplug gives different results on testing
 

@@ -1066,7 +1066,7 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
         if (restart_adsr) {
             key_on(chan);
         } else {
-            //printf("restart_adsr=false\n");
+            AdPlug_LogWrite("restart_adsr == false in output_note()\n");
         }
 
         ch->freq_table[chan] |= 0x2000;
@@ -1161,7 +1161,7 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
         ch->effect_table[slot][chan].val = lval;
     } else {
         // x00 without any previous compatible command, should never happen
-        printf("\nERROR: x00 without any previous compatible command\n");
+        AdPlug_LogWrite("x00 without any previous compatible command\n");
         ch->effect_table[slot][chan].def = 0;
         ch->effect_table[slot][chan].val = 0;
     }
@@ -3242,7 +3242,7 @@ char *a2t_load(char *name)
     fclose(fh);
 
     AdPlug_LogFile("./debug.log");
-    AdPlug_LogWrite("Starting debug output.\n");
+    AdPlug_LogWrite("Starting debug output for %s.\n", name);
 
     return fileptr;
 }
