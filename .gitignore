@@ -8,3 +8,5 @@
 a2t_play32-linux32
 .vscode
 *.dmp
+*.log
+*.pck

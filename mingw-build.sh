@@ -4,4 +4,4 @@ CFLAGS="-std=c99 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function `sd
 LDFLAGS="-lSDL -mconsole"
 
 gcc	src/sdl.c src/a2t.c src/depack.c src/sixpack.c src/unlzh.c src/unlzw.c src/unlzss.c src/opl3.c \
-	-o a2t $CFLAGS $LDFLAGS
+	src/debug.c -o a2t $CFLAGS $LDFLAGS

@@ -27,6 +27,7 @@
 #include "unlzss.h"
 #include "opl3.h"
 #include "a2t.h"
+#include "debug.h"
 
 const uint8_t _panning[3] = { 0x30, 0x10, 0x20 };
 
@@ -712,7 +713,7 @@ static bool _4op_vol_valid_chan(int chan)
 static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
     if (chan >= 20) {
-        //AdPlug_LogWrite("set_ins_volume: channel out of bounds\n");
+        AdPlug_LogWrite("set_ins_volume: channel %d out of bounds\n", chan);
         return;
     }
 
@@ -2604,7 +2605,7 @@ static void update_extra_fine_effects()
 static void set_current_order(uint8_t new_order)
 {
     if (new_order >= 0x80) {
-        //AdPlug_LogWrite("set_current_order parameter is out of bounds, possibly corrupt file\n");
+        AdPlug_LogWrite("set_current_order parameter 0x%x is out of bounds, possibly corrupt file\n", new_order);
     }
     current_order = new_order < 0x80 ? new_order : 0;
 }
@@ -3239,6 +3240,9 @@ char *a2t_load(char *name)
     fileptr = (void *)calloc(1, filesize);
     fread(fileptr, 1, filesize, fh);
     fclose(fh);
+
+    AdPlug_LogFile("./debug.log");
+    AdPlug_LogWrite("Starting debug output.\n");
 
     return fileptr;
 }
