@@ -2612,43 +2612,41 @@ static void set_current_order(uint8_t new_order)
 
 static int calc_following_order(uint8_t order)
 {
-    int result;
-    uint8_t index, jump_count;
-
-    result = -1;
-    index = order;
-    jump_count = 0;
+    int result = -1;
+    uint8_t i = 0;
 
     do {
-        if (songinfo->pattern_order[index] < 0x80) {
-            result = index;
+        if (songinfo->pattern_order[order] < 0x80) {
+            result = order;
         } else {
-            index = songinfo->pattern_order[index] - 0x80;
-            jump_count++;
+            order = songinfo->pattern_order[order] - 0x80;
+            i++;
         }
-    } while (!((jump_count > 0x7f) || (result != -1)));
+    } while (i < 128 && result == -1);
 
     return result;
 }
 
 static int calc_order_jump()
 {
-    uint8_t temp;
-    int result;
+    uint8_t i = 0;
+    int result = 0;
 
-    result = 0;
-    temp = 0;
-
+    // protect from circular jump to jump order command
+    // if after 128 attempts of order jump we still land on jump command
+    // then quit
     do {
         if (songinfo->pattern_order[current_order] > 0x7f) {
             set_current_order(songinfo->pattern_order[current_order] - 0x80);
             songend = true;
         }
-        temp++;
-    } while (!((temp > 0x7f) || (songinfo->pattern_order[current_order] < 0x80)));
+        i++;
+    } while (i < 128 && songinfo->pattern_order[current_order] > 0x7f);
 
-    if (temp > 0x7f) {
+    if (i >= 128) {
+        AdPlug_LogWrite("calc_order_jump: Circular order jump detected, stopping playback\n");
         a2t_stop();
+        songend = true;
         result = -1;
     }
 
@@ -2692,8 +2690,7 @@ static void update_song_position()
             }
         }
 
-        if ((songinfo->pattern_order[current_order] > 0x7f) &&
-            (calc_order_jump() == -1))
+        if ((songinfo->pattern_order[current_order] > 0x7f) && (calc_order_jump() == -1))
             return;
 
         current_pattern = songinfo->pattern_order[current_order];
@@ -2712,8 +2709,7 @@ static void update_song_position()
         ch->glfsld_table[1][chan].val = 0;
     }
 
-    if ((current_line == 0) &&
-        (current_order == calc_following_order(0)) && speed_update) {
+    if ((current_line == 0) && (current_order == calc_following_order(0)) && speed_update) {
         tempo = songinfo->tempo;
         speed = songinfo->speed;
         update_timer(tempo);
@@ -3202,8 +3198,7 @@ bool a2t_play(char *tune) // start_playing()
 
     songend = false;
 
-    if ((songinfo->pattern_order[current_order] > 0x7f) &&
-        (calc_order_jump() == -1))
+    if ((songinfo->pattern_order[current_order] > 0x7f) && (calc_order_jump() == -1))
         return false;
 
     current_pattern = songinfo->pattern_order[current_order];
