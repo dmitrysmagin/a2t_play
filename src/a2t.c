@@ -5,6 +5,7 @@
 
     In order to get into Adplug:
     - Refactor update_song_position(), calc_following_order() and calc_order_jump()
+    - Refactor pattern_loop_flag and pattern_break_flag
     - Merge set_volume and set_ins_volume?
     - Rework all variables layout:
         * After that drop _table suffix for all included data
@@ -1425,6 +1426,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_PositionJump:
         if (no_loop(chan, current_line)) {
             pattern_break = true;
+            // TODO: this should read 'next_order'
             next_line = pattern_break_flag + chan;
         }
         break;
@@ -1580,8 +1582,10 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         case ef_ex_PatternLoop:
         case ef_ex_PatternLoopRec:
             if (val % 16 == 0) {
+                // set loopback point
                 ch->loopbck_table[chan] = current_line;
             } else {
+                // loop x times
                 if (ch->loopbck_table[chan] != BYTE_NULL) {
                     if (ch->loop_table[chan][current_line] == BYTE_NULL)
                         ch->loop_table[chan][current_line] = val % 16;
@@ -2608,6 +2612,8 @@ static void set_current_order(uint8_t new_order)
         AdPlug_LogWrite("set_current_order parameter 0x%x is out of bounds, possibly corrupt file\n", new_order);
     }
     current_order = new_order < 0x80 ? new_order : 0;
+
+    // TODO: add code to manage order jumps
 }
 
 static int calc_following_order(uint8_t order)
@@ -2658,36 +2664,39 @@ static void update_song_position()
     if ((current_line < songinfo->patt_len - 1) && !pattern_break) {
         current_line++;
     } else {
-        if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) &&
-             (current_order < 0x7f)) {
+        bool do_pattern_loop =  pattern_break && ((next_line & 0xf0) == pattern_loop_flag);
+        bool do_position_jump = pattern_break && ((next_line & 0xf0) == pattern_break_flag);
+
+        if (!do_pattern_loop && current_order < 0x7f) {
             memset(ch->loopbck_table, BYTE_NULL, sizeof(ch->loopbck_table));
             memset(ch->loop_table, BYTE_NULL, sizeof(ch->loop_table));
             current_order++;
         }
 
-        if (pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) {
-            uint8_t temp;
+        if (do_pattern_loop) {
+            // ZCx, ZDx
+            uint8_t chan = next_line - pattern_loop_flag;
+            next_line = ch->loopbck_table[chan];
 
-            temp = next_line - pattern_loop_flag;
-            next_line = ch->loopbck_table[temp];
+            if (ch->loop_table[chan][current_line] != 0)
+                ch->loop_table[chan][current_line]--;
+        } else if (do_position_jump) {
+            // Bxx - order position jump
+            uint8_t old_order = current_order;
 
-            if (ch->loop_table[temp][current_line] != 0)
-                ch->loop_table[temp][current_line]--;
+            uint8_t chan = next_line - pattern_break_flag;
+            int slot = ch->event_table[chan].eff[0].def == ef_PositionJump ? 0 : 1;
+            uint8_t val = ch->event_table[chan].eff[slot].val;
+
+            set_current_order(val);
+
+            if (current_order <= old_order)
+                songend = true;
+            pattern_break = false;
         } else {
-            if (pattern_break && ((next_line & 0xf0) == pattern_break_flag)) {
-                uint8_t old_order = current_order;
-                if (ch->event_table[next_line - pattern_break_flag].eff[1].def == ef_PositionJump) {
-                    set_current_order(ch->event_table[next_line - pattern_break_flag].eff[1].val);
-                } else {
-                    set_current_order(ch->event_table[next_line - pattern_break_flag].eff[0].val);
-                }
-                if (current_order <= old_order)
-                    songend = true;
-                pattern_break = false;
-            } else {
-                if (current_order >= 0x7f)
-                    set_current_order(0);
-            }
+            // Normally we fall down here
+            if (current_order >= 0x7f)
+                set_current_order(0);
         }
 
         if ((songinfo->pattern_order[current_order] > 0x7f) && (calc_order_jump() == -1))
@@ -2709,6 +2718,7 @@ static void update_song_position()
         ch->glfsld_table[1][chan].val = 0;
     }
 
+    // Probably, reset current tempo and speed if at the begginning of the order
     if ((current_line == 0) && (current_order == calc_following_order(0)) && speed_update) {
         tempo = songinfo->tempo;
         speed = songinfo->speed;
@@ -3083,6 +3093,11 @@ static void init_buffers()
 
     for (int i = 0; i < 20; i++)
         ch->volslide_type[i] = (songinfo->lock_flags[i] >> 2) & 3;
+
+    memset(ch->notedel_table, BYTE_NULL, sizeof(ch->notedel_table));
+    memset(ch->notecut_table, BYTE_NULL, sizeof(ch->notecut_table));
+    memset(ch->loopbck_table, BYTE_NULL, sizeof(ch->loopbck_table));
+    memset(ch->loop_table, BYTE_NULL, sizeof(ch->loop_table));
 }
 
 static void init_player()
@@ -3198,6 +3213,7 @@ bool a2t_play(char *tune) // start_playing()
 
     songend = false;
 
+    set_current_order(0);
     if ((songinfo->pattern_order[current_order] > 0x7f) && (calc_order_jump() == -1))
         return false;
 
