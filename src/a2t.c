@@ -89,7 +89,7 @@ uint8_t current_vibrato_depth = 0;
 bool speed_update, lockvol, panlock, lockVP;
 uint8_t tremolo_depth, vibrato_depth;
 bool volume_scaling, percussion_mode;
-uint8_t last_order;
+//uint8_t last_order;
 
 bool editor_mode = false; // true to allocate max resources
 
@@ -1862,12 +1862,15 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
 static void play_line()
 {
     tADTRACK2_EVENT _event, *event = &_event;
+    /* // This can be omitted, no side effects for ZCx/ZDx
+    bool do_pattern_loop = pattern_break && ((next_line & 0xf0) == pattern_loop_flag);
 
-    if (!(pattern_break && ((next_line & 0xf0) == pattern_loop_flag)) && current_order != last_order) {
+    if (!do_pattern_loop && current_order != last_order) {
         memset(ch->loopbck_table, BYTE_NULL, sizeof(ch->loopbck_table));
         memset(ch->loop_table, BYTE_NULL, sizeof(ch->loop_table));
         last_order = current_order;
     }
+    */
 
     for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
         // save effect_table into last_effect
@@ -2667,36 +2670,35 @@ static void update_song_position()
         bool do_pattern_loop =  pattern_break && ((next_line & 0xf0) == pattern_loop_flag);
         bool do_position_jump = pattern_break && ((next_line & 0xf0) == pattern_break_flag);
 
-        if (!do_pattern_loop && current_order < 0x7f) {
-            memset(ch->loopbck_table, BYTE_NULL, sizeof(ch->loopbck_table));
-            memset(ch->loop_table, BYTE_NULL, sizeof(ch->loop_table));
-            current_order++;
-        }
-
         if (do_pattern_loop) {
-            // ZCx, ZDx
+            // ZCx, ZDx - loop back
             uint8_t chan = next_line - pattern_loop_flag;
             next_line = ch->loopbck_table[chan];
 
             if (ch->loop_table[chan][current_line] != 0)
                 ch->loop_table[chan][current_line]--;
-        } else if (do_position_jump) {
-            // Bxx - order position jump
-            uint8_t old_order = current_order;
-
-            uint8_t chan = next_line - pattern_break_flag;
-            int slot = ch->event_table[chan].eff[0].def == ef_PositionJump ? 0 : 1;
-            uint8_t val = ch->event_table[chan].eff[slot].val;
-
-            set_current_order(val);
-
-            if (current_order <= old_order)
-                songend = true;
-            pattern_break = false;
         } else {
-            // Normally we fall down here
-            if (current_order >= 0x7f)
-                set_current_order(0);
+            // A bit overkill to clean arrays here, better do it in the end of pattern loop
+            memset(ch->loopbck_table, BYTE_NULL, sizeof(ch->loopbck_table));
+            memset(ch->loop_table, BYTE_NULL, sizeof(ch->loop_table));
+
+            if (do_position_jump) {
+                // Bxx - order position jump
+                uint8_t old_order = current_order;
+
+                uint8_t chan = next_line - pattern_break_flag;
+                int slot = ch->event_table[chan].eff[0].def == ef_PositionJump ? 0 : 1;
+                uint8_t val = ch->event_table[chan].eff[slot].val;
+
+                set_current_order(val);
+
+                if (current_order <= old_order)
+                    songend = true;
+                pattern_break = false;
+            } else {
+                int new_order = current_order < 0x7f ? current_order + 1 : 0;
+                set_current_order(new_order);
+            }
         }
 
         if ((songinfo->pattern_order[current_order] > 0x7f) && (calc_order_jump() == -1))
