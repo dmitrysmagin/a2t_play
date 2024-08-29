@@ -4,7 +4,7 @@
     - Implement fade_out_volume in set_ins_volume() and set_volume
 
     In order to get into Adplug:
-    - Refactor update_song_position(), calc_following_order() and calc_order_jump()
+    - Refactor update_song_position(), calc_following_order()
     - Refactor pattern_loop_flag and pattern_break_flag
     - Merge set_volume and set_ins_volume?
     - Rework all variables layout:
@@ -2616,7 +2616,28 @@ static void set_current_order(uint8_t new_order)
     }
     current_order = new_order < 0x80 ? new_order : 0;
 
-    // TODO: add code to manage order jumps
+    if (songinfo->pattern_order[current_order] < 0x80)
+        return;
+
+    // protect from circular jump to jump order command
+    // if after 128 attempts of order jump we still land on jump command
+    // then quit
+    int i = 0;
+    do {
+        if (songinfo->pattern_order[current_order] > 0x7f) {
+            uint8_t old_order = current_order;
+            current_order = songinfo->pattern_order[current_order] - 0x80;
+            if (current_order <= old_order)
+                songend = true;
+        }
+        i++;
+    } while (i < 128 && songinfo->pattern_order[current_order] > 0x7f);
+
+    if (i >= 128) {
+        AdPlug_LogWrite("set_current_order: Circular order jump detected, stopping playback\n");
+        songend = true;
+        a2t_stop();
+    }
 }
 
 static int calc_following_order(uint8_t order)
@@ -2632,32 +2653,6 @@ static int calc_following_order(uint8_t order)
             i++;
         }
     } while (i < 128 && result == -1);
-
-    return result;
-}
-
-static int calc_order_jump()
-{
-    uint8_t i = 0;
-    int result = 0;
-
-    // protect from circular jump to jump order command
-    // if after 128 attempts of order jump we still land on jump command
-    // then quit
-    do {
-        if (songinfo->pattern_order[current_order] > 0x7f) {
-            set_current_order(songinfo->pattern_order[current_order] - 0x80);
-            songend = true;
-        }
-        i++;
-    } while (i < 128 && songinfo->pattern_order[current_order] > 0x7f);
-
-    if (i >= 128) {
-        AdPlug_LogWrite("calc_order_jump: Circular order jump detected, stopping playback\n");
-        a2t_stop();
-        songend = true;
-        result = -1;
-    }
 
     return result;
 }
@@ -2701,7 +2696,7 @@ static void update_song_position()
             }
         }
 
-        if ((songinfo->pattern_order[current_order] > 0x7f) && (calc_order_jump() == -1))
+        if ((songinfo->pattern_order[current_order] > 0x7f))
             return;
 
         current_pattern = songinfo->pattern_order[current_order];
@@ -3216,7 +3211,8 @@ bool a2t_play(char *tune) // start_playing()
     songend = false;
 
     set_current_order(0);
-    if ((songinfo->pattern_order[current_order] > 0x7f) && (calc_order_jump() == -1))
+
+    if ((songinfo->pattern_order[current_order] > 0x7f))
         return false;
 
     current_pattern = songinfo->pattern_order[current_order];
