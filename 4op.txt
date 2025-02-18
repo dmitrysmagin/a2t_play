@@ -15,6 +15,8 @@ tunes/mlf/pink.a2t - x00 after non-compatible command, restart_adsr == false in 
 tunes/mlf/fm-troni.a2m - version 14, set_ins_volume_4op, uses FFF at the end
 tunes/mlf/ishtar.a2m - version 13 - test more, in adplug gives different results on testing
 
+ca54.a2m - speed and tempo reset
+
 mario.a2m - version 1
 adven.a2m - version 5
 OLD_001.A2M - version 5

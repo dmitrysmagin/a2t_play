@@ -86,6 +86,7 @@ uint8_t misc_register;
 uint8_t current_tremolo_depth = 0;
 uint8_t current_vibrato_depth = 0;
 
+// Should read 'speed_reset'
 bool speed_update, lockvol, panlock, lockVP;
 uint8_t tremolo_depth, vibrato_depth;
 bool volume_scaling, percussion_mode;
@@ -2715,8 +2716,7 @@ static void update_song_position()
         ch->glfsld_table[1][chan].val = 0;
     }
 
-    // Probably, reset current tempo and speed if at the begginning of the order
-    if ((current_line == 0) && (current_order == calc_following_order(0)) && speed_update) {
+    if (speed_update && current_line == 0 && current_order == calc_following_order(0)) {
         tempo = songinfo->tempo;
         speed = songinfo->speed;
         update_timer(tempo);
@@ -3053,6 +3053,12 @@ static void done_irq()
     irq_mode = false;
 }
 
+/* Reset all global variables before loading the tune */
+static void reset_variables()
+{
+
+}
+
 static void init_buffers()
 {
     memset(ch, 0, sizeof(*ch));
@@ -3175,19 +3181,18 @@ void a2t_stop()
 /* Clean songinfo before importing a2t tune */
 static void init_songdata()
 {
-    if (play_status != isStopped)
-        a2t_stop();
-
     memset(songinfo, 0, sizeof(*songinfo));
     memset(songinfo->pattern_order, 0x80, sizeof(songinfo->pattern_order));
 
-    IRQ_freq_shift = 0;
-    playback_speed_shift = 0;
     songinfo->patt_len = 64;
     songinfo->nm_tracks = 18;
     songinfo->tempo = tempo;
     songinfo->speed = speed;
     songinfo->macro_speedup = 1;
+
+    // init_variables() ?
+    IRQ_freq_shift = 0;
+    playback_speed_shift = 0;
     speed_update = false;
     lockvol = false;
     panlock = false;
@@ -3832,9 +3837,6 @@ static bool a2t_import(char *tune, unsigned long size)
 
     songinfo->tempo = header->tempo;
     songinfo->speed = header->speed;
-    songinfo->patt_len = 64;
-    songinfo->nm_tracks = 18;
-    songinfo->macro_speedup = 1;
 
     // Read variable part after header, fill len[] with values
     result = a2t_read_varheader(blockptr, size - (blockptr - tune));
@@ -4082,7 +4084,7 @@ static bool a2m_import(char *tune, unsigned long size)
     if (strncmp(header->id, "_A2module_", 10))
         return false;
 
-    memset(songinfo, 0, sizeof(*songinfo));
+    init_songdata();
 
     memset(len, 0, sizeof(len));
 
@@ -4090,10 +4092,6 @@ static bool a2m_import(char *tune, unsigned long size)
 
     if (!ffver || ffver > 14)
         return false;
-
-    songinfo->patt_len = 64;
-    songinfo->nm_tracks = 18;
-    songinfo->macro_speedup = 1;
 
     // Read variable part after header, fill len[] with values
     result = a2m_read_varheader(blockptr, header->npatt, size - (blockptr - tune));
