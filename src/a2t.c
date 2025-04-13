@@ -250,7 +250,7 @@ static void arpvib_tables_free()
     arpeggio_table = 0;
 }
 
-static void arpvib_tables_allocate(size_t n, tARPVIB_TABLE mt[n])
+static void arpvib_tables_allocate(size_t n, tARPVIB_TABLE_V9_14 mt[n])
 {
     arpvib_tables_free();
 
@@ -264,11 +264,26 @@ static void arpvib_tables_allocate(size_t n, tARPVIB_TABLE mt[n])
     for (unsigned int i = 0; i < n; i++) {
         if (editor_mode || mt[i].vibrato.length) {
             vibrato_table[i] = calloc(1, sizeof(tVIBRATO_TABLE));
-            *vibrato_table[i] = mt[i].vibrato; // copy struct
+            //*vibrato_table[i] = mt[i].vibrato; // copy struct
+            // Copy field by field
+            vibrato_table[i]->length = mt[i].vibrato.length;
+            vibrato_table[i]->speed = mt[i].vibrato.speed;
+            vibrato_table[i]->loop_begin = mt[i].vibrato.loop_begin;
+            vibrato_table[i]->loop_length = mt[i].vibrato.loop_length;
+            vibrato_table[i]->keyoff_pos = mt[i].vibrato.keyoff_pos;
+            vibrato_table[i]->loop_begin = mt[i].vibrato.loop_begin;
+            memcpy(vibrato_table[i]->data, mt[i].vibrato.data, 255);
         }
         if (editor_mode || mt[i].arpeggio.length) {
             arpeggio_table[i] = calloc(1, sizeof(tARPEGGIO_TABLE));
-            *arpeggio_table[i] = mt[i].arpeggio; // copy struct
+            //*arpeggio_table[i] = mt[i].arpeggio; // copy struct
+            // Copy field by field
+            arpeggio_table[i]->length = mt[i].arpeggio.length;
+            arpeggio_table[i]->speed = mt[i].arpeggio.speed;
+            arpeggio_table[i]->loop_begin = mt[i].arpeggio.length;
+            arpeggio_table[i]->loop_length = mt[i].arpeggio.loop_begin;
+            arpeggio_table[i]->keyoff_pos = mt[i].arpeggio.keyoff_pos;
+            memcpy(arpeggio_table[i]->data, mt[i].arpeggio.data, 255);
         }
     }
 }
@@ -3497,7 +3512,7 @@ static int a2t_read_arpvibtable(char *src, unsigned long size)
 
     if (len[2] > size) return INT_MAX;
 
-    tARPVIB_TABLE *arpvib_table = (tARPVIB_TABLE *)calloc(255, sizeof(tARPVIB_TABLE));
+    tARPVIB_TABLE_V9_14 *arpvib_table = (tARPVIB_TABLE_V9_14 *)calloc(255, sizeof(tARPVIB_TABLE_V9_14));
     a2t_depack(src, len[2], arpvib_table);
 
     // TODO: Calculate actual num of arp/vib tables

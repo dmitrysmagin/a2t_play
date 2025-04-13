@@ -479,13 +479,44 @@ STATIC_ASSERT(sizeof(A2M_SONGDATA_V1_8) == 11717);
 /* Structures for importing A2M format V9-14 */
 
 typedef struct {
-    tFM_INST_DATA fm;
+    tFM_INST_DATA_V1_14 fm;
     uint8_t panning; // 11
     int8_t  fine_tune; // 12
     uint8_t perc_voice; // 13
 } tINSTR_DATA_V9_14;
 
 STATIC_ASSERT(sizeof(tINSTR_DATA_V9_14) == 14);
+
+typedef struct {
+    uint8_t length;         // 0
+    uint8_t speed;          // 1
+    uint8_t loop_begin;     // 2
+    uint8_t loop_length;    // 3
+    uint8_t keyoff_pos;     // 4
+    uint8_t data[255];      // 5
+} tARPEGGIO_TABLE_V9_14;
+
+STATIC_ASSERT(sizeof(tARPEGGIO_TABLE_V9_14) == 260);
+
+typedef struct {
+    uint8_t length;         // 0
+    uint8_t speed;          // 1
+    uint8_t delay;          // 2
+    uint8_t loop_begin;     // 3
+    uint8_t loop_length;    // 4
+    uint8_t keyoff_pos;     // 5
+    int8_t data[255];       // 6 array[1..255] of Shortint;
+} tVIBRATO_TABLE_V9_14;
+
+STATIC_ASSERT(sizeof(tVIBRATO_TABLE_V9_14) == 261);
+
+typedef struct {
+    tARPEGGIO_TABLE_V9_14 arpeggio;
+    tVIBRATO_TABLE_V9_14 vibrato;
+} tARPVIB_TABLE_V9_14;
+
+STATIC_ASSERT(sizeof(tARPVIB_TABLE_V9_14) == 521);
+#define tARPVIB_TABLE_V9_14_SIZE    (521)
 
 typedef struct {
     uint8_t num_4op;
@@ -500,12 +531,12 @@ typedef struct {
 } tBPM_DATA;
 
 typedef struct {
-    char songname[43];
-    char composer[43];
-    char instr_names[255][43];
-    tINSTR_DATA_V9_14 instr_data[255];
-    tFMREG_TABLE fmreg_table[255];      // tFMREG_TABLE_V9_14 ??
-    tARPVIB_TABLE arpvib_table[255];    // tARPVIB_TABLE_V9_14 ??
+    char songname[43];                      // 0
+    char composer[43];                      // 43
+    char instr_names[255][43];              // 86
+    tINSTR_DATA_V9_14 instr_data[255];      // 11051
+    tFMREG_TABLE fmreg_table[255];          // 14621 tFMREG_TABLE_V9_14 ??
+    tARPVIB_TABLE_V9_14 arpvib_table[255];  // 
     uint8_t pattern_order[128];
     uint8_t tempo;
     uint8_t speed;
