@@ -3349,26 +3349,71 @@ static int a2t_read_varheader(char *blockptr, unsigned long size)
     return INT_MAX;
 }
 
+static void instrument_import_raw11bytes(tINSTR_DATA *dsti, uint8_t *srci)
+{
+    // Copy instrument field by field
+    dsti->fm.multipM = srci[0] & 0xf;
+    dsti->fm.ksrM    = (srci[0] >> 4) & 1;
+    dsti->fm.sustM   = (srci[0] >> 5) & 1;
+    dsti->fm.vibrM   = (srci[0] >> 6) & 1;
+    dsti->fm.tremM   = (srci[0] >> 7) & 1;
+
+    dsti->fm.multipC = srci[1] & 0xf;
+    dsti->fm.ksrC    = (srci[1] >> 4) & 1;
+    dsti->fm.sustC   = (srci[1] >> 5) & 1;
+    dsti->fm.vibrC   = (srci[1] >> 6) & 1;
+    dsti->fm.tremC   = (srci[1] >> 7) & 1;
+
+    dsti->fm.volM    = srci[2] & 0x3f;
+    dsti->fm.kslM    = (srci[2] >> 6) & 3;
+
+    dsti->fm.volC    = srci[3] & 0x3f;
+    dsti->fm.kslC    = (srci[3] >> 6) & 3;
+
+    dsti->fm.decM    = srci[4] & 0xf;
+    dsti->fm.attckM  = (srci[4] >> 4) & 0xf;
+
+    dsti->fm.decC    = srci[5] & 0xf;
+    dsti->fm.attckC  = (srci[5] >> 4) & 0xf;
+
+    dsti->fm.relM    = srci[6] & 0xf;
+    dsti->fm.sustnM  = (srci[6] >> 4) & 0xf;
+
+    dsti->fm.relC    = srci[7] & 0xf;
+    dsti->fm.sustnC  = (srci[7] >> 4) & 0xf;
+
+    dsti->fm.wformM  = srci[8] & 7;
+    dsti->fm.wformC  = srci[9] & 7;
+
+    dsti->fm.connect  = srci[10] & 1;
+    dsti->fm.feedb    = (srci[10] >> 1) & 7;
+} 
+
 static void instrument_import_v1_8(int ins, tINSTR_DATA_V1_8 *instr_s)
 {
     tINSTR_DATA *instr_d = get_instr_data(ins);
     assert(instr_d);
 
-    instr_d->fm = instr_s->fm; // copy struct
-    instr_d->panning = instr_s->panning;
-    instr_d->fine_tune = instr_s->fine_tune;
+    instrument_import_raw11bytes(instr_d, (uint8_t *)instr_s);
+
+    instr_d->panning   = instr_s->panning; // 11
+    instr_d->fine_tune = instr_s->fine_tune; // 12
 
     if (instr_d->panning >= 3) {
         instr_d->panning = 0;
     }
 }
 
-static void instrument_import(int ins, tINSTR_DATA *instr_s)
+static void instrument_import(int ins, tINSTR_DATA_V9_14 *instr_s)
 {
     tINSTR_DATA *instr_d = get_instr_data(ins);
     assert(instr_d);
 
-    *instr_d = *instr_s; // copy struct
+    instrument_import_raw11bytes(instr_d, (uint8_t *)instr_s);
+
+    instr_d->panning    = instr_s->panning; // 11
+    instr_d->fine_tune  = instr_s->fine_tune; // 12
+    instr_d->perc_voice = instr_s->perc_voice; // 13
 
     if (instr_d->panning >= 3) {
         instr_d->panning = 0;
@@ -3413,7 +3458,7 @@ static int a2t_read_instruments(char *src, unsigned long size)
             instrument_import_v1_8(i + 1, &instr_data[i]);
         }
     } else {
-        tINSTR_DATA *instr_data = (tINSTR_DATA *)dst;
+        tINSTR_DATA_V9_14 *instr_data = (tINSTR_DATA_V9_14 *)dst;
 
         for (int i = 0; i < count; i++) {
             instrument_import(i + 1, &instr_data[i]);

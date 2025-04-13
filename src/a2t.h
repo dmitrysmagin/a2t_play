@@ -61,6 +61,13 @@ typedef enum {
     3) STATIC_ASSERT is used to make sure structs have the correct size
 */
 
+/*
+ * TO REWORK: tFM_INST_DATA, tINSTR_DATA, tINSTR_DATA_EXT, 
+ *  - totally separate data definitions used in the player and when loading a2m/a2t
+ *  - remove all occurrences of fm.data and fmpar->data
+ *  - calculate real reg values right before writing them with opl3out()
+ */
+
 typedef struct {
     union {
         struct {
@@ -286,7 +293,7 @@ STATIC_ASSERT(sizeof(tPATTERN_DATA) == 20 * 256 * 6);
 #define EFGR_PORTAVOLSLIDE 7
 #define EFGR_RETRIGNOTE 8
 
-/* Data for importing A2T format */
+/* Structures for importing A2T format (all versions) */
 typedef struct {
     char id[15];    // '_a2tiny_module_'
     uint8_t crc[4]; // uint32_t
@@ -425,11 +432,33 @@ enum {
     fx_ex_ExtendedCmd    = 0x0f
 };
 
-/* Data for importing A2M format */
+/* Structures for importing A2M format V1-8 */
+
 typedef struct {
-    tFM_INST_DATA fm;
-    uint8_t panning;
-    int8_t  fine_tune;
+    union {
+        struct {
+            uint8_t multipM: 4, ksrM: 1, sustM: 1, vibrM: 1, tremM : 1; // 0
+            uint8_t multipC: 4, ksrC: 1, sustC: 1, vibrC: 1, tremC : 1; // 1
+            uint8_t volM: 6, kslM: 2; // 2
+            uint8_t volC: 6, kslC: 2; // 3
+            uint8_t decM: 4, attckM: 4; // 4
+            uint8_t decC: 4, attckC: 4; // 5
+            uint8_t relM: 4, sustnM: 4; // 6
+            uint8_t relC: 4, sustnC: 4; // 7
+            uint8_t wformM: 3, : 5; // 8
+            uint8_t wformC: 3, : 5; // 9
+            uint8_t connect: 1, feedb: 3, : 4; // 10, panning is not used here
+        };
+        uint8_t data[11];
+    };
+} tFM_INST_DATA_V1_14;
+
+STATIC_ASSERT(sizeof(tFM_INST_DATA_V1_14) == 11);
+
+typedef struct {
+    tFM_INST_DATA_V1_14 fm;
+    uint8_t panning; // 11
+    int8_t  fine_tune; // 12
 } tINSTR_DATA_V1_8;
 
 STATIC_ASSERT(sizeof(tINSTR_DATA_V1_8) == 13);
@@ -447,6 +476,17 @@ typedef struct {
 
 STATIC_ASSERT(sizeof(A2M_SONGDATA_V1_8) == 11717);
 
+/* Structures for importing A2M format V9-14 */
+
+typedef struct {
+    tFM_INST_DATA fm;
+    uint8_t panning; // 11
+    int8_t  fine_tune; // 12
+    uint8_t perc_voice; // 13
+} tINSTR_DATA_V9_14;
+
+STATIC_ASSERT(sizeof(tINSTR_DATA_V9_14) == 14);
+
 typedef struct {
     uint8_t num_4op;
     uint8_t idx_4op[128];
@@ -463,9 +503,9 @@ typedef struct {
     char songname[43];
     char composer[43];
     char instr_names[255][43];
-    tINSTR_DATA instr_data[255];
-    tFMREG_TABLE fmreg_table[255];
-    tARPVIB_TABLE arpvib_table[255];
+    tINSTR_DATA_V9_14 instr_data[255];
+    tFMREG_TABLE fmreg_table[255];      // tFMREG_TABLE_V9_14 ??
+    tARPVIB_TABLE arpvib_table[255];    // tARPVIB_TABLE_V9_14 ??
     uint8_t pattern_order[128];
     uint8_t tempo;
     uint8_t speed;
