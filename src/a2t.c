@@ -3349,8 +3349,11 @@ static int a2t_read_varheader(char *blockptr, unsigned long size)
     return INT_MAX;
 }
 
-static void instrument_import_raw11bytes(tINSTR_DATA *dsti, uint8_t *srci)
+static void instrument_import(int ins, uint8_t *srci, bool v9_14)
 {
+    tINSTR_DATA *dsti = get_instr_data(ins);
+    assert(dsti);
+
     // Copy instrument field by field
     dsti->fm.multipM = srci[0] & 0xf;
     dsti->fm.ksrM    = (srci[0] >> 4) & 1;
@@ -3385,38 +3388,17 @@ static void instrument_import_raw11bytes(tINSTR_DATA *dsti, uint8_t *srci)
     dsti->fm.wformM  = srci[8] & 7;
     dsti->fm.wformC  = srci[9] & 7;
 
-    dsti->fm.connect  = srci[10] & 1;
-    dsti->fm.feedb    = (srci[10] >> 1) & 7;
-} 
+    dsti->fm.connect = srci[10] & 1;
+    dsti->fm.feedb   = (srci[10] >> 1) & 7;
 
-static void instrument_import_v1_8(int ins, tINSTR_DATA_V1_8 *instr_s)
-{
-    tINSTR_DATA *instr_d = get_instr_data(ins);
-    assert(instr_d);
+    dsti->panning    = srci[11] & 3;
+    dsti->fine_tune  = srci[12];
 
-    instrument_import_raw11bytes(instr_d, (uint8_t *)instr_s);
+    // Is 'perc_voice' even used anywhere?
+    dsti->perc_voice = (v9_14 == true ? srci[13] : 0);
 
-    instr_d->panning   = instr_s->panning; // 11
-    instr_d->fine_tune = instr_s->fine_tune; // 12
-
-    if (instr_d->panning >= 3) {
-        instr_d->panning = 0;
-    }
-}
-
-static void instrument_import(int ins, tINSTR_DATA_V9_14 *instr_s)
-{
-    tINSTR_DATA *instr_d = get_instr_data(ins);
-    assert(instr_d);
-
-    instrument_import_raw11bytes(instr_d, (uint8_t *)instr_s);
-
-    instr_d->panning    = instr_s->panning; // 11
-    instr_d->fine_tune  = instr_s->fine_tune; // 12
-    instr_d->perc_voice = instr_s->perc_voice; // 13
-
-    if (instr_d->panning >= 3) {
-        instr_d->panning = 0;
+    if (dsti->panning >= 3) {
+        dsti->panning = 0;
     }
 }
 
@@ -3455,13 +3437,13 @@ static int a2t_read_instruments(char *src, unsigned long size)
         tINSTR_DATA_V1_8 *instr_data = (tINSTR_DATA_V1_8 *)dst;
 
         for (int i = 0; i < count; i++) {
-            instrument_import_v1_8(i + 1, &instr_data[i]);
+            instrument_import(i + 1, (uint8_t *)&instr_data[i], false);
         }
     } else {
         tINSTR_DATA_V9_14 *instr_data = (tINSTR_DATA_V9_14 *)dst;
 
         for (int i = 0; i < count; i++) {
-            instrument_import(i + 1, &instr_data[i]);
+            instrument_import(i + 1, (uint8_t *)&instr_data[i], true);
         }
     }
 
@@ -4001,7 +3983,7 @@ static int a2m_read_songdata(char *src, unsigned long size)
             memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 32);
 
         for (int i = 0; i < count; i++) {
-            instrument_import_v1_8(i + 1, &data->instr_data[i]);
+            instrument_import(i + 1, (uint8_t *)&data->instr_data[i], false);
         }
 
         memcpy(songinfo->pattern_order, data->pattern_order, 128);
@@ -4040,7 +4022,7 @@ static int a2m_read_songdata(char *src, unsigned long size)
             memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 42);
 
         for (int i = 0; i < count; i++) {
-            instrument_import(i + 1, &data->instr_data[i]);
+            instrument_import(i + 1, (uint8_t *)&data->instr_data[i], true);
 
             // Instrument arpegio/vibrato references
             tINSTR_DATA_EXT *dst = get_instr(i + 1);

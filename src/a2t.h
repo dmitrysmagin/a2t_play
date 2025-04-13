@@ -449,7 +449,7 @@ typedef struct {
             uint8_t wformC: 3, : 5; // 9
             uint8_t connect: 1, feedb: 3, : 4; // 10, panning is not used here
         };
-        uint8_t data[11];
+        //uint8_t data[11];
     };
 } tFM_INST_DATA_V1_14;
 
@@ -467,7 +467,7 @@ typedef struct {
     char songname[43];
     char composer[43];
     char instr_names[250][33];
-    tINSTR_DATA_V1_8 instr_data[250];
+    tINSTR_DATA_V1_8 instr_data[250]; // uint8_t instr_data[13][250];
     uint8_t pattern_order[128];
     uint8_t tempo;
     uint8_t speed;
