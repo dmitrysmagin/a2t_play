@@ -321,29 +321,29 @@ static void arpvib_tables_allocate(size_t n, uint8_t *src/*tARPVIB_TABLE_V9_14 m
     arpeggio_table = calloc(n, sizeof(tARPEGGIO_TABLE *));
     arpvib_count = n;
 
-    for (unsigned int i = 0, y = 0; i < n; i++, y += tARPVIB_TABLE_V9_14_SIZE) {
-        if (editor_mode || src[y] /*mt[i].arpeggio.length*/) {
+    for (unsigned int i = 0; i < n; i++, src += tARPVIB_TABLE_V9_14_SIZE) {
+        if (editor_mode || src[0] /*arpeggio.length*/) {
             arpeggio_table[i] = calloc(1, sizeof(tARPEGGIO_TABLE));
 
             // Copy field by field
-            arpeggio_table[i]->length       = src[y] /*mt[i].arpeggio.length*/;
-            arpeggio_table[i]->speed        = src[y+1] /*mt[i].arpeggio.speed*/;
-            arpeggio_table[i]->loop_begin   = src[y+2] /*mt[i].arpeggio.loop_begin*/;
-            arpeggio_table[i]->loop_length  = src[y+3] /*mt[i].arpeggio.loop_length*/;
-            arpeggio_table[i]->keyoff_pos   = src[y+4] /*mt[i].arpeggio.keyoff_pos*/;
-            memcpy(arpeggio_table[i]->data, &src[y+5] /*mt[i].arpeggio.data*/, 255);
+            arpeggio_table[i]->length       = src[0] /*mt[i].arpeggio.length*/;
+            arpeggio_table[i]->speed        = src[1] /*mt[i].arpeggio.speed*/;
+            arpeggio_table[i]->loop_begin   = src[2] /*mt[i].arpeggio.loop_begin*/;
+            arpeggio_table[i]->loop_length  = src[3] /*mt[i].arpeggio.loop_length*/;
+            arpeggio_table[i]->keyoff_pos   = src[4] /*mt[i].arpeggio.keyoff_pos*/;
+            memcpy(arpeggio_table[i]->data, &src[5] /*mt[i].arpeggio.data*/, 255);
         }
-        if (editor_mode || src[y+260] /*mt[i].vibrato.length*/) {
+        if (editor_mode || src[260] /*vibrato.length*/) {
             vibrato_table[i] = calloc(1, sizeof(tVIBRATO_TABLE));
 
             // Copy field by field
-            vibrato_table[i]->length        = src[y+260] /*mt[i].vibrato.length*/;
-            vibrato_table[i]->speed         = src[y+261] /*mt[i].vibrato.speed*/;
-            vibrato_table[i]->delay         = src[y+262] /*mt[i].vibrato.delay*/;
-            vibrato_table[i]->loop_begin    = src[y+263] /*mt[i].vibrato.loop_begin*/;
-            vibrato_table[i]->loop_length   = src[y+264] /*mt[i].vibrato.loop_length*/;
-            vibrato_table[i]->keyoff_pos    = src[y+265] /*mt[i].vibrato.keyoff_pos*/;
-            memcpy(vibrato_table[i]->data, &src[y+266] /*mt[i].vibrato.data*/, 255);
+            vibrato_table[i]->length        = src[260] /*mt[i].vibrato.length*/;
+            vibrato_table[i]->speed         = src[261] /*mt[i].vibrato.speed*/;
+            vibrato_table[i]->delay         = src[262] /*mt[i].vibrato.delay*/;
+            vibrato_table[i]->loop_begin    = src[263] /*mt[i].vibrato.loop_begin*/;
+            vibrato_table[i]->loop_length   = src[264] /*mt[i].vibrato.loop_length*/;
+            vibrato_table[i]->keyoff_pos    = src[265] /*mt[i].vibrato.keyoff_pos*/;
+            memcpy(vibrato_table[i]->data, &src[266] /*mt[i].vibrato.data*/, 255);
         }
     }
 }
