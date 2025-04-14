@@ -3624,7 +3624,7 @@ static int a2t_read_order(char *src, unsigned long size)
     return len[i];
 }
 
-void convert_v1234_effects(tADTRACK2_EVENT_V1_8 *ev, int chan)
+void convert_v1234_effects(tADTRACK2_EVENT *ev, int chan)
 {
     // Old v1234 effects
     enum {
@@ -3662,155 +3662,155 @@ void convert_v1234_effects(tADTRACK2_EVENT_V1_8 *ev, int chan)
         fx_ex_ExtendedCmd    = 0x0f
     };
 
-    switch (ev->effect_def) {
-    case fx_Arpeggio:           ev->effect_def = ef_Arpeggio;        break;
-    case fx_FSlideUp:           ev->effect_def = ef_FSlideUp;        break;
-    case fx_FSlideDown:         ev->effect_def = ef_FSlideDown;      break;
-    case fx_FSlideUpFine:       ev->effect_def = ef_FSlideUpFine;    break;
-    case fx_FSlideDownFine:     ev->effect_def = ef_FSlideDownFine;  break;
-    case fx_TonePortamento:     ev->effect_def = ef_TonePortamento;  break;
-    case fx_TPortamVolSlide:    ev->effect_def = ef_TPortamVolSlide; break;
-    case fx_Vibrato:            ev->effect_def = ef_Vibrato;         break;
-    case fx_VibratoVolSlide:    ev->effect_def = ef_VibratoVolSlide; break;
-    case fx_SetInsVolume:       ev->effect_def = ef_SetInsVolume;    break;
-    case fx_PatternJump:        ev->effect_def = ef_PositionJump;    break;
-    case fx_PatternBreak:       ev->effect_def = ef_PatternBreak;    break;
-    case fx_SetTempo:           ev->effect_def = ef_SetSpeed;        break;
-    case fx_SetTimer:           ev->effect_def = ef_SetTempo;        break;
+    switch (ev->eff[0].def) {
+    case fx_Arpeggio:           ev->eff[0].def = ef_Arpeggio;        break;
+    case fx_FSlideUp:           ev->eff[0].def = ef_FSlideUp;        break;
+    case fx_FSlideDown:         ev->eff[0].def = ef_FSlideDown;      break;
+    case fx_FSlideUpFine:       ev->eff[0].def = ef_FSlideUpFine;    break;
+    case fx_FSlideDownFine:     ev->eff[0].def = ef_FSlideDownFine;  break;
+    case fx_TonePortamento:     ev->eff[0].def = ef_TonePortamento;  break;
+    case fx_TPortamVolSlide:    ev->eff[0].def = ef_TPortamVolSlide; break;
+    case fx_Vibrato:            ev->eff[0].def = ef_Vibrato;         break;
+    case fx_VibratoVolSlide:    ev->eff[0].def = ef_VibratoVolSlide; break;
+    case fx_SetInsVolume:       ev->eff[0].def = ef_SetInsVolume;    break;
+    case fx_PatternJump:        ev->eff[0].def = ef_PositionJump;    break;
+    case fx_PatternBreak:       ev->eff[0].def = ef_PatternBreak;    break;
+    case fx_SetTempo:           ev->eff[0].def = ef_SetSpeed;        break;
+    case fx_SetTimer:           ev->eff[0].def = ef_SetTempo;        break;
     case fx_SetOpIntensity: {
-        if (ev->effect & 0xf0) {
-            ev->effect_def = ef_SetCarrierVol;
-            ev->effect = (ev->effect >> 4) * 4 + 3;
-        } else if (ev->effect & 0x0f) {
-            ev->effect_def = ef_SetModulatorVol;
-            ev->effect = (ev->effect & 0x0f) * 4 + 3;
-        } else ev->effect_def = 0;
+        if (ev->eff[0].val & 0xf0) {
+            ev->eff[0].def = ef_SetCarrierVol;
+            ev->eff[0].val = (ev->eff[0].val >> 4) * 4 + 3;
+        } else if (ev->eff[0].val & 0x0f) {
+            ev->eff[0].def = ef_SetModulatorVol;
+            ev->eff[0].val = (ev->eff[0].val & 0x0f) * 4 + 3;
+        } else ev->eff[0].def = 0;
         break;
     }
     case fx_Extended: {
-        switch (ev->effect >> 4) {
+        switch (ev->eff[0].val >> 4) {
         case fx_ex_DefAMdepth:
-            ev->effect_def = ef_Extended;
-            ev->effect = ef_ex_SetTremDepth << 4 | (ev->effect & 0x0f);
+            ev->eff[0].def = ef_Extended;
+            ev->eff[0].val = ef_ex_SetTremDepth << 4 | (ev->eff[0].val & 0x0f);
             break;
         case fx_ex_DefVibDepth:
-            ev->effect_def = ef_Extended;
-            ev->effect = ef_ex_SetVibDepth << 4 | (ev->effect & 0x0f);
+            ev->eff[0].def = ef_Extended;
+            ev->eff[0].val = ef_ex_SetVibDepth << 4 | (ev->eff[0].val & 0x0f);
             break;
         case fx_ex_DefWaveform:
-            ev->effect_def = ef_SetWaveform;
-            if ((ev->effect & 0x0f) < 4) {
-                ev->effect = ((ev->effect & 0x0f) << 4) | 0x0f; // 0..3
+            ev->eff[0].def = ef_SetWaveform;
+            if ((ev->eff[0].val & 0x0f) < 4) {
+                ev->eff[0].val = ((ev->eff[0].val & 0x0f) << 4) | 0x0f; // 0..3
             } else {
-                ev->effect = ((ev->effect & 0x0f) - 4) | 0xf0; // 4..7
+                ev->eff[0].val = ((ev->eff[0].val & 0x0f) - 4) | 0xf0; // 4..7
             }
             break;
         case fx_ex_VSlideUp:
-            ev->effect_def = ef_VolSlide;
-            ev->effect = (ev->effect & 0x0f) << 4;
+            ev->eff[0].def = ef_VolSlide;
+            ev->eff[0].val = (ev->eff[0].val & 0x0f) << 4;
             break;
         case fx_ex_VSlideDown:
-            ev->effect_def = ef_VolSlide;
-            ev->effect = ev->effect & 0x0f;
+            ev->eff[0].def = ef_VolSlide;
+            ev->eff[0].val = ev->eff[0].val & 0x0f;
             break;
         case fx_ex_VSlideUpFine:
-            ev->effect_def = ef_VolSlideFine;
-            ev->effect = (ev->effect & 0x0f) << 4;
+            ev->eff[0].def = ef_VolSlideFine;
+            ev->eff[0].val = (ev->eff[0].val & 0x0f) << 4;
             break;
         case fx_ex_VSlideDownFine:
-            ev->effect_def = ef_VolSlideFine;
-            ev->effect = ev->effect & 0x0f;
+            ev->eff[0].def = ef_VolSlideFine;
+            ev->eff[0].val = ev->eff[0].val & 0x0f;
             break;
         case fx_ex_ManSlideUp:
-            ev->effect_def = ef_Extended2;
-            ev->effect = (ef_ex2_FineTuneUp << 4) | (ev->effect & 0x0f);
+            ev->eff[0].def = ef_Extended2;
+            ev->eff[0].val = (ef_ex2_FineTuneUp << 4) | (ev->eff[0].val & 0x0f);
             break;
         case fx_ex_ManSlideDown:
-            ev->effect_def = ef_Extended2;
-            ev->effect = (ef_ex2_FineTuneDown << 4) | (ev->effect & 0x0f);
+            ev->eff[0].def = ef_Extended2;
+            ev->eff[0].val = (ef_ex2_FineTuneDown << 4) | (ev->eff[0].val & 0x0f);
             break;
         case fx_ex_RetrigNote:
-            ev->effect_def = ef_RetrigNote;
-            ev->effect = (ev->effect & 0x0f) + 1;
+            ev->eff[0].def = ef_RetrigNote;
+            ev->eff[0].val = (ev->eff[0].val & 0x0f) + 1;
             break;
         case fx_ex_SetAttckRate:
-            ev->effect_def = ef_Extended;
-            ev->effect = ev->effect & 0x0f;
+            ev->eff[0].def = ef_Extended;
+            ev->eff[0].val = ev->eff[0].val & 0x0f;
             if (!adsr_carrier[chan]) {
-                ev->effect |= ef_ex_SetAttckRateM << 4;
+                ev->eff[0].val |= ef_ex_SetAttckRateM << 4;
             } else {
-                ev->effect |= ef_ex_SetAttckRateC << 4;
+                ev->eff[0].val |= ef_ex_SetAttckRateC << 4;
             }
             break;
         case fx_ex_SetDecayRate:
-            ev->effect_def = ef_Extended;
-            ev->effect = ev->effect & 0x0f;
+            ev->eff[0].def = ef_Extended;
+            ev->eff[0].val = ev->eff[0].val & 0x0f;
             if (!adsr_carrier[chan]) {
-                ev->effect |= ef_ex_SetDecayRateM << 4;
+                ev->eff[0].val |= ef_ex_SetDecayRateM << 4;
             } else {
-                ev->effect |= ef_ex_SetDecayRateC << 4;
+                ev->eff[0].val |= ef_ex_SetDecayRateC << 4;
             }
             break;
         case fx_ex_SetSustnLevel:
-            ev->effect_def = ef_Extended;
-            ev->effect = ev->effect & 0x0f;
+            ev->eff[0].def = ef_Extended;
+            ev->eff[0].val = ev->eff[0].val & 0x0f;
             if (!adsr_carrier[chan]) {
-                ev->effect |= ef_ex_SetSustnLevelM << 4;
+                ev->eff[0].val |= ef_ex_SetSustnLevelM << 4;
             } else {
-                ev->effect |= ef_ex_SetSustnLevelC << 4;
+                ev->eff[0].val |= ef_ex_SetSustnLevelC << 4;
             }
             break;
         case fx_ex_SetReleaseRate:
-            ev->effect_def = ef_Extended;
-            ev->effect = ev->effect & 0x0f;
+            ev->eff[0].def = ef_Extended;
+            ev->eff[0].val = ev->eff[0].val & 0x0f;
             if (!adsr_carrier[chan]) {
-                ev->effect |= ef_ex_SetRelRateM << 4;
+                ev->eff[0].val |= ef_ex_SetRelRateM << 4;
             } else {
-                ev->effect |= ef_ex_SetRelRateC << 4;
+                ev->eff[0].val |= ef_ex_SetRelRateC << 4;
             }
             break;
         case fx_ex_SetFeedback:
-            ev->effect_def = ef_Extended;
-            ev->effect = (ef_ex_SetFeedback << 4) | (ev->effect & 0x0f);
+            ev->eff[0].def = ef_Extended;
+            ev->eff[0].val = (ef_ex_SetFeedback << 4) | (ev->eff[0].val & 0x0f);
             break;
         case fx_ex_ExtendedCmd:
-            ev->effect_def = ef_Extended;
-            ev->effect = ef_ex_ExtendedCmd2 << 4;
-            if ((ev->effect & 0x0f) < 10) {
+            ev->eff[0].def = ef_Extended;
+            ev->eff[0].val = ef_ex_ExtendedCmd2 << 4;
+            if ((ev->eff[0].val & 0x0f) < 10) {
                 // FIXME: Should be a parameter
                 const bool whole_song = false;
 
-                switch (ev->effect & 0x0f) {
-                case 0: ev->effect |= ef_ex_cmd2_RSS;       break;
-                case 1: ev->effect |= ef_ex_cmd2_LockVol;   break;
-                case 2: ev->effect |= ef_ex_cmd2_UnlockVol; break;
-                case 3: ev->effect |= ef_ex_cmd2_LockVP;    break;
-                case 4: ev->effect |= ef_ex_cmd2_UnlockVP;  break;
+                switch (ev->eff[0].val & 0x0f) {
+                case 0: ev->eff[0].val |= ef_ex_cmd2_RSS;       break;
+                case 1: ev->eff[0].val |= ef_ex_cmd2_LockVol;   break;
+                case 2: ev->eff[0].val |= ef_ex_cmd2_UnlockVol; break;
+                case 3: ev->eff[0].val |= ef_ex_cmd2_LockVP;    break;
+                case 4: ev->eff[0].val |= ef_ex_cmd2_UnlockVP;  break;
                 case 5:
-                    ev->effect_def = (whole_song ? 255 : 0);
-                    ev->effect = 0;
+                    ev->eff[0].def = (whole_song ? 255 : 0);
+                    ev->eff[0].val = 0;
                     adsr_carrier[chan] = true;
                     break;
                 case 6:
-                    ev->effect_def = (whole_song ? 255 : 0);
-                    ev->effect = (whole_song ? 1 : 0);
+                    ev->eff[0].def = (whole_song ? 255 : 0);
+                    ev->eff[0].val = (whole_song ? 1 : 0);
                     adsr_carrier[chan] = false;
                     break;
-                case 7: ev->effect |= ef_ex_cmd2_VSlide_car; break;
-                case 8: ev->effect |= ef_ex_cmd2_VSlide_mod; break;
-                case 9: ev->effect |= ef_ex_cmd2_VSlide_def; break;
+                case 7: ev->eff[0].val |= ef_ex_cmd2_VSlide_car; break;
+                case 8: ev->eff[0].val |= ef_ex_cmd2_VSlide_mod; break;
+                case 9: ev->eff[0].val |= ef_ex_cmd2_VSlide_def; break;
                 }
             } else {
-                ev->effect_def = 0;
-                ev->effect = 0;
+                ev->eff[0].def = 0;
+                ev->eff[0].val = 0;
             }
             break;
         }
         break;
     }
     default:
-        ev->effect_def = 0;
-        ev->effect = 0;
+        ev->eff[0].def = 0;
+        ev->eff[0].val = 0;
     }
 }
 
@@ -3822,7 +3822,7 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
     switch (ffver) {
     case 1 ... 4: // [4][16][64][9][4]
         {
-        tPATTERN_DATA_V1234 *old = calloc(16, sizeof(*old));
+        uint8_t *old = calloc(16, tPATTERN_DATA_V1234_SIZE);
 
         memset(adsr_carrier, false, sizeof(adsr_carrier));
 
@@ -3841,15 +3841,20 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
                         break;
                 for (int r = 0; r < 64; r++) // row
                 for (int c = 0; c < 9; c++) { // channel
-                    tADTRACK2_EVENT_V1_8 *src = &old[p].row[r].ch[c].ev;
                     tADTRACK2_EVENT *dst = get_event_p(i * 16 + p, c, r);
+                    //tADTRACK2_EVENT_V1_8 *src = &old[p].row[r].ch[c].ev;
+                    uint8_t *src = old + (
+                        p * tPATTERN_DATA_V1234_SIZE +
+                        r * 9 * tADTRACK2_EVENT_V1_8_SIZE +
+                        c * tADTRACK2_EVENT_V1_8_SIZE
+                    );
 
-                    convert_v1234_effects(src, c);
+                    dst->note       = src[0];
+                    dst->instr_def  = src[1];
+                    dst->eff[0].def = src[2];
+                    dst->eff[0].val = src[3];
 
-                    dst->note = src->note;
-                    dst->instr_def = src->instr_def;
-                    dst->eff[0].def = src->effect_def;
-                    dst->eff[0].val = src->effect;
+                    convert_v1234_effects(dst, c);
                 }
             }
 
@@ -3887,8 +3892,8 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
                         r * tADTRACK2_EVENT_V1_8_SIZE
                     );
 
-                    dst->note = src[0];
-                    dst->instr_def = src[1];
+                    dst->note       = src[0];
+                    dst->instr_def  = src[1];
                     dst->eff[0].def = src[2];
                     dst->eff[0].val = src[3];
                 }

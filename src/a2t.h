@@ -265,6 +265,7 @@ STATIC_ASSERT(sizeof(A2T_VARHEADER_V10) == 107);
 STATIC_ASSERT(sizeof(A2T_VARHEADER_V11) == 111);
 STATIC_ASSERT(sizeof(A2T_VARHEADER) == 111);
 
+#if 0
 // only for importing v 1,2,3,4,5,6,7,8
 typedef struct {
     uint8_t note;
@@ -295,9 +296,6 @@ STATIC_ASSERT(sizeof(tADTRACK2_EVENT_V1_8) == 4);
 STATIC_ASSERT(sizeof(tPATTERN_DATA_V1234) == 2304);
 STATIC_ASSERT(sizeof(tPATTERN_DATA_V5678) == 4608);
 
-#define tADTRACK2_EVENT_V1_8_SIZE      (4)
-#define tPATTERN_DATA_V1234_SIZE        (64 * 9 * 4)
-#define tPATTERN_DATA_V5678_SIZE        (18 * 64 * 4)
 
 typedef struct {
     uint8_t note;       // 0
@@ -309,7 +307,6 @@ typedef struct {
 } tADTRACK2_EVENT_V9_14;
 
 STATIC_ASSERT(sizeof(tADTRACK2_EVENT_V9_14) == 6);
-#define tADTRACK2_EVENT_V9_14_SIZE        (6)
 
 typedef struct {
     struct {
@@ -320,6 +317,12 @@ typedef struct {
 } tPATTERN_DATA_V9_14;
 
 STATIC_ASSERT(sizeof(tPATTERN_DATA_V9_14) == 20 * 256 * 6);
+#endif
+
+#define tADTRACK2_EVENT_V1_8_SIZE       (4)
+#define tPATTERN_DATA_V1234_SIZE        (64 * 9 * 4)
+#define tPATTERN_DATA_V5678_SIZE        (18 * 64 * 4)
+#define tADTRACK2_EVENT_V9_14_SIZE      (6)
 #define tPATTERN_DATA_V9_14_SIZE        (20 * 256 * 6)
 
 /* Structures for importing A2M format V1-8 */
