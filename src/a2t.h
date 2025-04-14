@@ -296,44 +296,8 @@ STATIC_ASSERT(sizeof(tPATTERN_DATA_V1234) == 2304);
 STATIC_ASSERT(sizeof(tPATTERN_DATA_V5678) == 4608);
 
 #define tADTRACK2_EVENT_V1_8_SIZE      (4)
-#define tPATTERN_DATA_V1234_SIZE        (2304)
-#define tPATTERN_DATA_V5678_SIZE        (4608)
-
-// Old v1234 effects
-enum {
-    fx_Arpeggio          = 0x00,
-    fx_FSlideUp          = 0x01,
-    fx_FSlideDown        = 0x02,
-    fx_FSlideUpFine      = 0x03,
-    fx_FSlideDownFine    = 0x04,
-    fx_TonePortamento    = 0x05,
-    fx_TPortamVolSlide   = 0x06,
-    fx_Vibrato           = 0x07,
-    fx_VibratoVolSlide   = 0x08,
-    fx_SetOpIntensity    = 0x09,
-    fx_SetInsVolume      = 0x0a,
-    fx_PatternBreak      = 0x0b,
-    fx_PatternJump       = 0x0c,
-    fx_SetTempo          = 0x0d,
-    fx_SetTimer          = 0x0e,
-    fx_Extended          = 0x0f,
-    fx_ex_DefAMdepth     = 0x00,
-    fx_ex_DefVibDepth    = 0x01,
-    fx_ex_DefWaveform    = 0x02,
-    fx_ex_ManSlideUp     = 0x03,
-    fx_ex_ManSlideDown   = 0x04,
-    fx_ex_VSlideUp       = 0x05,
-    fx_ex_VSlideDown     = 0x06,
-    fx_ex_VSlideUpFine   = 0x07,
-    fx_ex_VSlideDownFine = 0x08,
-    fx_ex_RetrigNote     = 0x09,
-    fx_ex_SetAttckRate   = 0x0a,
-    fx_ex_SetDecayRate   = 0x0b,
-    fx_ex_SetSustnLevel  = 0x0c,
-    fx_ex_SetReleaseRate = 0x0d,
-    fx_ex_SetFeedback    = 0x0e,
-    fx_ex_ExtendedCmd    = 0x0f
-};
+#define tPATTERN_DATA_V1234_SIZE        (64 * 9 * 4)
+#define tPATTERN_DATA_V5678_SIZE        (18 * 64 * 4)
 
 typedef struct {
     uint8_t note;       // 0

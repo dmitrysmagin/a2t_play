@@ -3626,6 +3626,42 @@ static int a2t_read_order(char *src, unsigned long size)
 
 void convert_v1234_effects(tADTRACK2_EVENT_V1_8 *ev, int chan)
 {
+    // Old v1234 effects
+    enum {
+        fx_Arpeggio          = 0x00,
+        fx_FSlideUp          = 0x01,
+        fx_FSlideDown        = 0x02,
+        fx_FSlideUpFine      = 0x03,
+        fx_FSlideDownFine    = 0x04,
+        fx_TonePortamento    = 0x05,
+        fx_TPortamVolSlide   = 0x06,
+        fx_Vibrato           = 0x07,
+        fx_VibratoVolSlide   = 0x08,
+        fx_SetOpIntensity    = 0x09,
+        fx_SetInsVolume      = 0x0a,
+        fx_PatternBreak      = 0x0b,
+        fx_PatternJump       = 0x0c,
+        fx_SetTempo          = 0x0d,
+        fx_SetTimer          = 0x0e,
+        fx_Extended          = 0x0f,
+        fx_ex_DefAMdepth     = 0x00,
+        fx_ex_DefVibDepth    = 0x01,
+        fx_ex_DefWaveform    = 0x02,
+        fx_ex_ManSlideUp     = 0x03,
+        fx_ex_ManSlideDown   = 0x04,
+        fx_ex_VSlideUp       = 0x05,
+        fx_ex_VSlideDown     = 0x06,
+        fx_ex_VSlideUpFine   = 0x07,
+        fx_ex_VSlideDownFine = 0x08,
+        fx_ex_RetrigNote     = 0x09,
+        fx_ex_SetAttckRate   = 0x0a,
+        fx_ex_SetDecayRate   = 0x0b,
+        fx_ex_SetSustnLevel  = 0x0c,
+        fx_ex_SetReleaseRate = 0x0d,
+        fx_ex_SetFeedback    = 0x0e,
+        fx_ex_ExtendedCmd    = 0x0f
+    };
+
     switch (ev->effect_def) {
     case fx_Arpeggio:           ev->effect_def = ef_Arpeggio;        break;
     case fx_FSlideUp:           ev->effect_def = ef_FSlideUp;        break;
@@ -3827,7 +3863,7 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
         }
     case 5 ... 8: // [8][8][18][64][4]
         {
-        tPATTERN_DATA_V5678 *old = calloc(8, sizeof(*old));
+        uint8_t *old = calloc(8, tPATTERN_DATA_V5678_SIZE);
 
         for (int i = 0; i < 8; i++) {
             if (!len[i+s]) continue;
@@ -3844,13 +3880,17 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
                     break;
                 for (int c = 0; c < 18; c++) // channel
                 for (int r = 0; r < 64; r++) { // row
-                    tADTRACK2_EVENT_V1_8 *src = &old[p].ch[c].row[r].ev;
                     tADTRACK2_EVENT *dst = get_event_p(i * 8 + p, c, r);
+                    uint8_t *src = old + (
+                        p * tPATTERN_DATA_V5678_SIZE +
+                        c * 64 * tADTRACK2_EVENT_V1_8_SIZE +
+                        r * tADTRACK2_EVENT_V1_8_SIZE
+                    );
 
-                    dst->note = src->note;
-                    dst->instr_def = src->instr_def;
-                    dst->eff[0].def = src->effect_def;
-                    dst->eff[0].val = src->effect;
+                    dst->note = src[0];
+                    dst->instr_def = src[1];
+                    dst->eff[0].def = src[2];
+                    dst->eff[0].val = src[3];
                 }
             }
 
@@ -3886,17 +3926,17 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
                 for (int c = 0; c < eventsinfo->channels; c++) // channel
                 for (int r = 0; r < eventsinfo->rows; r++) { // row
                     tADTRACK2_EVENT *dst = get_event_p(i * 8 + p, c, r);
-                    uint8_t *s = old + (
+                    uint8_t *src = old + (
                             p * tPATTERN_DATA_V9_14_SIZE +
                             c * 256 * tADTRACK2_EVENT_V9_14_SIZE +
                             r * tADTRACK2_EVENT_V9_14_SIZE);
 
-                    dst->note       = s[0];
-                    dst->instr_def  = s[1];
-                    dst->eff[0].def = s[2];
-                    dst->eff[0].val = s[3];
-                    dst->eff[1].def = s[4];
-                    dst->eff[1].val = s[5];
+                    dst->note       = src[0];
+                    dst->instr_def  = src[1];
+                    dst->eff[0].def = src[2];
+                    dst->eff[0].val = src[3];
+                    dst->eff[1].def = src[4];
+                    dst->eff[1].val = src[5];
                 }
             }
         }
