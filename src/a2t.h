@@ -488,6 +488,29 @@ typedef struct {
 STATIC_ASSERT(sizeof(tINSTR_DATA_V9_14) == 14);
 
 typedef struct {
+    tFM_INST_DATA_V1_14 fm;     // 0
+    uint8_t freq_slide[2];      // 11-12 int16_t
+    uint8_t panning;            // 13
+    uint8_t duration;           // 14
+} tREGISTER_TABLE_DEF_V9_14;
+
+STATIC_ASSERT(sizeof(tREGISTER_TABLE_DEF_V9_14) == 15);
+#define tREGISTER_TABLE_DEF_V9_14_SIZE      (15)
+
+typedef struct {
+    uint8_t length;                     // 0
+    uint8_t loop_begin;                 // 1
+    uint8_t loop_length;                // 2
+    uint8_t keyoff_pos;                 // 3
+    uint8_t arpeggio_table;             // 4
+    uint8_t vibrato_table;              // 5
+    tREGISTER_TABLE_DEF_V9_14 data[255];    // 6
+} tFMREG_TABLE_V9_14;
+
+STATIC_ASSERT(sizeof(tFMREG_TABLE_V9_14) == 3831);
+#define tFMREG_TABLE_V9_14_SIZE     (3831)
+
+typedef struct {
     uint8_t length;         // 0
     uint8_t speed;          // 1
     uint8_t loop_begin;     // 2
@@ -535,7 +558,7 @@ typedef struct {
     char composer[43];                      // 43
     char instr_names[255][43];              // 86
     tINSTR_DATA_V9_14 instr_data[255];      // 11051
-    tFMREG_TABLE fmreg_table[255];          // 14621 tFMREG_TABLE_V9_14 ??
+    tFMREG_TABLE_V9_14 fmreg_table[255];    // 14621
     tARPVIB_TABLE_V9_14 arpvib_table[255];  // 
     uint8_t pattern_order[128];
     uint8_t tempo;

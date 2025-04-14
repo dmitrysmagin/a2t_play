@@ -190,16 +190,55 @@ static inline tINSTR_DATA *get_instr_data(uint8_t ins)
     return instrument ? &instrument->instr_data : NULL;
 }
 
+// Fill tFM_INST_DATA from the raw byte array
+static void fmdata_fill_from_raw(tFM_INST_DATA *fm, uint8_t *src)
+{
+    fm->multipM = src[0] & 0xf;
+    fm->ksrM    = (src[0] >> 4) & 1;
+    fm->sustM   = (src[0] >> 5) & 1;
+    fm->vibrM   = (src[0] >> 6) & 1;
+    fm->tremM   = (src[0] >> 7) & 1;
+
+    fm->multipC = src[1] & 0xf;
+    fm->ksrC    = (src[1] >> 4) & 1;
+    fm->sustC   = (src[1] >> 5) & 1;
+    fm->vibrC   = (src[1] >> 6) & 1;
+    fm->tremC   = (src[1] >> 7) & 1;
+
+    fm->volM    = src[2] & 0x3f;
+    fm->kslM    = (src[2] >> 6) & 3;
+
+    fm->volC    = src[3] & 0x3f;
+    fm->kslC    = (src[3] >> 6) & 3;
+
+    fm->decM    = src[4] & 0xf;
+    fm->attckM  = (src[4] >> 4) & 0xf;
+
+    fm->decC    = src[5] & 0xf;
+    fm->attckC  = (src[5] >> 4) & 0xf;
+
+    fm->relM    = src[6] & 0xf;
+    fm->sustnM  = (src[6] >> 4) & 0xf;
+
+    fm->relC    = src[7] & 0xf;
+    fm->sustnC  = (src[7] >> 4) & 0xf;
+
+    fm->wformM  = src[8] & 7;
+    fm->wformC  = src[9] & 7;
+
+    fm->connect = src[10] & 1;
+    fm->feedb   = (src[10] >> 1) & 7;
+}
+
 // Helpers for macro tables =======================================================================
 
-// use VLA feature
-static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
+static void fmreg_table_allocate(size_t n, uint8_t *src)
 {
     n = editor_mode ? 255 : n;
 
     // Note: for editor_mode allocate max entries possible
-    for (unsigned int i = 0; i < n; i++) {
-        if (editor_mode || rt[i].length) {
+    for (unsigned int i = 0; i < n; i++, src += tFMREG_TABLE_V9_14_SIZE) {
+        if (editor_mode || src[0] /* length */) {
             tINSTR_DATA_EXT *instrument = get_instr(i + 1);
             assert(instrument);
             if (!instrument)
@@ -207,7 +246,27 @@ static void fmreg_table_allocate(size_t n, tFMREG_TABLE rt[n])
 
             instrument->fmreg = calloc(1, sizeof(tFMREG_TABLE));
             assert(instrument->fmreg);
-            *instrument->fmreg = rt[i]; // copy struct
+            //*instrument->fmreg = rt[i]; // copy struct
+
+            // Copy field by field
+            instrument->fmreg->length         = src[0]; // length
+            instrument->fmreg->loop_begin     = src[1]; // loop_begin
+            instrument->fmreg->loop_length    = src[2]; // loop_length
+            instrument->fmreg->keyoff_pos     = src[3]; // keyoff_pos
+            instrument->fmreg->arpeggio_table = src[4]; // arpeggio_table
+            instrument->fmreg->vibrato_table  = src[5]; // vibrato_table
+
+            uint8_t *rts = &src[6];
+            for (unsigned int e = 0; e < 255; e++, rts += tREGISTER_TABLE_DEF_V9_14_SIZE) {
+                tREGISTER_TABLE_DEF *rtd = &instrument->fmreg->data[e];
+
+                fmdata_fill_from_raw(&rtd->fm, rts);
+
+                rtd->freq_slide[0] = rts[11]; // freq_slide lo
+                rtd->freq_slide[1] = rts[12]; // freq_slide hi
+                rtd->panning = rts[13];       // panning
+                rtd->duration = rts[14];      // duration
+            }
         }
     }
 }
@@ -3370,42 +3429,7 @@ static void instrument_import(int ins, uint8_t *srci, bool v9_14)
     tINSTR_DATA *dsti = get_instr_data(ins);
     assert(dsti);
 
-    // Copy instrument field by field
-    dsti->fm.multipM = srci[0] & 0xf;
-    dsti->fm.ksrM    = (srci[0] >> 4) & 1;
-    dsti->fm.sustM   = (srci[0] >> 5) & 1;
-    dsti->fm.vibrM   = (srci[0] >> 6) & 1;
-    dsti->fm.tremM   = (srci[0] >> 7) & 1;
-
-    dsti->fm.multipC = srci[1] & 0xf;
-    dsti->fm.ksrC    = (srci[1] >> 4) & 1;
-    dsti->fm.sustC   = (srci[1] >> 5) & 1;
-    dsti->fm.vibrC   = (srci[1] >> 6) & 1;
-    dsti->fm.tremC   = (srci[1] >> 7) & 1;
-
-    dsti->fm.volM    = srci[2] & 0x3f;
-    dsti->fm.kslM    = (srci[2] >> 6) & 3;
-
-    dsti->fm.volC    = srci[3] & 0x3f;
-    dsti->fm.kslC    = (srci[3] >> 6) & 3;
-
-    dsti->fm.decM    = srci[4] & 0xf;
-    dsti->fm.attckM  = (srci[4] >> 4) & 0xf;
-
-    dsti->fm.decC    = srci[5] & 0xf;
-    dsti->fm.attckC  = (srci[5] >> 4) & 0xf;
-
-    dsti->fm.relM    = srci[6] & 0xf;
-    dsti->fm.sustnM  = (srci[6] >> 4) & 0xf;
-
-    dsti->fm.relC    = srci[7] & 0xf;
-    dsti->fm.sustnC  = (srci[7] >> 4) & 0xf;
-
-    dsti->fm.wformM  = srci[8] & 7;
-    dsti->fm.wformC  = srci[9] & 7;
-
-    dsti->fm.connect = srci[10] & 1;
-    dsti->fm.feedb   = (srci[10] >> 1) & 7;
+    fmdata_fill_from_raw(&dsti->fm, srci);
 
     dsti->panning    = srci[11] & 3;
     dsti->fine_tune  = srci[12];
@@ -3480,21 +3504,13 @@ static int a2t_read_fmregtable(char *src, unsigned long size)
 
     if (len[1] > size) return INT_MAX;
 
-    tFMREG_TABLE *data = (tFMREG_TABLE *)calloc(255, sizeof(tFMREG_TABLE));
+    uint8_t *data = (uint8_t *)calloc(255, tFMREG_TABLE_V9_14_SIZE);
     a2t_depack(src, len[1], data);
 
     int count = instrinfo->count;
 
     // Allocate fmreg macro tables
     fmreg_table_allocate(count, data);
-
-    for (int i = 0; i < count; i++) {
-        // Instrument arpegio/vibrato references
-        tINSTR_DATA_EXT *dst = get_instr(i + 1);
-        assert(dst);
-        dst->arpeggio = data[i].arpeggio_table;
-        dst->vibrato = data[i].vibrato_table;
-    }
 
     free(data);
 
@@ -4048,7 +4064,7 @@ static int a2m_read_songdata(char *src, unsigned long size)
         }
 
         // Allocate fmreg macro tables
-        fmreg_table_allocate(count, data->fmreg_table);
+        fmreg_table_allocate(count, (uint8_t *)data->fmreg_table);
 
         // Allocate arpeggio/vibrato macro tables
         // TODO: Calculate actual num of arp/vib tables
