@@ -2004,7 +2004,7 @@ static void play_line()
         ch->ftune_table[chan] = 0;
 
         // Do a full copy of the event, because we modify event->note
-        *event = *get_event_p(current_pattern, chan, current_line);
+        *event = *get_event_p(current_pattern, chan, current_line); // Copy struct
 
         // Fixup event->note
         if (event->note == 0xff) { // Key off
@@ -3624,7 +3624,7 @@ static int a2t_read_order(char *src, unsigned long size)
     return len[i];
 }
 
-void convert_v1234_event(tADTRACK2_EVENT_V1234 *ev, int chan)
+void convert_v1234_effects(tADTRACK2_EVENT_V1_8 *ev, int chan)
 {
     switch (ev->effect_def) {
     case fx_Arpeggio:           ev->effect_def = ef_Arpeggio;        break;
@@ -3805,10 +3805,10 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
                         break;
                 for (int r = 0; r < 64; r++) // row
                 for (int c = 0; c < 9; c++) { // channel
-                    tADTRACK2_EVENT_V1234 *src = &old[p].row[r].ch[c].ev;
+                    tADTRACK2_EVENT_V1_8 *src = &old[p].row[r].ch[c].ev;
                     tADTRACK2_EVENT *dst = get_event_p(i * 16 + p, c, r);
 
-                    convert_v1234_event(src, c);
+                    convert_v1234_effects(src, c);
 
                     dst->note = src->note;
                     dst->instr_def = src->instr_def;
@@ -3844,7 +3844,7 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
                     break;
                 for (int c = 0; c < 18; c++) // channel
                 for (int r = 0; r < 64; r++) { // row
-                    tADTRACK2_EVENT_V1234 *src = &old[p].ch[c].row[r].ev;
+                    tADTRACK2_EVENT_V1_8 *src = &old[p].ch[c].row[r].ev;
                     tADTRACK2_EVENT *dst = get_event_p(i * 8 + p, c, r);
 
                     dst->note = src->note;
@@ -3864,7 +3864,7 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
         }
     case 9 ... 14: // [16][8][20][256][6]
         {
-        tPATTERN_DATA *old = calloc(8, sizeof(*old));
+        uint8_t *old = calloc(8, tPATTERN_DATA_V9_14_SIZE);
 
         // 16 groups of 8 patterns
         for (int i = 0; i < 16; i++) {
@@ -3886,8 +3886,17 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
                 for (int c = 0; c < eventsinfo->channels; c++) // channel
                 for (int r = 0; r < eventsinfo->rows; r++) { // row
                     tADTRACK2_EVENT *dst = get_event_p(i * 8 + p, c, r);
-                    tADTRACK2_EVENT *src = &old[p].ch[c].row[r].ev;
-                    *dst = *src; // copy struct
+                    uint8_t *s = old + (
+                            p * tPATTERN_DATA_V9_14_SIZE +
+                            c * 256 * tADTRACK2_EVENT_V9_14_SIZE +
+                            r * tADTRACK2_EVENT_V9_14_SIZE);
+
+                    dst->note       = s[0];
+                    dst->instr_def  = s[1];
+                    dst->eff[0].def = s[2];
+                    dst->eff[0].val = s[3];
+                    dst->eff[1].def = s[4];
+                    dst->eff[1].val = s[5];
                 }
             }
         }

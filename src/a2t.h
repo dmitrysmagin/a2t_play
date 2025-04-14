@@ -61,27 +61,6 @@ typedef enum {
     3) STATIC_ASSERT is used to make sure structs have the correct size
 */
 
-typedef struct {
-    uint8_t note;
-    uint8_t instr_def; // TODO: rename to 'ins'
-    struct {
-        uint8_t def;
-        uint8_t val;
-    } eff[2];
-} tADTRACK2_EVENT;
-
-STATIC_ASSERT(sizeof(tADTRACK2_EVENT) == 6);
-
-typedef struct {
-    struct {
-        struct {
-            tADTRACK2_EVENT ev;
-        } row[256];
-    } ch[20];
-} tPATTERN_DATA;
-
-STATIC_ASSERT(sizeof(tPATTERN_DATA) == 20 * 256 * 6);
-
 #define ef_Arpeggio            0
 #define ef_FSlideUp            1
 #define ef_FSlideDown          2
@@ -292,13 +271,13 @@ typedef struct {
     uint8_t instr_def;
     uint8_t effect_def;
     uint8_t effect;
-} tADTRACK2_EVENT_V1234;
+} tADTRACK2_EVENT_V1_8;
 
 // for importing v 1,2,3,4 patterns
 typedef struct {
     struct {
         struct {
-            tADTRACK2_EVENT_V1234 ev;
+            tADTRACK2_EVENT_V1_8 ev;
         } ch[9];
     } row[64];
 } tPATTERN_DATA_V1234;
@@ -307,14 +286,18 @@ typedef struct {
 typedef struct {
     struct {
         struct {
-            tADTRACK2_EVENT_V1234 ev;
+            tADTRACK2_EVENT_V1_8 ev;
         } row[64];
     } ch[18];
 } tPATTERN_DATA_V5678;
 
-STATIC_ASSERT(sizeof(tADTRACK2_EVENT_V1234) == 4);
+STATIC_ASSERT(sizeof(tADTRACK2_EVENT_V1_8) == 4);
 STATIC_ASSERT(sizeof(tPATTERN_DATA_V1234) == 2304);
 STATIC_ASSERT(sizeof(tPATTERN_DATA_V5678) == 4608);
+
+#define tADTRACK2_EVENT_V1_8_SIZE      (4)
+#define tPATTERN_DATA_V1234_SIZE        (2304)
+#define tPATTERN_DATA_V5678_SIZE        (4608)
 
 // Old v1234 effects
 enum {
@@ -351,6 +334,29 @@ enum {
     fx_ex_SetFeedback    = 0x0e,
     fx_ex_ExtendedCmd    = 0x0f
 };
+
+typedef struct {
+    uint8_t note;       // 0
+    uint8_t instr_def;  // 1
+    struct {
+        uint8_t def;    // 2, 4
+        uint8_t val;    // 3, 5
+    } eff[2];
+} tADTRACK2_EVENT_V9_14;
+
+STATIC_ASSERT(sizeof(tADTRACK2_EVENT_V9_14) == 6);
+#define tADTRACK2_EVENT_V9_14_SIZE        (6)
+
+typedef struct {
+    struct {
+        struct {
+            tADTRACK2_EVENT_V9_14 ev;
+        } row[256];
+    } ch[20];
+} tPATTERN_DATA_V9_14;
+
+STATIC_ASSERT(sizeof(tPATTERN_DATA_V9_14) == 20 * 256 * 6);
+#define tPATTERN_DATA_V9_14_SIZE        (20 * 256 * 6)
 
 /* Structures for importing A2M format V1-8 */
 
@@ -619,6 +625,23 @@ typedef struct {
     bool vib_paused;
     uint16_t vib_freq;
 } tCH_MACRO_TABLE;
+
+typedef struct {
+    uint8_t note;
+    uint8_t instr_def; // TODO: rename to 'ins'
+    struct {
+        uint8_t def;
+        uint8_t val;
+    } eff[2];
+} tADTRACK2_EVENT;
+
+typedef struct {
+    struct {
+        struct {
+            tADTRACK2_EVENT ev;
+        } row[256];
+    } ch[20];
+} tPATTERN_DATA;
 
 typedef struct {
     tFM_INST_DATA fmpar_table[20]; // TODO: rename to 'fm'
