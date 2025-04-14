@@ -612,15 +612,15 @@ static void change_freq(int chan, uint16_t freq)
 
 static bool is_chan_adsr_data_empty(int chan)
 {
-    //tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
+    tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
     uint8_t data[11];
-    raw_fill_from_fmdata(data, &ch->fmpar_table[chan]);
+    raw_fill_from_fmdata(data, fmpar);
 
     return (
-        !/*fmpar->*/data[4] &&
-        !/*fmpar->*/data[5] &&
-        !/*fmpar->*/data[6] &&
-        !/*fmpar->*/data[7]
+        !data[4] &&
+        !data[5] &&
+        !data[6] &&
+        !data[7]
     );
 }
 
@@ -631,10 +631,10 @@ static bool is_ins_adsr_data_empty(int ins)
     raw_fill_from_fmdata(data, &i->fm);
 
     return (
-        !/*i->fm.*/data[4] &&
-        !/*i->fm.*/data[5] &&
-        !/*i->fm.*/data[6] &&
-        !/*i->fm.*/data[7]
+        !data[4] &&
+        !data[5] &&
+        !data[6] &&
+        !data[7]
     );
 }
 
@@ -1051,21 +1051,17 @@ static void set_ins_data(uint8_t ins, int chan)
         uint16_t c = regoffs_c(chan);
         uint16_t n = regoffs_n(chan);
 
-        opl3out(0x20 + m, /*i->fm.*/data[0]);
-        opl3out(0x20 + c, /*i->fm.*/data[1]);
-        opl3out(0x40 + m, (/*i->fm.*/data[2] & 0xc0) + 63);
-        opl3out(0x40 + c, (/*i->fm.*/data[3] & 0xc0) + 63);
-        opl3out(0x60 + m, /*i->fm.*/data[4]);
-        opl3out(0x60 + c, /*i->fm.*/data[5]);
-        opl3out(0x80 + m, /*i->fm.*/data[6]);
-        opl3out(0x80 + c, /*i->fm.*/data[7]);
-        opl3out(0xe0 + m, /*i->fm.*/data[8]);
-        opl3out(0xe0 + c, /*i->fm.*/data[9]);
-        opl3out(0xc0 + n, /*i->fm.*/data[10] | _panning[ch->panning_table[chan]]);
-
-        /*for (int r = 0; r < 11; r++) {
-            ch->fmpar_table[chan].data[r] = i->fm.data[r];
-        }*/
+        opl3out(0x20 + m, data[0]);
+        opl3out(0x20 + c, data[1]);
+        opl3out(0x40 + m, (data[2] & 0xc0) + 63);
+        opl3out(0x40 + c, (data[3] & 0xc0) + 63);
+        opl3out(0x60 + m, data[4]);
+        opl3out(0x60 + c, data[5]);
+        opl3out(0x80 + m, data[6]);
+        opl3out(0x80 + c, data[7]);
+        opl3out(0xe0 + m, data[8]);
+        opl3out(0xe0 + c, data[9]);
+        opl3out(0xc0 + n, data[10] | _panning[ch->panning_table[chan]]);
 
         ch->fmpar_table[chan] = i->fm; // Copy struct
 
@@ -1095,26 +1091,26 @@ static void set_ins_data(uint8_t ins, int chan)
 
 static void update_modulator_adsrw(int chan)
 {
-    //tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
+    tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
     uint16_t m = regoffs_m(chan);
     uint8_t data[11];
-    raw_fill_from_fmdata(data, &ch->fmpar_table[chan]);
+    raw_fill_from_fmdata(data, fmpar);
 
-    opl3out(0x60 + m, /*fmpar->*/data[4]);
-    opl3out(0x80 + m, /*fmpar->*/data[6]);
-    opl3out(0xe0 + m, /*fmpar->*/data[8]);
+    opl3out(0x60 + m, data[4]);
+    opl3out(0x80 + m, data[6]);
+    opl3out(0xe0 + m, data[8]);
 }
 
 static void update_carrier_adsrw(int chan)
 {
-    //tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
+    tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
     uint16_t c = regoffs_c(chan);
     uint8_t data[11];
-    raw_fill_from_fmdata(data, &ch->fmpar_table[chan]);
+    raw_fill_from_fmdata(data, fmpar);
 
-    opl3out(0x60 + c, /*fmpar->*/data[5]);
-    opl3out(0x80 + c, /*fmpar->*/data[7]);
-    opl3out(0xe0 + c, /*fmpar->*/data[9]);
+    opl3out(0x60 + c, data[5]);
+    opl3out(0x80 + c, data[7]);
+    opl3out(0xe0 + c, data[9]);
 }
 
 static void update_fmpar(int chan)
@@ -1123,9 +1119,9 @@ static void update_fmpar(int chan)
     uint8_t data[11];
     raw_fill_from_fmdata(data, fmpar);
 
-    opl3out(0x20 + regoffs_m(chan), /*fmpar->*/data[0]);
-    opl3out(0x20 + regoffs_c(chan), /*fmpar->*/data[1]);
-    opl3out(0xc0 + regoffs_n(chan), /*fmpar->*/data[10] | _panning[ch->panning_table[chan]]);
+    opl3out(0x20 + regoffs_m(chan), data[0]);
+    opl3out(0x20 + regoffs_c(chan), data[1]);
+    opl3out(0xc0 + regoffs_n(chan), data[10] | _panning[ch->panning_table[chan]]);
 
     set_ins_volume(fmpar->volM, fmpar->volC, chan);
 }
