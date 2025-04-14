@@ -230,6 +230,30 @@ static void fmdata_fill_from_raw(tFM_INST_DATA *fm, uint8_t *src)
     fm->feedb   = (src[10] >> 1) & 7;
 }
 
+// Fill uint8_t data[11] array from tFM_INST_DATA
+static void raw_fill_from_fmdata(uint8_t *dst, tFM_INST_DATA *fm)
+{
+    dst[0] = (fm->multipM & 0xf) |
+            ((fm->ksrM  & 1) << 4) |
+            ((fm->sustM & 1) << 5) |
+            ((fm->vibrM & 1) << 6) |
+            ((fm->tremM & 1) << 7);
+    dst[1] = (fm->multipC & 0xf) |
+            ((fm->ksrC  & 1) << 4) |
+            ((fm->sustC & 1) << 5) |
+            ((fm->vibrC & 1) << 6) |
+            ((fm->tremC & 1) << 7);
+    dst[2] = (fm->volM & 0x3f) | ((fm->kslM & 3) << 6);
+    dst[3] = (fm->volC & 0x3f) | ((fm->kslC & 3) << 6);
+    dst[4] = (fm->decM & 0xf) | ((fm->attckM & 0xf) << 4);
+    dst[5] = (fm->decC & 0xf) | ((fm->attckC & 0xf) << 4);
+    dst[6] = (fm->relM & 0xf) | ((fm->sustnM & 0xf) << 4);
+    dst[7] = (fm->relC & 0xf) | ((fm->sustnC & 0xf) << 4);
+    dst[8] = fm->wformM & 7;
+    dst[9] = fm->wformC & 7;
+    dst[10] = (fm->connect & 1) | ((fm->feedb & 7) << 1);
+}
+
 // Helpers for macro tables =======================================================================
 
 static void fmreg_table_allocate(size_t n, uint8_t *src)
@@ -246,7 +270,6 @@ static void fmreg_table_allocate(size_t n, uint8_t *src)
 
             instrument->fmreg = calloc(1, sizeof(tFMREG_TABLE));
             assert(instrument->fmreg);
-            //*instrument->fmreg = rt[i]; // copy struct
 
             // Copy field by field
             instrument->fmreg->length         = src[0]; // length
@@ -589,25 +612,29 @@ static void change_freq(int chan, uint16_t freq)
 
 static bool is_chan_adsr_data_empty(int chan)
 {
-    tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
+    //tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
+    uint8_t data[11];
+    raw_fill_from_fmdata(data, &ch->fmpar_table[chan]);
 
     return (
-        !fmpar->data[4] &&
-        !fmpar->data[5] &&
-        !fmpar->data[6] &&
-        !fmpar->data[7]
+        !/*fmpar->*/data[4] &&
+        !/*fmpar->*/data[5] &&
+        !/*fmpar->*/data[6] &&
+        !/*fmpar->*/data[7]
     );
 }
 
 static bool is_ins_adsr_data_empty(int ins)
 {
     tINSTR_DATA *i = get_instr_data(ins);
+    uint8_t data[11];
+    raw_fill_from_fmdata(data, &i->fm);
 
     return (
-        !i->fm.data[4] &&
-        !i->fm.data[5] &&
-        !i->fm.data[6] &&
-        !i->fm.data[7]
+        !/*i->fm.*/data[4] &&
+        !/*i->fm.*/data[5] &&
+        !/*i->fm.*/data[6] &&
+        !/*i->fm.*/data[7]
     );
 }
 
@@ -726,9 +753,13 @@ static void release_sustaining_sound(int chan)
     opl3out(0x40 + c, 63);
 
     // clear adsrw_mod and adsrw_car
-    for (int i = 4; i <= 9; i++) {
+    ch->fmpar_table[chan].decM = 0;
+    ch->fmpar_table[chan].attckM = 0;
+    ch->fmpar_table[chan].decC = 0;
+    ch->fmpar_table[chan].attckC = 0;
+    /*for (int i = 4; i <= 9; i++) {
         ch->fmpar_table[chan].data[i] = 0;
-    }
+    }*/
 
     key_on(chan);
     opl3out(0x60 + m, BYTE_NULL);
@@ -995,12 +1026,14 @@ static void init_macro_table(int chan, uint8_t note, uint8_t ins, uint16_t freq)
 
 static void set_ins_data(uint8_t ins, int chan)
 {
-    static tINSTR_DATA zeroins = { {.data = {0}}, 0, 0, 0};
+    static tINSTR_DATA zeroins = { { 0 }, 0, 0, 0 };
 
     if (ins == 0) return;
 
     tINSTR_DATA *i = get_instr_data(ins);
     i = i ? i : &zeroins;
+    uint8_t data[11];
+    raw_fill_from_fmdata(data, &i->fm);
 
     if (is_data_empty(i, sizeof(tINSTR_DATA))) {
         release_sustaining_sound(chan);
@@ -1018,21 +1051,23 @@ static void set_ins_data(uint8_t ins, int chan)
         uint16_t c = regoffs_c(chan);
         uint16_t n = regoffs_n(chan);
 
-        opl3out(0x20 + m, i->fm.data[0]);
-        opl3out(0x20 + c, i->fm.data[1]);
-        opl3out(0x40 + m, (i->fm.data[2] & 0xc0) + 63);
-        opl3out(0x40 + c, (i->fm.data[3] & 0xc0) + 63);
-        opl3out(0x60 + m, i->fm.data[4]);
-        opl3out(0x60 + c, i->fm.data[5]);
-        opl3out(0x80 + m, i->fm.data[6]);
-        opl3out(0x80 + c, i->fm.data[7]);
-        opl3out(0xe0 + m, i->fm.data[8]);
-        opl3out(0xe0 + c, i->fm.data[9]);
-        opl3out(0xc0 + n, i->fm.data[10] | _panning[ch->panning_table[chan]]);
+        opl3out(0x20 + m, /*i->fm.*/data[0]);
+        opl3out(0x20 + c, /*i->fm.*/data[1]);
+        opl3out(0x40 + m, (/*i->fm.*/data[2] & 0xc0) + 63);
+        opl3out(0x40 + c, (/*i->fm.*/data[3] & 0xc0) + 63);
+        opl3out(0x60 + m, /*i->fm.*/data[4]);
+        opl3out(0x60 + c, /*i->fm.*/data[5]);
+        opl3out(0x80 + m, /*i->fm.*/data[6]);
+        opl3out(0x80 + c, /*i->fm.*/data[7]);
+        opl3out(0xe0 + m, /*i->fm.*/data[8]);
+        opl3out(0xe0 + c, /*i->fm.*/data[9]);
+        opl3out(0xc0 + n, /*i->fm.*/data[10] | _panning[ch->panning_table[chan]]);
 
-        for (int r = 0; r < 11; r++) {
+        /*for (int r = 0; r < 11; r++) {
             ch->fmpar_table[chan].data[r] = i->fm.data[r];
-        }
+        }*/
+
+        ch->fmpar_table[chan] = i->fm; // Copy struct
 
         // Stop instr macro if resetting voice
         if (!ch->reset_chan[chan])
@@ -1060,31 +1095,37 @@ static void set_ins_data(uint8_t ins, int chan)
 
 static void update_modulator_adsrw(int chan)
 {
-    tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
+    //tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
     uint16_t m = regoffs_m(chan);
+    uint8_t data[11];
+    raw_fill_from_fmdata(data, &ch->fmpar_table[chan]);
 
-    opl3out(0x60 + m, fmpar->data[4]);
-    opl3out(0x80 + m, fmpar->data[6]);
-    opl3out(0xe0 + m, fmpar->data[8]);
+    opl3out(0x60 + m, /*fmpar->*/data[4]);
+    opl3out(0x80 + m, /*fmpar->*/data[6]);
+    opl3out(0xe0 + m, /*fmpar->*/data[8]);
 }
 
 static void update_carrier_adsrw(int chan)
 {
-    tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
+    //tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
     uint16_t c = regoffs_c(chan);
+    uint8_t data[11];
+    raw_fill_from_fmdata(data, &ch->fmpar_table[chan]);
 
-    opl3out(0x60 + c, fmpar->data[5]);
-    opl3out(0x80 + c, fmpar->data[7]);
-    opl3out(0xe0 + c, fmpar->data[9]);
+    opl3out(0x60 + c, /*fmpar->*/data[5]);
+    opl3out(0x80 + c, /*fmpar->*/data[7]);
+    opl3out(0xe0 + c, /*fmpar->*/data[9]);
 }
 
 static void update_fmpar(int chan)
 {
     tFM_INST_DATA *fmpar = &ch->fmpar_table[chan];
+    uint8_t data[11];
+    raw_fill_from_fmdata(data, fmpar);
 
-    opl3out(0x20 + regoffs_m(chan), fmpar->data[0]);
-    opl3out(0x20 + regoffs_c(chan), fmpar->data[1]);
-    opl3out(0xc0 + regoffs_n(chan), fmpar->data[10] | _panning[ch->panning_table[chan]]);
+    opl3out(0x20 + regoffs_m(chan), /*fmpar->*/data[0]);
+    opl3out(0x20 + regoffs_c(chan), /*fmpar->*/data[1]);
+    opl3out(0xc0 + regoffs_n(chan), /*fmpar->*/data[10] | _panning[ch->panning_table[chan]]);
 
     set_ins_volume(fmpar->volM, fmpar->volC, chan);
 }
@@ -2934,7 +2975,7 @@ static void macro_poll_proc()
                         update_fmpar(chan);
 
                         // TODO: check if those flags are really set by the editor
-                        uint8_t macro_flags = d->fm.data[10];
+                        uint8_t macro_flags = 0; //d->fm.data[10];
 
                         if (force_macro_keyon || (macro_flags & 0x80)) { // MACRO_NOTE_RETRIG_FLAG
                             if (!((is_4op_chan(chan) && is_4op_chan_hi(chan)))) {

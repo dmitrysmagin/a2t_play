@@ -61,87 +61,6 @@ typedef enum {
     3) STATIC_ASSERT is used to make sure structs have the correct size
 */
 
-/*
- * TO REWORK: tFM_INST_DATA, tINSTR_DATA, tINSTR_DATA_EXT, 
- *  - totally separate data definitions used in the player and when loading a2m/a2t
- *  - remove all occurrences of fm.data and fmpar->data
- *  - calculate real reg values right before writing them with opl3out()
- */
-
-typedef struct {
-    union {
-        struct {
-            uint8_t multipM: 4, ksrM: 1, sustM: 1, vibrM: 1, tremM : 1;
-            uint8_t multipC: 4, ksrC: 1, sustC: 1, vibrC: 1, tremC : 1;
-            uint8_t volM: 6, kslM: 2;
-            uint8_t volC: 6, kslC: 2;
-            uint8_t decM: 4, attckM: 4;
-            uint8_t decC: 4, attckC: 4;
-            uint8_t relM: 4, sustnM: 4;
-            uint8_t relC: 4, sustnC: 4;
-            uint8_t wformM: 3, : 5;
-            uint8_t wformC: 3, : 5;
-            uint8_t connect: 1, feedb: 3, : 4; // panning is not used here
-        };
-        uint8_t data[11];
-    };
-} tFM_INST_DATA;
-
-STATIC_ASSERT(sizeof(tFM_INST_DATA) == 11);
-
-typedef struct {
-    tFM_INST_DATA fm;
-    uint8_t panning;
-    int8_t  fine_tune;
-    uint8_t perc_voice;
-} tINSTR_DATA;
-
-STATIC_ASSERT(sizeof(tINSTR_DATA) == 14);
-
-typedef struct {
-    uint8_t length;
-    uint8_t speed;
-    uint8_t loop_begin;
-    uint8_t loop_length;
-    uint8_t keyoff_pos;
-    uint8_t data[255];
-} tARPEGGIO_TABLE;
-
-typedef struct {
-    uint8_t length;
-    uint8_t speed;
-    uint8_t delay;
-    uint8_t loop_begin;
-    uint8_t loop_length;
-    uint8_t keyoff_pos;
-    int8_t data[255]; // array[1..255] of Shortint;
-} tVIBRATO_TABLE;
-
-typedef struct {
-    tFM_INST_DATA fm;
-    uint8_t freq_slide[2]; // int16_t
-    uint8_t panning;
-    uint8_t duration;
-} tREGISTER_TABLE_DEF;
-
-typedef struct {
-    uint8_t length;
-    uint8_t loop_begin;
-    uint8_t loop_length;
-    uint8_t keyoff_pos;
-    uint8_t arpeggio_table;
-    uint8_t vibrato_table;
-    tREGISTER_TABLE_DEF data[255];
-} tFMREG_TABLE;
-
-typedef struct {
-    tARPEGGIO_TABLE arpeggio;
-    tVIBRATO_TABLE vibrato;
-} tARPVIB_TABLE;
-
-STATIC_ASSERT(sizeof(tFMREG_TABLE) == 3831);
-STATIC_ASSERT(sizeof(tARPVIB_TABLE) == 521);
-
 typedef struct {
     uint8_t note;
     uint8_t instr_def; // TODO: rename to 'ins'
@@ -313,6 +232,7 @@ typedef struct {
 } A2M_HEADER;
 
 STATIC_ASSERT(sizeof(A2M_HEADER) == 16);
+#define A2M_HEADER_SIZE     (16)
 
 typedef struct {
     uint8_t len[6][2]; // uint16_t
@@ -554,9 +474,9 @@ typedef struct {
 } tBPM_DATA;
 
 typedef struct {
-    char songname[43];                      // 0
-    char composer[43];                      // 43
-    char instr_names[255][43];              // 86
+    char songname[43];                      // 0  : 43
+    char composer[43];                      // 43 : 43
+    char instr_names[255][43];              // 86 : 43*255
     tINSTR_DATA_V9_14 instr_data[255];      // 11051
     tFMREG_TABLE_V9_14 fmreg_table[255];    // 14621
     tARPVIB_TABLE_V9_14 arpvib_table[255];  // 
@@ -581,14 +501,69 @@ STATIC_ASSERT(sizeof(A2M_SONGDATA_V9_14) == 1138338);
 /* Player data */
 
 typedef struct {
+    uint8_t multipM: 4, ksrM: 1, sustM: 1, vibrM: 1, tremM : 1;
+    uint8_t multipC: 4, ksrC: 1, sustC: 1, vibrC: 1, tremC : 1;
+    uint8_t volM: 6, kslM: 2;
+    uint8_t volC: 6, kslC: 2;
+    uint8_t decM: 4, attckM: 4;
+    uint8_t decC: 4, attckC: 4;
+    uint8_t relM: 4, sustnM: 4;
+    uint8_t relC: 4, sustnC: 4;
+    uint8_t wformM: 3, : 5;
+    uint8_t wformC: 3, : 5;
+    uint8_t connect: 1, feedb: 3, : 4; // panning is not used here
+} tFM_INST_DATA;
+
+typedef struct {
+    tFM_INST_DATA fm;
+    uint8_t panning;
+    int8_t  fine_tune;
+    uint8_t perc_voice;
+} tINSTR_DATA;
+
+typedef struct {
+    uint8_t length;
+    uint8_t speed;
+    uint8_t loop_begin;
+    uint8_t loop_length;
+    uint8_t keyoff_pos;
+    uint8_t data[255];
+} tARPEGGIO_TABLE;
+
+typedef struct {
+    uint8_t length;
+    uint8_t speed;
+    uint8_t delay;
+    uint8_t loop_begin;
+    uint8_t loop_length;
+    uint8_t keyoff_pos;
+    int8_t data[255]; // array[1..255] of Shortint;
+} tVIBRATO_TABLE;
+
+typedef struct {
+    tFM_INST_DATA fm;
+    uint8_t freq_slide[2]; // int16_t
+    uint8_t panning;
+    uint8_t duration;
+} tREGISTER_TABLE_DEF;
+
+typedef struct {
+    uint8_t length;
+    uint8_t loop_begin;
+    uint8_t loop_length;
+    uint8_t keyoff_pos;
+    uint8_t arpeggio_table;
+    uint8_t vibrato_table;
+    tREGISTER_TABLE_DEF data[255];
+} tFMREG_TABLE;
+
+typedef struct {
     tINSTR_DATA instr_data;
     uint8_t vibrato;
     uint8_t arpeggio;
     tFMREG_TABLE *fmreg;
     uint32_t dis_fmreg_cols;
 } tINSTR_DATA_EXT;
-
-STATIC_ASSERT(sizeof(tINSTR_DATA_EXT) == 20 + sizeof(tFMREG_TABLE *));
 
 typedef struct {
     char            songname[43];        // pascal String[42];
