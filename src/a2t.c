@@ -3549,6 +3549,16 @@ static int a2t_read_fmregtable(char *src, unsigned long size)
     // Allocate fmreg macro tables
     fmreg_table_allocate(count, data);
 
+    for (int i = 0; i < count; i++) {
+        // Instrument arpegio/vibrato references
+        tINSTR_DATA_EXT *dst = get_instr(i + 1);
+        assert(dst);
+
+        if (!dst->fmreg) continue; 
+        dst->arpeggio = dst->fmreg->arpeggio_table;
+        dst->vibrato = dst->fmreg->vibrato_table;
+    }
+
     free(data);
 
 #if 0
@@ -3842,7 +3852,6 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
                 for (int r = 0; r < 64; r++) // row
                 for (int c = 0; c < 9; c++) { // channel
                     tADTRACK2_EVENT *dst = get_event_p(i * 16 + p, c, r);
-                    //tADTRACK2_EVENT_V1_8 *src = &old[p].row[r].ch[c].ev;
                     uint8_t *src = old + (
                         p * tPATTERN_DATA_V1234_SIZE +
                         r * 9 * tADTRACK2_EVENT_V1_8_SIZE +
@@ -4146,16 +4155,20 @@ static int a2m_read_songdata(char *src, unsigned long size)
 
         for (int i = 0; i < count; i++) {
             instrument_import(i + 1, (uint8_t *)&data->instr_data[i], true);
-
-            // Instrument arpegio/vibrato references
-            tINSTR_DATA_EXT *dst = get_instr(i + 1);
-            assert(dst);
-            dst->arpeggio = data->fmreg_table[i].arpeggio_table;
-            dst->vibrato = data->fmreg_table[i].vibrato_table;
         }
 
         // Allocate fmreg macro tables
         fmreg_table_allocate(count, (uint8_t *)data->fmreg_table);
+
+        for (int i = 0; i < count; i++) {
+            // Instrument arpegio/vibrato references
+            tINSTR_DATA_EXT *dst = get_instr(i + 1);
+            assert(dst);
+
+            if (!dst->fmreg) continue; 
+            dst->arpeggio = dst->fmreg->arpeggio_table;
+            dst->vibrato = dst->fmreg->vibrato_table;
+        }
 
         // Allocate arpeggio/vibrato macro tables
         // TODO: Calculate actual num of arp/vib tables
