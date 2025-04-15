@@ -452,7 +452,7 @@ typedef struct {
     char instr_names[255][43];              // 86 : 43*255
     tINSTR_DATA_V9_14 instr_data[255];      // 11051
     tFMREG_TABLE_V9_14 fmreg_table[255];    // 14621
-    tARPVIB_TABLE_V9_14 arpvib_table[255];  // 
+    tARPVIB_TABLE_V9_14 arpvib_table[255];  //
     uint8_t pattern_order[128];
     uint8_t tempo;
     uint8_t speed;
@@ -515,7 +515,7 @@ typedef struct {
 
 typedef struct {
     tFM_INST_DATA fm;
-    uint8_t freq_slide[2]; // int16_t
+    int16_t freq_slide;
     uint8_t panning;
     uint8_t duration;
 } tREGISTER_TABLE_DEF;
@@ -602,13 +602,13 @@ typedef struct {
     } eff[2];
 } tADTRACK2_EVENT;
 
-typedef struct {
+/*typedef struct {
     struct {
         struct {
             tADTRACK2_EVENT ev;
         } row[256];
     } ch[20];
-} tPATTERN_DATA;
+} tPATTERN_DATA;*/
 
 typedef struct {
     tFM_INST_DATA fmpar_table[20]; // TODO: rename to 'fm'

@@ -285,8 +285,7 @@ static void fmreg_table_allocate(size_t n, uint8_t *src)
 
                 fmdata_fill_from_raw(&rtd->fm, rts);
 
-                rtd->freq_slide[0] = rts[11]; // freq_slide lo
-                rtd->freq_slide[1] = rts[12]; // freq_slide hi
+                rtd->freq_slide = (int16_t)(rts[11] | (rts[12] << 8));
                 rtd->panning = rts[13];       // panning
                 rtd->duration = rts[14];      // duration
             }
@@ -2995,7 +2994,7 @@ static void macro_poll_proc()
                             }
                         }
 
-                        int16_t freq_slide = INT16LE(d->freq_slide);
+                        int16_t freq_slide = d->freq_slide;
 
                         if (!(disabled & (1 << 26))) {
                             if (freq_slide > 0) {
@@ -3554,7 +3553,7 @@ static int a2t_read_fmregtable(char *src, unsigned long size)
         tINSTR_DATA_EXT *dst = get_instr(i + 1);
         assert(dst);
 
-        if (!dst->fmreg) continue; 
+        if (!dst->fmreg) continue;
         dst->arpeggio = dst->fmreg->arpeggio_table;
         dst->vibrato = dst->fmreg->vibrato_table;
     }
@@ -4165,7 +4164,7 @@ static int a2m_read_songdata(char *src, unsigned long size)
             tINSTR_DATA_EXT *dst = get_instr(i + 1);
             assert(dst);
 
-            if (!dst->fmreg) continue; 
+            if (!dst->fmreg) continue;
             dst->arpeggio = dst->fmreg->arpeggio_table;
             dst->vibrato = dst->fmreg->vibrato_table;
         }
