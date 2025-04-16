@@ -203,14 +203,17 @@ typedef struct {
 
 STATIC_ASSERT(sizeof(A2T_HEADER) == 23);
 
+#if 0
 typedef struct {
-    char id[10];    // '_a2module_'
-    uint8_t crc[4]; // uint32_t
-    uint8_t ffver;
-    uint8_t npatt;
+    char id[10];    // 0 '_a2module_'
+    uint8_t crc[4]; // 10-11-12-13 uint32_t
+    uint8_t ffver;  // 14
+    uint8_t npatt;  // 15
 } A2M_HEADER;
 
 STATIC_ASSERT(sizeof(A2M_HEADER) == 16);
+#endif
+
 #define A2M_HEADER_SIZE     (16)
 
 typedef struct {

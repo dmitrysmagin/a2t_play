@@ -4236,27 +4236,27 @@ static int a2m_read_patterns(char *src, unsigned long size)
 
 static bool a2m_import(char *tune, unsigned long size)
 {
-    A2M_HEADER *header = (A2M_HEADER *)tune;
-    char *blockptr = tune + sizeof(A2M_HEADER);
+    uint8_t *header = (uint8_t *)tune;
+    char *blockptr = tune + A2M_HEADER_SIZE;
     int result;
 
-    if (sizeof(A2M_HEADER) > size)
+    if (A2M_HEADER_SIZE > size)
         return false;
 
-    if (strncmp(header->id, "_A2module_", 10))
+    if (strncmp((const char *)header, "_A2module_", 10))
         return false;
 
     init_songdata();
 
     memset(len, 0, sizeof(len));
 
-    ffver = header->ffver;
+    ffver = header[14];
 
     if (!ffver || ffver > 14)
         return false;
 
     // Read variable part after header, fill len[] with values
-    result = a2m_read_varheader(blockptr, header->npatt, size - (blockptr - tune));
+    result = a2m_read_varheader(blockptr, header[15], size - (blockptr - tune));
     if (result == INT_MAX) return false;
     blockptr += result;
 
@@ -4266,14 +4266,14 @@ static bool a2m_import(char *tune, unsigned long size)
     blockptr += result;
 
     // Allocate patterns
-    patterns_allocate(header->npatt, songinfo->nm_tracks, songinfo->patt_len);
+    patterns_allocate(header[15], songinfo->nm_tracks, songinfo->patt_len);
 
     // Read patterns
     result = a2m_read_patterns(blockptr, size - (blockptr - tune));
     if (result == INT_MAX) return false;
 
-    printf("A2M version: %d\n", header->ffver);
-    printf("Number of patterns: %d\n", header->npatt);
+    printf("A2M version: %d\n", header[14]);
+    printf("Number of patterns: %d\n", header[15]);
     printf("Rows per pattern: %d\n", songinfo->patt_len);
     printf("Voices per pattern: %d\n", songinfo->nm_tracks);
     printf("Tempo: %d\n", songinfo->tempo);
