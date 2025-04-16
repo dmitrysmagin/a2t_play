@@ -31,12 +31,6 @@ typedef signed char bool;
 #define true 1
 #endif
 
-// Macros for extracting little-endian integers from filedata
-#define INT16LE(A) (int16_t)((A[0]) | (A[1] << 8))
-#define UINT16LE(A) (uint16_t)((A[0]) | (A[1] << 8))
-#define INT32LE(A) (int32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
-#define UINT32LE(A) (uint32_t)((A[0]) | (A[1] << 8) | (A[2] << 16) | (A[3] << 24))
-
 #define keyoff_flag         0x80
 #define fixed_note_flag     0x90
 #define pattern_loop_flag   0xe0
@@ -60,6 +54,10 @@ typedef enum {
     2) ints and longs are represented as arrays of chars, little-endian order is implied
     3) STATIC_ASSERT is used to make sure structs have the correct size
 */
+
+// Make sure compiler doesn't pad byte arrays
+STATIC_ASSERT(sizeof(uint8_t[2]) == 2);
+STATIC_ASSERT(sizeof(uint8_t[4]) == 4);
 
 #define ef_Arpeggio            0
 #define ef_FSlideUp            1
@@ -191,7 +189,53 @@ typedef enum {
 #define EFGR_PORTAVOLSLIDE 7
 #define EFGR_RETRIGNOTE 8
 
+// Macros for extracting little-endian integers from filedata
+#define INT8LE(A)       (int8_t)((A)[0])
+#define UINT8LE(A)      (uint8_t)((A)[0])
+#define INT16LE(A)      (int16_t)(((A)[0]) | ((A)[1] << 8))
+#define UINT16LE(A)     (uint16_t)(((A)[0]) | ((A)[1] << 8))
+#define INT32LE(A)      (int32_t)(((A)[0]) | ((A)[1] << 8) | ((A)[2] << 16) | ((A)[3] << 24))
+#define UINT32LE(A)     (uint32_t)(((A)[0]) | ((A)[1] << 8) | ((A)[2] << 16) | ((A)[3] << 24))
+
 /* Structures for importing A2T format (all versions) */
+#define A2T_HEADER_FFVER(P)                 UINT8LE((P)+19)
+#define A2T_HEADER_NPATT(P)                 UINT8LE((P)+20)
+#define A2T_HEADER_TEMPO(P)                 UINT8LE((P)+21)
+#define A2T_HEADER_SPEED(P)                 UINT8LE((P)+22)
+#define A2T_HEADER_SIZE                     (23)
+
+#define A2T_VARHEADER_V1234_LEN(P, I)       UINT16LE((P)+0+I*2)
+#define A2T_VARHEADER_V1234_SIZE            (12)
+
+#define A2T_VARHEADER_V5678_COMMON_FLAG(P)  UINT8LE ((P)+0)
+#define A2T_VARHEADER_V5678_LEN(P, I)       UINT16LE((P)+1+I*2)
+#define A2T_VARHEADER_V5678_SIZE            (21)
+
+#define A2T_VARHEADER_V9_COMMON_FLAG(P)     UINT8LE ((P)+0)
+#define A2T_VARHEADER_V9_PATT_LEN(P)        UINT16LE((P)+1)
+#define A2T_VARHEADER_V9_NM_TRACKS(P)       UINT8LE ((P)+3)
+#define A2T_VARHEADER_V9_MACRO_SPEEDUP(P)   UINT16LE((P)+4)
+#define A2T_VARHEADER_V9_LEN(P, I)          UINT32LE((P)+6+I*4)
+#define A2T_VARHEADER_V9_SIZE               (86)
+
+#define A2T_VARHEADER_V10_COMMON_FLAG(P)    UINT8LE ((P)+0)
+#define A2T_VARHEADER_V10_PATT_LEN(P)       UINT16LE((P)+1)
+#define A2T_VARHEADER_V10_NM_TRACKS(P)      UINT8LE ((P)+3)
+#define A2T_VARHEADER_V10_MACRO_SPEEDUP(P)  UINT16LE((P)+4)
+#define A2T_VARHEADER_V10_FLAG_4OP(P)       UINT8LE ((P)+6)
+#define A2T_VARHEADER_V10_LOCK_FLAGS(P, I)  UINT8LE ((P)+7+I)
+#define A2T_VARHEADER_V10_LEN(P, I)         UINT32LE((P)+27+I*4)
+#define A2T_VARHEADER_V10_SIZE              (107)
+
+#define A2T_VARHEADER_V11_COMMON_FLAG(P)    UINT8LE ((P)+0)
+#define A2T_VARHEADER_V11_PATT_LEN(P)       UINT16LE((P)+1)
+#define A2T_VARHEADER_V11_NM_TRACKS(P)      UINT8LE ((P)+3)
+#define A2T_VARHEADER_V11_MACRO_SPEEDUP(P)  UINT16LE((P)+4)
+#define A2T_VARHEADER_V11_FLAG_4OP(P)       UINT8LE ((P)+6)
+#define A2T_VARHEADER_V11_LOCK_FLAGS(P, I)  UINT8LE ((P)+7+I)
+#define A2T_VARHEADER_V11_LEN(P, I)         UINT32LE((P)+27+I*4)
+#define A2T_VARHEADER_V11_SIZE              (111)
+
 #if 0
 typedef struct {
     char id[15];    // 0 '_a2tiny_module_'
@@ -202,49 +246,42 @@ typedef struct {
     uint8_t speed;  // 22
 } A2T_HEADER;
 STATIC_ASSERT(sizeof(A2T_HEADER) == 23);
-#endif
-
-#define A2T_HEADER_FFVER(P)     ((P)[19])
-#define A2T_HEADER_NPATT(P)     ((P)[20])
-#define A2T_HEADER_TEMPO(P)     ((P)[21])
-#define A2T_HEADER_SPEED(P)     ((P)[22])
-#define A2T_HEADER_SIZE         (23)
 
 typedef struct {
     uint8_t len[6][2]; // uint16_t
 } A2T_VARHEADER_V1234;
 
 typedef struct {
-    uint8_t common_flag;
-    uint8_t len[10][2]; // uint16_t
+    uint8_t common_flag;      // 0
+    uint8_t len[10][2];       // 1 uint16_t
 } A2T_VARHEADER_V5678;
 
 typedef struct {
-    uint8_t common_flag;
-    uint8_t patt_len[2]; // uint16_t
-    uint8_t nm_tracks;
-    uint8_t macro_speedup[2]; // uint16_t
-    uint8_t len[20][4]; // uint32_t
+    uint8_t common_flag;      // 0
+    uint8_t patt_len[2];      // 1,2 uint16_t
+    uint8_t nm_tracks;        // 3
+    uint8_t macro_speedup[2]; // 4,5 uint16_t
+    uint8_t len[20][4];       // 6-85 uint32_t
 } A2T_VARHEADER_V9;
 
 typedef struct {
-    uint8_t common_flag;
-    uint8_t patt_len[2]; // uint16_t
-    uint8_t nm_tracks;
-    uint8_t macro_speedup[2]; // uint16_t
-    uint8_t flag_4op;
-    uint8_t lock_flags[20];
-    uint8_t len[20][4]; // uint32_t
+    uint8_t common_flag;      // 0
+    uint8_t patt_len[2];      // 1,2 uint16_t
+    uint8_t nm_tracks;        // 3
+    uint8_t macro_speedup[2]; // 4,5 uint16_t
+    uint8_t flag_4op;         // 6
+    uint8_t lock_flags[20];   // 7-26
+    uint8_t len[20][4];       // 27-106 uint32_t
 } A2T_VARHEADER_V10;
 
 typedef struct {
-    uint8_t common_flag;
-    uint8_t patt_len[2]; // uint16_t
-    uint8_t nm_tracks;
-    uint8_t macro_speedup[2]; // uint16_t
-    uint8_t flag_4op;
-    uint8_t lock_flags[20];
-    uint8_t len[21][4]; // uint32_t
+    uint8_t common_flag;      // 0
+    uint8_t patt_len[2];      // 1,2 uint16_t
+    uint8_t nm_tracks;        // 3
+    uint8_t macro_speedup[2]; // 4,5 uint16_t
+    uint8_t flag_4op;         // 6
+    uint8_t lock_flags[20];   // 7-26
+    uint8_t len[21][4];       // 27-110 uint32_t
 } A2T_VARHEADER_V11;
 
 typedef union {
@@ -262,7 +299,6 @@ STATIC_ASSERT(sizeof(A2T_VARHEADER_V10) == 107);
 STATIC_ASSERT(sizeof(A2T_VARHEADER_V11) == 111);
 STATIC_ASSERT(sizeof(A2T_VARHEADER) == 111);
 
-#if 0
 // only for importing v 1,2,3,4,5,6,7,8
 typedef struct {
     uint8_t note;

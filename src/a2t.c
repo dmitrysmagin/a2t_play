@@ -3403,58 +3403,58 @@ static inline void a2t_depack(void *src, int srcsize, void *dst)
 // read the variable part of the header
 static int a2t_read_varheader(char *blockptr, unsigned long size)
 {
-    A2T_VARHEADER *varheader = (A2T_VARHEADER *)blockptr;
+    uint8_t *varheader = (uint8_t *)blockptr;
 
     switch (ffver) {
     case 1 ... 4:
-        if (sizeof(A2T_VARHEADER_V1234) > size)
+        if (A2T_VARHEADER_V1234_SIZE > size)
             return INT_MAX;
         for (int i = 0; i < 6; i++)
-            len[i] = UINT16LE(varheader->v1234.len[i]);
-        return sizeof(A2T_VARHEADER_V1234);
+            len[i] = A2T_VARHEADER_V1234_LEN(varheader, i);
+        return A2T_VARHEADER_V1234_SIZE;
     case 5 ... 8:
-        if (sizeof(A2T_VARHEADER_V5678) > size)
+        if (A2T_VARHEADER_V5678_SIZE > size)
             return INT_MAX;
-        songinfo->common_flag = varheader->v5678.common_flag;
+        songinfo->common_flag = A2T_VARHEADER_V5678_COMMON_FLAG(varheader);
         for (int i = 0; i < 10; i++)
-            len[i] = UINT16LE(varheader->v5678.len[i]);
-        return sizeof(A2T_VARHEADER_V5678);
+            len[i] = A2T_VARHEADER_V5678_LEN(varheader, i);
+        return A2T_VARHEADER_V5678_SIZE;
     case 9:
-        if (sizeof(A2T_VARHEADER_V9) > size)
+        if (A2T_VARHEADER_V9_SIZE > size)
             return INT_MAX;
-        songinfo->common_flag = varheader->v9.common_flag;
-        songinfo->patt_len = UINT16LE(varheader->v9.patt_len);
-        songinfo->nm_tracks = varheader->v9.nm_tracks;
-        songinfo->macro_speedup = UINT16LE(varheader->v9.macro_speedup);
+        songinfo->common_flag = A2T_VARHEADER_V9_COMMON_FLAG(varheader);
+        songinfo->patt_len = A2T_VARHEADER_V9_PATT_LEN(varheader);
+        songinfo->nm_tracks = A2T_VARHEADER_V9_NM_TRACKS(varheader);
+        songinfo->macro_speedup = A2T_VARHEADER_V9_MACRO_SPEEDUP(varheader);
         for (int i = 0; i < 20; i++)
-            len[i] = UINT32LE(varheader->v9.len[i]);
-        return sizeof(A2T_VARHEADER_V9);
+            len[i] = A2T_VARHEADER_V9_LEN(varheader, i);
+        return A2T_VARHEADER_V9_SIZE;
     case 10:
-        if (sizeof(A2T_VARHEADER_V10) > size)
+        if (A2T_VARHEADER_V10_SIZE > size)
             return INT_MAX;
-        songinfo->common_flag = varheader->v10.common_flag;
-        songinfo->patt_len = UINT16LE(varheader->v10.patt_len);
-        songinfo->nm_tracks = varheader->v10.nm_tracks;
-        songinfo->macro_speedup = UINT16LE(varheader->v10.macro_speedup);
-        songinfo->flag_4op = varheader->v10.flag_4op;
+        songinfo->common_flag = A2T_VARHEADER_V10_COMMON_FLAG(varheader);
+        songinfo->patt_len = A2T_VARHEADER_V10_PATT_LEN(varheader);
+        songinfo->nm_tracks = A2T_VARHEADER_V10_NM_TRACKS(varheader);
+        songinfo->macro_speedup = A2T_VARHEADER_V10_MACRO_SPEEDUP(varheader);
+        songinfo->flag_4op = A2T_VARHEADER_V10_FLAG_4OP(varheader);
         for (int i = 0; i < 20; i++)
-            songinfo->lock_flags[i] = varheader->v10.lock_flags[i];
+            songinfo->lock_flags[i] = A2T_VARHEADER_V10_LOCK_FLAGS(varheader, i);
         for (int i = 0; i < 20; i++)
-            len[i] = UINT32LE(varheader->v10.len[i]);
-        return sizeof(A2T_VARHEADER_V10);
+            len[i] = A2T_VARHEADER_V10_LEN(varheader, i);
+        return A2T_VARHEADER_V10_SIZE;
     case 11 ... 14:
-        if (sizeof(A2T_VARHEADER_V11) > size)
+        if (A2T_VARHEADER_V11_SIZE > size)
             return INT_MAX;
-        songinfo->common_flag = varheader->v11.common_flag;
-        songinfo->patt_len = UINT16LE(varheader->v11.patt_len);
-        songinfo->nm_tracks = varheader->v11.nm_tracks;
-        songinfo->macro_speedup = UINT16LE(varheader->v11.macro_speedup);
-        songinfo->flag_4op = varheader->v11.flag_4op;
+        songinfo->common_flag = A2T_VARHEADER_V11_COMMON_FLAG(varheader);
+        songinfo->patt_len = A2T_VARHEADER_V11_PATT_LEN(varheader);
+        songinfo->nm_tracks = A2T_VARHEADER_V11_NM_TRACKS(varheader);
+        songinfo->macro_speedup = A2T_VARHEADER_V11_MACRO_SPEEDUP(varheader);
+        songinfo->flag_4op = A2T_VARHEADER_V11_FLAG_4OP(varheader);
         for (int i = 0; i < 20; i++)
-            songinfo->lock_flags[i] = varheader->v10.lock_flags[i];
+            songinfo->lock_flags[i] = A2T_VARHEADER_V11_LOCK_FLAGS(varheader, i);
         for (int i = 0; i < 21; i++)
-            len[i] = UINT32LE(varheader->v11.len[i]);
-        return sizeof(A2T_VARHEADER_V11);
+            len[i] = A2T_VARHEADER_V11_LEN(varheader, i);
+        return A2T_VARHEADER_V11_SIZE;
     }
 
     return INT_MAX;
