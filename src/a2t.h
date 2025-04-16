@@ -192,16 +192,19 @@ typedef enum {
 #define EFGR_RETRIGNOTE 8
 
 /* Structures for importing A2T format (all versions) */
+#if 0
 typedef struct {
-    char id[15];    // '_a2tiny_module_'
-    uint8_t crc[4]; // uint32_t
-    uint8_t ffver;
-    uint8_t npatt;
-    uint8_t tempo;
-    uint8_t speed;
+    char id[15];    // 0 '_a2tiny_module_'
+    uint8_t crc[4]; // 15-16-17-18 uint32_t
+    uint8_t ffver;  // 19
+    uint8_t npatt;  // 20
+    uint8_t tempo;  // 21
+    uint8_t speed;  // 22
 } A2T_HEADER;
-
 STATIC_ASSERT(sizeof(A2T_HEADER) == 23);
+#endif
+
+#define A2T_HEADER_SIZE     (23)
 
 #if 0
 typedef struct {
@@ -210,7 +213,6 @@ typedef struct {
     uint8_t ffver;  // 14
     uint8_t npatt;  // 15
 } A2M_HEADER;
-
 STATIC_ASSERT(sizeof(A2M_HEADER) == 16);
 #endif
 

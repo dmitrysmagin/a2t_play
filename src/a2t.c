@@ -3974,27 +3974,27 @@ static int a2t_read_patterns(char *src, unsigned long size)
 
 static bool a2t_import(char *tune, unsigned long size)
 {
-    A2T_HEADER *header = (A2T_HEADER *)tune;
-    char *blockptr = tune + sizeof(A2T_HEADER);
+    uint8_t *header = (uint8_t *)tune;
+    char *blockptr = tune + A2T_HEADER_SIZE;
     int result;
 
-    if (sizeof(A2T_HEADER) > size)
+    if (A2T_HEADER_SIZE > size)
         return false;
 
-    if (strncmp(header->id, "_A2tiny_module_", 15))
+    if (strncmp((char *)header, "_A2tiny_module_", 15))
         return false;
 
     init_songdata();
 
     memset(len, 0, sizeof(len));
 
-    ffver = header->ffver;
+    ffver = header[19];
 
     if (!ffver || ffver > 14)
         return false;
 
-    songinfo->tempo = header->tempo;
-    songinfo->speed = header->speed;
+    songinfo->tempo = header[21];
+    songinfo->speed = header[22];
 
     // Read variable part after header, fill len[] with values
     result = a2t_read_varheader(blockptr, size - (blockptr - tune));
@@ -4036,18 +4036,18 @@ static bool a2t_import(char *tune, unsigned long size)
     blockptr += result;
 
     // Allocate patterns
-    patterns_allocate(header->npatt, songinfo->nm_tracks, songinfo->patt_len);
+    patterns_allocate(header[20], songinfo->nm_tracks, songinfo->patt_len);
 
     // Read patterns
     result = a2t_read_patterns(blockptr, size - (blockptr - tune));
     if (result == INT_MAX) return false;
 
-    printf("A2T version: %d\n", header->ffver);
-    printf("Number of patterns: %d\n", header->npatt);
+    printf("A2T version: %d\n", header[19]);
+    printf("Number of patterns: %d\n", header[20]);
     printf("Rows per pattern: %d\n", songinfo->patt_len);
     printf("Voices per pattern: %d\n", songinfo->nm_tracks);
-    printf("Tempo: %d\n", header->tempo);
-    printf("Speed: %d\n", header->speed);
+    printf("Tempo: %d\n", header[21]);
+    printf("Speed: %d\n", header[22]);
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
 
