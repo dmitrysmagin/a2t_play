@@ -204,19 +204,11 @@ typedef struct {
 STATIC_ASSERT(sizeof(A2T_HEADER) == 23);
 #endif
 
-#define A2T_HEADER_SIZE     (23)
-
-#if 0
-typedef struct {
-    char id[10];    // 0 '_a2module_'
-    uint8_t crc[4]; // 10-11-12-13 uint32_t
-    uint8_t ffver;  // 14
-    uint8_t npatt;  // 15
-} A2M_HEADER;
-STATIC_ASSERT(sizeof(A2M_HEADER) == 16);
-#endif
-
-#define A2M_HEADER_SIZE     (16)
+#define A2T_HEADER_FFVER(P)     ((P)[19])
+#define A2T_HEADER_NPATT(P)     ((P)[20])
+#define A2T_HEADER_TEMPO(P)     ((P)[21])
+#define A2T_HEADER_SPEED(P)     ((P)[22])
+#define A2T_HEADER_SIZE         (23)
 
 typedef struct {
     uint8_t len[6][2]; // uint16_t
@@ -301,7 +293,6 @@ STATIC_ASSERT(sizeof(tADTRACK2_EVENT_V1_8) == 4);
 STATIC_ASSERT(sizeof(tPATTERN_DATA_V1234) == 2304);
 STATIC_ASSERT(sizeof(tPATTERN_DATA_V5678) == 4608);
 
-
 typedef struct {
     uint8_t note;       // 0
     uint8_t instr_def;  // 1
@@ -331,6 +322,20 @@ STATIC_ASSERT(sizeof(tPATTERN_DATA_V9_14) == 20 * 256 * 6);
 #define tPATTERN_DATA_V9_14_SIZE        (20 * 256 * 6)
 
 /* Structures for importing A2M format V1-8 */
+
+#if 0
+typedef struct {
+    char id[10];    // 0 '_a2module_'
+    uint8_t crc[4]; // 10-11-12-13 uint32_t
+    uint8_t ffver;  // 14
+    uint8_t npatt;  // 15
+} A2M_HEADER;
+STATIC_ASSERT(sizeof(A2M_HEADER) == 16);
+#endif
+
+#define A2M_HEADER_FFVER(P)     ((P)[14])
+#define A2M_HEADER_NPATT(P)     ((P)[15])
+#define A2M_HEADER_SIZE         (16)
 
 typedef struct {
     union {

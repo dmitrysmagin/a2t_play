@@ -3483,7 +3483,7 @@ static int a2t_read_instruments(char *src, unsigned long size)
     if (len[0] > size) return INT_MAX;
 
     int instnum = (ffver < 9 ? 250 : 255);
-    int instsize = (ffver < 9 ? sizeof(tINSTR_DATA_V1_8) : sizeof(tINSTR_DATA));
+    int instsize = (ffver < 9 ? sizeof(tINSTR_DATA_V1_8) : sizeof(tINSTR_DATA_V9_14));
     int dstsize = (instnum * instsize) +
                   (ffver > 11 ?  sizeof(tBPM_DATA) + sizeof(tINS_4OP_FLAGS) + sizeof(tRESERVED) : 0);
     char *dst = (char *)calloc(1, dstsize);
@@ -3988,13 +3988,13 @@ static bool a2t_import(char *tune, unsigned long size)
 
     memset(len, 0, sizeof(len));
 
-    ffver = header[19];
+    ffver = A2T_HEADER_FFVER(header);
 
     if (!ffver || ffver > 14)
         return false;
 
-    songinfo->tempo = header[21];
-    songinfo->speed = header[22];
+    songinfo->tempo = A2T_HEADER_TEMPO(header);
+    songinfo->speed = A2T_HEADER_SPEED(header);
 
     // Read variable part after header, fill len[] with values
     result = a2t_read_varheader(blockptr, size - (blockptr - tune));
@@ -4036,18 +4036,18 @@ static bool a2t_import(char *tune, unsigned long size)
     blockptr += result;
 
     // Allocate patterns
-    patterns_allocate(header[20], songinfo->nm_tracks, songinfo->patt_len);
+    patterns_allocate(A2T_HEADER_NPATT(header), songinfo->nm_tracks, songinfo->patt_len);
 
     // Read patterns
     result = a2t_read_patterns(blockptr, size - (blockptr - tune));
     if (result == INT_MAX) return false;
 
-    printf("A2T version: %d\n", header[19]);
-    printf("Number of patterns: %d\n", header[20]);
+    printf("A2T version: %d\n", A2T_HEADER_FFVER(header));
+    printf("Number of patterns: %d\n", A2T_HEADER_NPATT(header));
     printf("Rows per pattern: %d\n", songinfo->patt_len);
     printf("Voices per pattern: %d\n", songinfo->nm_tracks);
-    printf("Tempo: %d\n", header[21]);
-    printf("Speed: %d\n", header[22]);
+    printf("Tempo: %d\n", A2T_HEADER_TEMPO(header));
+    printf("Speed: %d\n", A2T_HEADER_SPEED(header));
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
 
@@ -4250,13 +4250,13 @@ static bool a2m_import(char *tune, unsigned long size)
 
     memset(len, 0, sizeof(len));
 
-    ffver = header[14];
+    ffver = A2M_HEADER_FFVER(header);
 
     if (!ffver || ffver > 14)
         return false;
 
     // Read variable part after header, fill len[] with values
-    result = a2m_read_varheader(blockptr, header[15], size - (blockptr - tune));
+    result = a2m_read_varheader(blockptr, A2M_HEADER_NPATT(header), size - (blockptr - tune));
     if (result == INT_MAX) return false;
     blockptr += result;
 
@@ -4266,14 +4266,14 @@ static bool a2m_import(char *tune, unsigned long size)
     blockptr += result;
 
     // Allocate patterns
-    patterns_allocate(header[15], songinfo->nm_tracks, songinfo->patt_len);
+    patterns_allocate(A2M_HEADER_NPATT(header), songinfo->nm_tracks, songinfo->patt_len);
 
     // Read patterns
     result = a2m_read_patterns(blockptr, size - (blockptr - tune));
     if (result == INT_MAX) return false;
 
-    printf("A2M version: %d\n", header[14]);
-    printf("Number of patterns: %d\n", header[15]);
+    printf("A2M version: %d\n", A2M_HEADER_FFVER(header));
+    printf("Number of patterns: %d\n", A2M_HEADER_NPATT(header));
     printf("Rows per pattern: %d\n", songinfo->patt_len);
     printf("Voices per pattern: %d\n", songinfo->nm_tracks);
     printf("Tempo: %d\n", songinfo->tempo);
