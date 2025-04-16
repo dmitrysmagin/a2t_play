@@ -369,8 +369,8 @@ typedef struct {
 STATIC_ASSERT(sizeof(A2M_HEADER) == 16);
 #endif
 
-#define A2M_HEADER_FFVER(P)     ((P)[14])
-#define A2M_HEADER_NPATT(P)     ((P)[15])
+#define A2M_HEADER_FFVER(P)     UINT8LE((P)+14)
+#define A2M_HEADER_NPATT(P)     UINT8LE((P)+15)
 #define A2M_HEADER_SIZE         (16)
 
 typedef struct {
@@ -401,6 +401,7 @@ typedef struct {
 } tINSTR_DATA_V1_8;
 
 STATIC_ASSERT(sizeof(tINSTR_DATA_V1_8) == 13);
+#define tINSTR_DATA_V1_8_SIZE               (13)
 
 typedef struct {
     char songname[43];
@@ -425,6 +426,7 @@ typedef struct {
 } tINSTR_DATA_V9_14;
 
 STATIC_ASSERT(sizeof(tINSTR_DATA_V9_14) == 14);
+#define tINSTR_DATA_V9_14_SIZE              (14)
 
 typedef struct {
     tFM_INST_DATA_V1_14 fm;     // 0
@@ -485,12 +487,18 @@ typedef struct {
     uint8_t idx_4op[128];
 } tINS_4OP_FLAGS;
 
+#define tINS_4OP_FLAGS_SIZE         (129U)
+
 typedef uint8_t tRESERVED[1024];
+
+#define tRESERVED_SIZE              (1024)
 
 typedef struct {
     uint8_t rows_per_beat;
     int8_t tempo_finetune[2]; // int16_t
 } tBPM_DATA;
+
+#define tBPM_DATA_SIZE              (3U)
 
 typedef struct {
     char songname[43];                      // 0  : 43

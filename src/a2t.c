@@ -3460,7 +3460,7 @@ static int a2t_read_varheader(char *blockptr, unsigned long size)
     return INT_MAX;
 }
 
-static void instrument_import(int ins, uint8_t *srci, bool v9_14)
+static void instrument_import(int ins, uint8_t *srci)
 {
     tINSTR_DATA *dsti = get_instr_data(ins);
     assert(dsti);
@@ -3470,66 +3470,57 @@ static void instrument_import(int ins, uint8_t *srci, bool v9_14)
     dsti->panning    = srci[11] & 3;
     dsti->fine_tune  = srci[12];
 
-    // Is 'perc_voice' even used anywhere?
-    dsti->perc_voice = (v9_14 == true ? srci[13] : 0);
+    // Is 'perc_voice' even used anywhere except editor?
+    dsti->perc_voice = (ffver >= 9 ? srci[13] : 0);
 
     if (dsti->panning >= 3) {
         dsti->panning = 0;
     }
 }
 
-static int a2t_read_instruments(char *src, unsigned long size)
+static int a2t_read_instruments(char *packed, unsigned long size)
 {
     if (len[0] > size) return INT_MAX;
 
     int instnum = (ffver < 9 ? 250 : 255);
-    int instsize = (ffver < 9 ? sizeof(tINSTR_DATA_V1_8) : sizeof(tINSTR_DATA_V9_14));
-    int dstsize = (instnum * instsize) +
-                  (ffver > 11 ?  sizeof(tBPM_DATA) + sizeof(tINS_4OP_FLAGS) + sizeof(tRESERVED) : 0);
-    char *dst = (char *)calloc(1, dstsize);
+    int instsize = (ffver < 9 ? tINSTR_DATA_V1_8_SIZE : tINSTR_DATA_V9_14_SIZE);
+    int unpackedsize = (instnum * instsize) +
+                  (ffver > 11 ? tBPM_DATA_SIZE + tINS_4OP_FLAGS_SIZE + tRESERVED_SIZE : 0);
+    uint8_t *unpacked = (uint8_t *)calloc(1, unpackedsize);
+    uint8_t *p = unpacked;
 
-    a2t_depack(src, len[0], dst);
+    a2t_depack(packed, len[0], unpacked);
 
     if (ffver == 14) {
         //memcpy(&songinfo->bpm_data, dst, sizeof(songinfo->bpm_data));
-        dst += sizeof(tBPM_DATA);
+        p += tBPM_DATA_SIZE;
     }
 
     if (ffver >= 12 && ffver <= 14) {
-        //memcpy(&songinfo->ins_4op_flags, dst, sizeof(songinfo->ins_4op_flags));
-        dst += sizeof(tINS_4OP_FLAGS);
-        //memcpy(&songinfo->reserved_data, dst, sizeof(songinfo->reserved_data));
-        dst += sizeof(tRESERVED);
+        //memcpy(&songinfo->ins_4op_flags, p, sizeof(songinfo->ins_4op_flags));
+        p += tINS_4OP_FLAGS_SIZE;
+        //memcpy(&songinfo->reserved_data, p, sizeof(songinfo->reserved_data));
+        p += tRESERVED_SIZE;
     }
 
     // Calculate the real number of used instruments
     int count = instnum;
-    while (count && is_data_empty(dst + (count - 1) * instsize, instsize))
+    while (count && is_data_empty(p + (count - 1) * instsize, instsize))
         count--;
 
     instruments_allocate(count);
 
-    if (ffver < 9) {
-        tINSTR_DATA_V1_8 *instr_data = (tINSTR_DATA_V1_8 *)dst;
-
-        for (int i = 0; i < count; i++) {
-            instrument_import(i + 1, (uint8_t *)&instr_data[i], false);
-        }
-    } else {
-        tINSTR_DATA_V9_14 *instr_data = (tINSTR_DATA_V9_14 *)dst;
-
-        for (int i = 0; i < count; i++) {
-            instrument_import(i + 1, (uint8_t *)&instr_data[i], true);
-        }
+    for (int i = 0; i < count; i++, p += instsize) {
+        instrument_import(i + 1, p);
     }
 
 #if 0
     FILE *f = fopen("0_inst.dmp", "wb");
-    fwrite(dst, 1, dstsize, f);
+    fwrite(unpacked, 1, unpackedsize, f);
     fclose(f);
 #endif
 
-    free(dst);
+    free(unpacked);
 
     return len[0];
 }
@@ -4114,7 +4105,7 @@ static int a2m_read_songdata(char *src, unsigned long size)
             memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 32);
 
         for (int i = 0; i < count; i++) {
-            instrument_import(i + 1, (uint8_t *)&data->instr_data[i], false);
+            instrument_import(i + 1, (uint8_t *)&data->instr_data[i]);
         }
 
         memcpy(songinfo->pattern_order, data->pattern_order, 128);
@@ -4153,7 +4144,7 @@ static int a2m_read_songdata(char *src, unsigned long size)
             memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 42);
 
         for (int i = 0; i < count; i++) {
-            instrument_import(i + 1, (uint8_t *)&data->instr_data[i], true);
+            instrument_import(i + 1, (uint8_t *)&data->instr_data[i]);
         }
 
         // Allocate fmreg macro tables
