@@ -3525,19 +3525,19 @@ static int a2t_read_instruments(char *packed, unsigned long size)
     return len[0];
 }
 
-static int a2t_read_fmregtable(char *src, unsigned long size)
+static int a2t_read_fmregtable(char *packed, unsigned long size)
 {
     if (ffver < 9) return 0;
 
     if (len[1] > size) return INT_MAX;
 
-    uint8_t *data = (uint8_t *)calloc(255, tFMREG_TABLE_V9_14_SIZE);
-    a2t_depack(src, len[1], data);
+    uint8_t *unpacked = (uint8_t *)calloc(255, tFMREG_TABLE_V9_14_SIZE);
+    a2t_depack(packed, len[1], unpacked);
 
     int count = instrinfo->count;
 
     // Allocate fmreg macro tables
-    fmreg_table_allocate(count, data);
+    fmreg_table_allocate(count, unpacked);
 
     for (int i = 0; i < count; i++) {
         // Instrument arpegio/vibrato references
@@ -3549,7 +3549,7 @@ static int a2t_read_fmregtable(char *src, unsigned long size)
         dst->vibrato = dst->fmreg->vibrato_table;
     }
 
-    free(data);
+    free(unpacked);
 
 #if 0
     FILE *f = fopen("1_inst_macro.dmp", "wb");
@@ -3560,19 +3560,19 @@ static int a2t_read_fmregtable(char *src, unsigned long size)
     return len[1];
 }
 
-static int a2t_read_arpvibtable(char *src, unsigned long size)
+static int a2t_read_arpvibtable(char *packed, unsigned long size)
 {
     if (ffver < 9) return 0;
 
     if (len[2] > size) return INT_MAX;
 
-    uint8_t *arpvib_table = (uint8_t *)calloc(255, tARPVIB_TABLE_V9_14_SIZE);
-    a2t_depack(src, len[2], arpvib_table);
+    uint8_t *unpacked = (uint8_t *)calloc(255, tARPVIB_TABLE_V9_14_SIZE);
+    a2t_depack(packed, len[2], unpacked);
 
     // TODO: Calculate actual num of arp/vib tables
-    arpvib_tables_allocate(255, arpvib_table);
+    arpvib_tables_allocate(255, unpacked);
 
-    free(arpvib_table);
+    free(unpacked);
 
 #if 0
     FILE *f = fopen("2_macrotable.dmp", "wb");
@@ -3583,7 +3583,7 @@ static int a2t_read_arpvibtable(char *src, unsigned long size)
     return len[2];
 }
 
-static int a2t_read_disabled_fmregs(char *src, unsigned long size)
+static int a2t_read_disabled_fmregs(char *packed, unsigned long size)
 {
     if (ffver < 11) return 0;
 
@@ -3591,7 +3591,7 @@ static int a2t_read_disabled_fmregs(char *src, unsigned long size)
 
     bool (*dis_fmregs)[255][28] = calloc(255, 28);
 
-    a2t_depack(src, len[3], *dis_fmregs);
+    a2t_depack(packed, len[3], *dis_fmregs);
 
     disabled_fmregs_import(instrinfo->count, *dis_fmregs);
 
@@ -3606,14 +3606,14 @@ static int a2t_read_disabled_fmregs(char *src, unsigned long size)
     return len[3];
 }
 
-static int a2t_read_order(char *src, unsigned long size)
+static int a2t_read_order(char *packed, unsigned long size)
 {
     int blocknum[14] = {1, 1, 1, 1, 1, 1, 1, 1, 3, 3, 4, 4, 4, 4};
     int i = blocknum[ffver - 1];
 
     if (len[i] > size) return INT_MAX;
 
-    a2t_depack(src, len[i], songinfo->pattern_order);
+    a2t_depack(packed, len[i], songinfo->pattern_order);
 
 #if 0
     FILE *f = fopen("4_order.dmp", "wb");
@@ -4083,50 +4083,52 @@ static int a2m_read_varheader(char *blockptr, int npatt, unsigned long size)
     return INT_MAX;
 }
 
-static int a2m_read_songdata(char *src, unsigned long size)
+static int a2m_read_songdata(char *packed, unsigned long size)
 {
     if (ffver < 9) { // 1 - 8
         if (len[0] > size) return INT_MAX;
 
-        A2M_SONGDATA_V1_8 *data = calloc(1, sizeof(*data));
-        a2t_depack(src, len[0], data);
+        //printf("offsetof: %d\n", __builtin_offsetof(A2M_SONGDATA_V1_8, common_flag));
 
-        memcpy(songinfo->songname, data->songname, 43);
-        memcpy(songinfo->composer, data->composer, 43);
+        uint8_t *unpacked = calloc(1, A2M_SONGDATA_V1_8_SIZE);
+        a2t_depack(packed, len[0], unpacked);
+
+        memcpy(songinfo->songname, A2M_SONGDATA_V1_8_SONGNAME_P(unpacked) + 1, 42);
+        memcpy(songinfo->composer, A2M_SONGDATA_V1_8_COMPOSER_P(unpacked) + 1, 42);
 
         // Calculate the real number of used instruments
         int count = 250;
-        while (count && is_data_empty(&data->instr_data[count - 1], sizeof(tINSTR_DATA_V1_8)))
+        while (count && is_data_empty(A2M_SONGDATA_V1_8_INSTR_DATA_P(unpacked, count - 1), tINSTR_DATA_V1_8_SIZE))
             count--;
 
         instruments_allocate(count);
 
-        for (int i = 0; i < 250; i++)
-            memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 32);
-
         for (int i = 0; i < count; i++) {
-            instrument_import(i + 1, (uint8_t *)&data->instr_data[i]);
+            instrument_import(i + 1, A2M_SONGDATA_V1_8_INSTR_DATA_P(unpacked, i));
         }
 
-        memcpy(songinfo->pattern_order, data->pattern_order, 128);
+        for (int i = 0; i < 250; i++)
+            memcpy(songinfo->instr_names[i], A2M_SONGDATA_V1_8_INSTR_NAMES_P(unpacked, i) + 1, 32);
 
-        songinfo->tempo = data->tempo;
-        songinfo->speed = data->speed;
+        memcpy(songinfo->pattern_order, A2M_SONGDATA_V1_8_PATTERN_ORDER_P(unpacked, 0), 128);
+
+        songinfo->tempo = A2M_SONGDATA_V1_8_TEMPO(unpacked);
+        songinfo->speed = A2M_SONGDATA_V1_8_SPEED(unpacked);
 
         if (ffver > 4) { // 5 - 8
-            songinfo->common_flag = data->common_flag;
+            songinfo->common_flag = A2M_SONGDATA_V1_8_COMMON_FLAG(unpacked);
         }
 
-        free(data);
+        free(unpacked);
     } else { // 9 - 14
         if (len[0] > size) return INT_MAX;
 
         A2M_SONGDATA_V9_14 *data = calloc(1, sizeof(*data));
-        a2t_depack(src, len[0], data);
+        a2t_depack(packed, len[0], data);
 
         #if 0
             FILE *f = fopen("songdata_aplib.pck", "wb");
-            fwrite(src, 1, len[0], f);
+            fwrite(packed, 1, len[0], f);
             fclose(f);
         #endif
 
@@ -4140,12 +4142,12 @@ static int a2m_read_songdata(char *src, unsigned long size)
 
         instruments_allocate(count);
 
-        for (int i = 0; i < 255; i++)
-            memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 42);
-
         for (int i = 0; i < count; i++) {
             instrument_import(i + 1, (uint8_t *)&data->instr_data[i]);
         }
+
+        for (int i = 0; i < 255; i++)
+            memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 42);
 
         // Allocate fmreg macro tables
         fmreg_table_allocate(count, (uint8_t *)data->fmreg_table);

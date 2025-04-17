@@ -394,6 +394,7 @@ typedef struct {
 
 STATIC_ASSERT(sizeof(tFM_INST_DATA_V1_14) == 11);
 
+#if 0
 typedef struct {
     tFM_INST_DATA_V1_14 fm;
     uint8_t panning; // 11
@@ -401,20 +402,32 @@ typedef struct {
 } tINSTR_DATA_V1_8;
 
 STATIC_ASSERT(sizeof(tINSTR_DATA_V1_8) == 13);
-#define tINSTR_DATA_V1_8_SIZE               (13)
 
 typedef struct {
-    char songname[43];
-    char composer[43];
-    char instr_names[250][33];
-    tINSTR_DATA_V1_8 instr_data[250]; // uint8_t instr_data[13][250];
-    uint8_t pattern_order[128];
-    uint8_t tempo;
-    uint8_t speed;
-    uint8_t common_flag; // A2M_SONGDATA_V5678
+    char songname[43];                  // 0-42
+    char composer[43];                  // 43-85
+    char instr_names[250][33];          // 86-8335
+    tINSTR_DATA_V1_8 instr_data[250];   // 8336 uint8_t instr_data[13][250];
+    uint8_t pattern_order[128];         // 11586
+    uint8_t tempo;                      // 11714
+    uint8_t speed;                      // 11715
+    uint8_t common_flag;                // 11716 A2M_SONGDATA_V5678
 } A2M_SONGDATA_V1_8;
 
 STATIC_ASSERT(sizeof(A2M_SONGDATA_V1_8) == 11717);
+#endif
+
+#define tINSTR_DATA_V1_8_SIZE                    (13)
+
+#define A2M_SONGDATA_V1_8_SONGNAME_P(P)          (uint8_t *)((P)+0)
+#define A2M_SONGDATA_V1_8_COMPOSER_P(P)          (uint8_t *)((P)+43)
+#define A2M_SONGDATA_V1_8_INSTR_NAMES_P(P, I)    (uint8_t *)((P)+86+(I)*33)
+#define A2M_SONGDATA_V1_8_INSTR_DATA_P(P, I)     (uint8_t *)((P)+8336+(I)*tINSTR_DATA_V1_8_SIZE)
+#define A2M_SONGDATA_V1_8_PATTERN_ORDER_P(P, I)  (uint8_t *)((P)+11586+(I))
+#define A2M_SONGDATA_V1_8_TEMPO(P)               UINT8LE((P)+11714)
+#define A2M_SONGDATA_V1_8_SPEED(P)               UINT8LE((P)+11715)
+#define A2M_SONGDATA_V1_8_COMMON_FLAG(P)         UINT8LE((P)+11716)
+#define A2M_SONGDATA_V1_8_SIZE                   (11717)
 
 /* Structures for importing A2M format V9-14 */
 
@@ -524,6 +537,8 @@ typedef struct {
 } A2M_SONGDATA_V9_14;
 
 STATIC_ASSERT(sizeof(A2M_SONGDATA_V9_14) == 1138338);
+
+#define A2M_SONGDATA_V9_14_SIZE         (1138338)
 
 /* Player data */
 
