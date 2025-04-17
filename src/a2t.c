@@ -288,6 +288,8 @@ static void fmreg_table_allocate(size_t n, uint8_t *src)
                 rtd->freq_slide = (int16_t)(rts[11] | (rts[12] << 8));
                 rtd->panning = rts[13];       // panning
                 rtd->duration = rts[14];      // duration
+                rtd->macro_flags = rts[10] & 0xf0;
+                if (rtd->macro_flags) printf("rtd->macro_flags: 0x%x", rtd->macro_flags);
             }
         }
     }
@@ -331,9 +333,8 @@ static void arpvib_tables_free()
     arpeggio_table = 0;
 }
 
-static void arpvib_tables_allocate(size_t n, uint8_t *src/*tARPVIB_TABLE_V9_14 mt[n]*/)
+static void arpvib_tables_allocate(size_t n, uint8_t *src)
 {
-    //char *src = (char *)&mt[0];
     arpvib_tables_free();
 
     // Note: for editor_mode allocate max entries possible
@@ -348,24 +349,24 @@ static void arpvib_tables_allocate(size_t n, uint8_t *src/*tARPVIB_TABLE_V9_14 m
             arpeggio_table[i] = calloc(1, sizeof(tARPEGGIO_TABLE));
 
             // Copy field by field
-            arpeggio_table[i]->length       = src[0] /*mt[i].arpeggio.length*/;
-            arpeggio_table[i]->speed        = src[1] /*mt[i].arpeggio.speed*/;
-            arpeggio_table[i]->loop_begin   = src[2] /*mt[i].arpeggio.loop_begin*/;
-            arpeggio_table[i]->loop_length  = src[3] /*mt[i].arpeggio.loop_length*/;
-            arpeggio_table[i]->keyoff_pos   = src[4] /*mt[i].arpeggio.keyoff_pos*/;
-            memcpy(arpeggio_table[i]->data, &src[5] /*mt[i].arpeggio.data*/, 255);
+            arpeggio_table[i]->length       = src[0] /*arpeggio.length*/;
+            arpeggio_table[i]->speed        = src[1] /*arpeggio.speed*/;
+            arpeggio_table[i]->loop_begin   = src[2] /*arpeggio.loop_begin*/;
+            arpeggio_table[i]->loop_length  = src[3] /*arpeggio.loop_length*/;
+            arpeggio_table[i]->keyoff_pos   = src[4] /*arpeggio.keyoff_pos*/;
+            memcpy(arpeggio_table[i]->data, &src[5] /*arpeggio.data*/, 255);
         }
         if (editor_mode || src[260] /*vibrato.length*/) {
             vibrato_table[i] = calloc(1, sizeof(tVIBRATO_TABLE));
 
             // Copy field by field
-            vibrato_table[i]->length        = src[260] /*mt[i].vibrato.length*/;
-            vibrato_table[i]->speed         = src[261] /*mt[i].vibrato.speed*/;
-            vibrato_table[i]->delay         = src[262] /*mt[i].vibrato.delay*/;
-            vibrato_table[i]->loop_begin    = src[263] /*mt[i].vibrato.loop_begin*/;
-            vibrato_table[i]->loop_length   = src[264] /*mt[i].vibrato.loop_length*/;
-            vibrato_table[i]->keyoff_pos    = src[265] /*mt[i].vibrato.keyoff_pos*/;
-            memcpy(vibrato_table[i]->data, &src[266] /*mt[i].vibrato.data*/, 255);
+            vibrato_table[i]->length        = src[260] /*vibrato.length*/;
+            vibrato_table[i]->speed         = src[261] /*vibrato.speed*/;
+            vibrato_table[i]->delay         = src[262] /*vibrato.delay*/;
+            vibrato_table[i]->loop_begin    = src[263] /*vibrato.loop_begin*/;
+            vibrato_table[i]->loop_length   = src[264] /*vibrato.loop_length*/;
+            vibrato_table[i]->keyoff_pos    = src[265] /*vibrato.keyoff_pos*/;
+            memcpy(vibrato_table[i]->data, &src[266] /*vibrato.data*/, 255);
         }
     }
 }
@@ -756,9 +757,6 @@ static void release_sustaining_sound(int chan)
     ch->fmpar_table[chan].attckM = 0;
     ch->fmpar_table[chan].decC = 0;
     ch->fmpar_table[chan].attckC = 0;
-    /*for (int i = 4; i <= 9; i++) {
-        ch->fmpar_table[chan].data[i] = 0;
-    }*/
 
     key_on(chan);
     opl3out(0x60 + m, BYTE_NULL);
@@ -2970,7 +2968,7 @@ static void macro_poll_proc()
                         update_fmpar(chan);
 
                         // TODO: check if those flags are really set by the editor
-                        uint8_t macro_flags = 0; //d->fm.data[10];
+                        uint8_t macro_flags = d->macro_flags;
 
                         if (force_macro_keyon || (macro_flags & 0x80)) { // MACRO_NOTE_RETRIG_FLAG
                             if (!((is_4op_chan(chan) && is_4op_chan_hi(chan)))) {
@@ -4190,7 +4188,7 @@ static int a2m_read_songdata(char *packed, unsigned long size)
         //memcpy(songinfo->reserved_data, data->reserved_data, 1024);
 
         // v14
-        // TODO: Implement these
+        // TODO: Implement these in player
         songinfo->bpm_rows_per_beat = A2M_SONGDATA_V9_14_BPM_ROWS_PER_BEAT(unpacked);
         songinfo->bpm_tempo_finetune = A2M_SONGDATA_V9_14_BPM_TEMPO_FINETUNE(unpacked);
 #if 0
