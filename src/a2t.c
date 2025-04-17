@@ -2,6 +2,7 @@
     TODO:
     - Bug in the original player: need to reset global_volume after order restart
     - Implement fade_out_volume in set_ins_volume() and set_volume
+    - Implement bpm_rows_per_beat and bpm_tempo_finetune
 
     In order to get into Adplug:
     - Refactor update_song_position(), calc_following_order()
@@ -289,7 +290,7 @@ static void fmreg_table_allocate(size_t n, uint8_t *src)
                 rtd->panning = rts[13];       // panning
                 rtd->duration = rts[14];      // duration
                 rtd->macro_flags = rts[10] & 0xf0;
-                if (rtd->macro_flags) printf("rtd->macro_flags: 0x%x", rtd->macro_flags);
+                if (rtd->macro_flags) printf("rtd->macro_flags: 0x%x\n", rtd->macro_flags);
             }
         }
     }
