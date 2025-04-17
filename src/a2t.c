@@ -4088,8 +4088,6 @@ static int a2m_read_songdata(char *packed, unsigned long size)
     if (ffver < 9) { // 1 - 8
         if (len[0] > size) return INT_MAX;
 
-        //printf("offsetof: %d\n", __builtin_offsetof(A2M_SONGDATA_V1_8, common_flag));
-
         uint8_t *unpacked = calloc(1, A2M_SONGDATA_V1_8_SIZE);
         a2t_depack(packed, len[0], unpacked);
 
@@ -4123,8 +4121,11 @@ static int a2m_read_songdata(char *packed, unsigned long size)
     } else { // 9 - 14
         if (len[0] > size) return INT_MAX;
 
-        A2M_SONGDATA_V9_14 *data = calloc(1, sizeof(*data));
-        a2t_depack(packed, len[0], data);
+        //printf("offsetof: %d\n", __builtin_offsetof(tBPM_DATA, tempo_finetune));
+
+        uint8_t *unpacked = calloc(1, A2M_SONGDATA_V9_14_SIZE);
+
+        a2t_depack(packed, len[0], unpacked);
 
         #if 0
             FILE *f = fopen("songdata_aplib.pck", "wb");
@@ -4132,25 +4133,25 @@ static int a2m_read_songdata(char *packed, unsigned long size)
             fclose(f);
         #endif
 
-        memcpy(songinfo->songname, data->songname, 43);
-        memcpy(songinfo->composer, data->composer, 43);
+        memcpy(songinfo->songname, A2M_SONGDATA_V9_14_SONGNAME_P(unpacked) + 1, 42);
+        memcpy(songinfo->composer, A2M_SONGDATA_V9_14_COMPOSER_P(unpacked) + 1, 42);
 
         // Calculate the real number of used instruments
         int count = 255;
-        while (count && is_data_empty(&data->instr_data[count - 1], sizeof(tINSTR_DATA)))
+        while (count && is_data_empty(A2M_SONGDATA_V9_14_INSTR_DATA_P(unpacked, count - 1), tINSTR_DATA_V9_14_SIZE))
             count--;
 
         instruments_allocate(count);
 
         for (int i = 0; i < count; i++) {
-            instrument_import(i + 1, (uint8_t *)&data->instr_data[i]);
+            instrument_import(i + 1, A2M_SONGDATA_V9_14_INSTR_DATA_P(unpacked, i));
         }
 
         for (int i = 0; i < 255; i++)
-            memcpy(songinfo->instr_names[i], data->instr_names[i] + 1, 42);
+            memcpy(songinfo->instr_names[i], A2M_SONGDATA_V9_14_INSTR_NAMES_P(unpacked, i) + 1, 42);
 
         // Allocate fmreg macro tables
-        fmreg_table_allocate(count, (uint8_t *)data->fmreg_table);
+        fmreg_table_allocate(count, A2M_SONGDATA_V9_14_FMREG_TABLE_P(unpacked, 0));
 
         for (int i = 0; i < count; i++) {
             // Instrument arpegio/vibrato references
@@ -4164,25 +4165,23 @@ static int a2m_read_songdata(char *packed, unsigned long size)
 
         // Allocate arpeggio/vibrato macro tables
         // TODO: Calculate actual num of arp/vib tables
-        arpvib_tables_allocate(255, (uint8_t *)data->arpvib_table);
+        arpvib_tables_allocate(255, A2M_SONGDATA_V9_14_ARPVIB_TABLE_P(unpacked, 0));
 
-        memcpy(songinfo->pattern_order, data->pattern_order, 128);
+        memcpy(songinfo->pattern_order, A2M_SONGDATA_V9_14_PATTERN_ORDER_P(unpacked, 0), 128);
 
-        songinfo->tempo = data->tempo;
-        songinfo->speed = data->speed;
-        songinfo->common_flag = data->common_flag;
-        songinfo->patt_len = UINT16LE(data->patt_len);
-        songinfo->nm_tracks = data->nm_tracks;
-        songinfo->macro_speedup = UINT16LE(data->macro_speedup);
+        songinfo->tempo = A2M_SONGDATA_V9_14_TEMPO(unpacked);
+        songinfo->speed = A2M_SONGDATA_V9_14_SPEED(unpacked);
+        songinfo->common_flag = A2M_SONGDATA_V9_14_COMMON_FLAG(unpacked);
+        songinfo->patt_len = A2M_SONGDATA_V9_14_PATT_LEN(unpacked);
+        songinfo->nm_tracks = A2M_SONGDATA_V9_14_NM_TRACKS(unpacked);
+        songinfo->macro_speedup = A2M_SONGDATA_V9_14_MACRO_SPEEDUP(unpacked);
 
         // v10
-        songinfo->flag_4op = data->flag_4op;
-        memcpy(songinfo->lock_flags, data->lock_flags, sizeof(data->lock_flags));
+        songinfo->flag_4op = A2M_SONGDATA_V9_14_FLAG_4OP(unpacked);
+        memcpy(songinfo->lock_flags, A2M_SONGDATA_V9_14_LOCK_FLAGS_P(unpacked, 0), 20);
 
         // v11
-        // NOTE: not used anywhere
-        //memcpy(songinfo->pattern_names, data->pattern_names, 128 * 43);
-        disabled_fmregs_import(count, data->dis_fmreg_col);
+        disabled_fmregs_import(count, (void *)A2M_SONGDATA_V9_14_DIS_FMREG_COL_P(unpacked, 0));
 
         // v12-13
         // NOTE: not used anywhere
@@ -4191,15 +4190,15 @@ static int a2m_read_songdata(char *packed, unsigned long size)
         //memcpy(songinfo->reserved_data, data->reserved_data, 1024);
 
         // v14
-        // NOTE: not used anywhere
-        //songinfo->bpm_data.rows_per_beat = data->bpm_data.rows_per_beat;
-        //songinfo->bpm_data.tempo_finetune = INT16LE(data->bpm_data.tempo_finetune);
+        // TODO: Implement these
+        songinfo->bpm_rows_per_beat = A2M_SONGDATA_V9_14_BPM_ROWS_PER_BEAT(unpacked);
+        songinfo->bpm_tempo_finetune = A2M_SONGDATA_V9_14_BPM_TEMPO_FINETUNE(unpacked);
 #if 0
         FILE *f = fopen("instruments.dmp", "wb");
         fwrite(data->instr_data, 1, sizeof(data->instr_data), f);
         fclose(f);
 #endif
-        free(data);
+        free(unpacked);
     }
 
     speed_update    = (songinfo->common_flag >> 0) & 1;

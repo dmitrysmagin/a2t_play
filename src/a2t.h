@@ -236,6 +236,12 @@ STATIC_ASSERT(sizeof(uint8_t[4]) == 4);
 #define A2T_VARHEADER_V11_LEN(P, I)         UINT32LE((P)+27+I*4)
 #define A2T_VARHEADER_V11_SIZE              (111)
 
+#define tADTRACK2_EVENT_V1_8_SIZE       (4)
+#define tPATTERN_DATA_V1234_SIZE        (64 * 9 * 4)
+#define tPATTERN_DATA_V5678_SIZE        (18 * 64 * 4)
+#define tADTRACK2_EVENT_V9_14_SIZE      (6)
+#define tPATTERN_DATA_V9_14_SIZE        (20 * 256 * 6)
+
 #if 0
 typedef struct {
     char id[15];    // 0 '_a2tiny_module_'
@@ -351,12 +357,6 @@ typedef struct {
 STATIC_ASSERT(sizeof(tPATTERN_DATA_V9_14) == 20 * 256 * 6);
 #endif
 
-#define tADTRACK2_EVENT_V1_8_SIZE       (4)
-#define tPATTERN_DATA_V1234_SIZE        (64 * 9 * 4)
-#define tPATTERN_DATA_V5678_SIZE        (18 * 64 * 4)
-#define tADTRACK2_EVENT_V9_14_SIZE      (6)
-#define tPATTERN_DATA_V9_14_SIZE        (20 * 256 * 6)
-
 /* Structures for importing A2M format V1-8 */
 
 #if 0
@@ -366,12 +366,8 @@ typedef struct {
     uint8_t ffver;  // 14
     uint8_t npatt;  // 15
 } A2M_HEADER;
-STATIC_ASSERT(sizeof(A2M_HEADER) == 16);
-#endif
 
-#define A2M_HEADER_FFVER(P)     UINT8LE((P)+14)
-#define A2M_HEADER_NPATT(P)     UINT8LE((P)+15)
-#define A2M_HEADER_SIZE         (16)
+STATIC_ASSERT(sizeof(A2M_HEADER) == 16);
 
 typedef struct {
     union {
@@ -394,7 +390,6 @@ typedef struct {
 
 STATIC_ASSERT(sizeof(tFM_INST_DATA_V1_14) == 11);
 
-#if 0
 typedef struct {
     tFM_INST_DATA_V1_14 fm;
     uint8_t panning; // 11
@@ -417,6 +412,10 @@ typedef struct {
 STATIC_ASSERT(sizeof(A2M_SONGDATA_V1_8) == 11717);
 #endif
 
+#define A2M_HEADER_FFVER(P)     UINT8LE((P)+14)
+#define A2M_HEADER_NPATT(P)     UINT8LE((P)+15)
+#define A2M_HEADER_SIZE         (16)
+
 #define tINSTR_DATA_V1_8_SIZE                    (13)
 
 #define A2M_SONGDATA_V1_8_SONGNAME_P(P)          (uint8_t *)((P)+0)
@@ -430,16 +429,15 @@ STATIC_ASSERT(sizeof(A2M_SONGDATA_V1_8) == 11717);
 #define A2M_SONGDATA_V1_8_SIZE                   (11717)
 
 /* Structures for importing A2M format V9-14 */
-
+#if 0
 typedef struct {
     tFM_INST_DATA_V1_14 fm;
-    uint8_t panning; // 11
-    int8_t  fine_tune; // 12
-    uint8_t perc_voice; // 13
+    uint8_t panning;        // 11
+    int8_t  fine_tune;      // 12
+    uint8_t perc_voice;     // 13
 } tINSTR_DATA_V9_14;
 
 STATIC_ASSERT(sizeof(tINSTR_DATA_V9_14) == 14);
-#define tINSTR_DATA_V9_14_SIZE              (14)
 
 typedef struct {
     tFM_INST_DATA_V1_14 fm;     // 0
@@ -449,7 +447,6 @@ typedef struct {
 } tREGISTER_TABLE_DEF_V9_14;
 
 STATIC_ASSERT(sizeof(tREGISTER_TABLE_DEF_V9_14) == 15);
-#define tREGISTER_TABLE_DEF_V9_14_SIZE      (15)
 
 typedef struct {
     uint8_t length;                     // 0
@@ -462,7 +459,6 @@ typedef struct {
 } tFMREG_TABLE_V9_14;
 
 STATIC_ASSERT(sizeof(tFMREG_TABLE_V9_14) == 3831);
-#define tFMREG_TABLE_V9_14_SIZE     (3831)
 
 typedef struct {
     uint8_t length;         // 0
@@ -493,52 +489,72 @@ typedef struct {
 } tARPVIB_TABLE_V9_14;
 
 STATIC_ASSERT(sizeof(tARPVIB_TABLE_V9_14) == 521);
-#define tARPVIB_TABLE_V9_14_SIZE    (521)
 
 typedef struct {
     uint8_t num_4op;
     uint8_t idx_4op[128];
 } tINS_4OP_FLAGS;
 
-#define tINS_4OP_FLAGS_SIZE         (129U)
-
 typedef uint8_t tRESERVED[1024];
-
-#define tRESERVED_SIZE              (1024)
 
 typedef struct {
     uint8_t rows_per_beat;
     int8_t tempo_finetune[2]; // int16_t
 } tBPM_DATA;
 
-#define tBPM_DATA_SIZE              (3U)
-
 typedef struct {
-    char songname[43];                      // 0  : 43
-    char composer[43];                      // 43 : 43
-    char instr_names[255][43];              // 86 : 43*255
+    char songname[43];                      // 0-43
+    char composer[43];                      // 43-43
+    char instr_names[255][43];              // 86-43*255
     tINSTR_DATA_V9_14 instr_data[255];      // 11051
     tFMREG_TABLE_V9_14 fmreg_table[255];    // 14621
-    tARPVIB_TABLE_V9_14 arpvib_table[255];  //
-    uint8_t pattern_order[128];
-    uint8_t tempo;
-    uint8_t speed;
-    uint8_t common_flag;
-    uint8_t patt_len[2];           // uint16_t
-    uint8_t nm_tracks;
-    uint8_t macro_speedup[2];      // uint16_t
-    uint8_t flag_4op;              // A2M_SONGDATA_V10
-    uint8_t lock_flags[20];        // A2M_SONGDATA_V10
-    char pattern_names[128][43];   // A2M_SONGDATA_V11
-    bool dis_fmreg_col[255][28]; // A2M_SONGDATA_V11
-    tINS_4OP_FLAGS ins_4op_flags;  // A2M_SONGDATA_V12_13
-    tRESERVED reserved_data;       // A2M_SONGDATA_V12_13
-    tBPM_DATA bpm_data;            // A2M_SONGDATA_V14
+    tARPVIB_TABLE_V9_14 arpvib_table[255];  // 991526
+    uint8_t pattern_order[128];             // 1124381
+    uint8_t tempo;                          // 1124509
+    uint8_t speed;                          // 1124510
+    uint8_t common_flag;                    // 1124511
+    uint8_t patt_len[2];                    // 1124512 uint16_t
+    uint8_t nm_tracks;                      // 1124514
+    uint8_t macro_speedup[2];               // 1124515 uint16_t
+    uint8_t flag_4op;                       // 1124517 A2M_SONGDATA_V10
+    uint8_t lock_flags[20];                 // 1124518 A2M_SONGDATA_V10
+    char pattern_names[128][43];            // 1124538 A2M_SONGDATA_V11
+    bool dis_fmreg_col[255][28];            // 1130042 A2M_SONGDATA_V11
+    tINS_4OP_FLAGS ins_4op_flags;           // 1137182 A2M_SONGDATA_V12_13
+    tRESERVED reserved_data;                // 1137311 A2M_SONGDATA_V12_13
+    tBPM_DATA bpm_data;                     // 1138335 A2M_SONGDATA_V14
 } A2M_SONGDATA_V9_14;
 
 STATIC_ASSERT(sizeof(A2M_SONGDATA_V9_14) == 1138338);
+#endif
 
-#define A2M_SONGDATA_V9_14_SIZE         (1138338)
+#define tINSTR_DATA_V9_14_SIZE                  (14)
+#define tREGISTER_TABLE_DEF_V9_14_SIZE          (15)
+#define tFMREG_TABLE_V9_14_SIZE                 (3831)
+#define tARPVIB_TABLE_V9_14_SIZE                (521)
+#define tINS_4OP_FLAGS_SIZE                     (129U)
+#define tRESERVED_SIZE                          (1024)
+#define tBPM_DATA_SIZE                          (3U)
+
+#define A2M_SONGDATA_V9_14_SONGNAME_P(P)         (uint8_t *)((P)+0)
+#define A2M_SONGDATA_V9_14_COMPOSER_P(P)         (uint8_t *)((P)+43)
+#define A2M_SONGDATA_V9_14_INSTR_NAMES_P(P, I)   (uint8_t *)((P)+86+(I)*43)
+#define A2M_SONGDATA_V9_14_INSTR_DATA_P(P, I)    (uint8_t *)((P)+11051+(I)*tINSTR_DATA_V9_14_SIZE)
+#define A2M_SONGDATA_V9_14_FMREG_TABLE_P(P, I)   (uint8_t *)((P)+14621+(I)*tFMREG_TABLE_V9_14_SIZE)
+#define A2M_SONGDATA_V9_14_ARPVIB_TABLE_P(P, I)  (uint8_t *)((P)+991526+(I)*tARPVIB_TABLE_V9_14_SIZE)
+#define A2M_SONGDATA_V9_14_PATTERN_ORDER_P(P, I) (uint8_t *)((P)+1124381+(I))
+#define A2M_SONGDATA_V9_14_TEMPO(P)               UINT8LE((P)+1124509)
+#define A2M_SONGDATA_V9_14_SPEED(P)               UINT8LE((P)+1124510)
+#define A2M_SONGDATA_V9_14_COMMON_FLAG(P)         UINT8LE((P)+1124511)
+#define A2M_SONGDATA_V9_14_PATT_LEN(P)            UINT16LE((P)+1124512)
+#define A2M_SONGDATA_V9_14_NM_TRACKS(P)           UINT8LE((P)+1124514)
+#define A2M_SONGDATA_V9_14_MACRO_SPEEDUP(P)       UINT16LE((P)+1124515)
+#define A2M_SONGDATA_V9_14_FLAG_4OP(P)            UINT8LE((P)+1124517)
+#define A2M_SONGDATA_V9_14_LOCK_FLAGS_P(P, I)    (uint8_t *)((P)+1124518+(I))
+#define A2M_SONGDATA_V9_14_DIS_FMREG_COL_P(P, I) (uint8_t *)((P)+1130042+(I)*28)
+#define A2M_SONGDATA_V9_14_BPM_ROWS_PER_BEAT(P)   UINT8LE((P)+1138335)
+#define A2M_SONGDATA_V9_14_BPM_TEMPO_FINETUNE(P)  INT16LE((P)+1138336)
+#define A2M_SONGDATA_V9_14_SIZE                  (1138338)
 
 /* Player data */
 
@@ -620,6 +636,8 @@ typedef struct {
     uint16_t        macro_speedup;
     uint8_t         flag_4op;
     uint8_t         lock_flags[20];
+    uint8_t         bpm_rows_per_beat;
+    int             bpm_tempo_finetune;
 } tSONGINFO;
 
 typedef struct {
