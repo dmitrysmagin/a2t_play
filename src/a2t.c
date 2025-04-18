@@ -269,7 +269,7 @@ static void fmreg_table_allocate(size_t n, uint8_t *src)
             if (!instrument)
                 continue;
 
-            instrument->fmreg = calloc(1, sizeof(tFMREG_TABLE));
+            instrument->fmreg = (tFMREG_TABLE *)calloc(1, sizeof(tFMREG_TABLE));
             assert(instrument->fmreg);
 
             // Copy field by field
@@ -347,7 +347,7 @@ static void arpvib_tables_allocate(size_t n, uint8_t *src)
 
     for (unsigned int i = 0; i < n; i++, src += tARPVIB_TABLE_V9_14_SIZE) {
         if (editor_mode || src[0] /*arpeggio.length*/) {
-            arpeggio_table[i] = calloc(1, sizeof(tARPEGGIO_TABLE));
+            arpeggio_table[i] = (tARPEGGIO_TABLE *)calloc(1, sizeof(tARPEGGIO_TABLE));
 
             // Copy field by field
             arpeggio_table[i]->length       = src[0] /*arpeggio.length*/;
@@ -358,7 +358,7 @@ static void arpvib_tables_allocate(size_t n, uint8_t *src)
             memcpy(arpeggio_table[i]->data, &src[5] /*arpeggio.data*/, 255);
         }
         if (editor_mode || src[260] /*vibrato.length*/) {
-            vibrato_table[i] = calloc(1, sizeof(tVIBRATO_TABLE));
+            vibrato_table[i] = (tVIBRATO_TABLE *)calloc(1, sizeof(tVIBRATO_TABLE));
 
             // Copy field by field
             vibrato_table[i]->length        = src[260] /*vibrato.length*/;
@@ -2993,7 +2993,7 @@ static void macro_poll_proc()
                             }
                         }
 
-                        int16_t freq_slide = d->freq_slide;
+                        int freq_slide = d->freq_slide;
 
                         if (!(disabled & (1 << 26))) {
                             if (freq_slide > 0) {
@@ -4180,7 +4180,7 @@ static int a2m_read_songdata(char *packed, unsigned long size)
         memcpy(songinfo->lock_flags, A2M_SONGDATA_V9_14_LOCK_FLAGS_P(unpacked, 0), 20);
 
         // v11
-        disabled_fmregs_import(count, (void *)A2M_SONGDATA_V9_14_DIS_FMREG_COL_P(unpacked, 0));
+        disabled_fmregs_import(count, (bool (*)[28])A2M_SONGDATA_V9_14_DIS_FMREG_COL_P(unpacked, 0));
 
         // v12-13
         // NOTE: not used anywhere
