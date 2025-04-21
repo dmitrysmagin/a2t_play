@@ -2052,17 +2052,16 @@ static void generate_custom_vibrato(uint8_t value)
 
     #define min0(VALUE) ((int)VALUE >= 0 ? (int)VALUE : 0)
 
-    switch (value) {
-    case 0: // set default speed table
+    if (value == 0) {
+        // 0: set default speed table
         vibtrem_table_size = def_vibtrem_table_size;
         memcpy(&vibtrem_table, &def_vibtrem_table, sizeof(vibtrem_table));
-        break;
+    } else if (value <= 239) {
+        // 1-239: set custom speed table (fixed size = 32)
+        vibtrem_table_size = def_vibtrem_table_size;
+        double mul_r = (double)value / 16.0;
 
-    case 1 ... 239: // set custom speed table (fixed size = 32)
-         vibtrem_table_size = def_vibtrem_table_size;
-         double mul_r = (double)value / 16.0;
-
-         for (idx2 = 0; idx2 <= 7; idx2++) {
+        for (idx2 = 0; idx2 <= 7; idx2++) {
             vibtrem_table[idx2 * 32] = 0;
 
             for (idx = 1; idx <= 16; idx++) {
@@ -2073,9 +2072,8 @@ static void generate_custom_vibrato(uint8_t value)
                 vibtrem_table[idx2 * 32 + idx] = (uint8_t)round((32 - idx) * mul_r);
             }
         }
-        break;
-
-    case 240 ... 255: // set custom speed table (speed factor = 1-4)
+    } else {
+        // 240-255: set custom speed table (speed factor = 1-4)
         vibtrem_speed_factor = (value - 240) % 4 + 1;
         vibtrem_table_size = 2 * vibtab_size[value - 240];
         int mul_b = 256 / (vibtab_size[value - 240]);
@@ -2093,7 +2091,6 @@ static void generate_custom_vibrato(uint8_t value)
                     min0((2 * vibtab_size[value - 240] - idx) * mul_b - 1);
             }
         }
-        break;
     }
 }
 
@@ -3047,21 +3044,18 @@ static void macro_poll_proc()
                 if ((mt->arpg_pos != 0) &&
                     (mt->arpg_pos != IDLE) && (mt->arpg_pos != finished_flag)) {
                     int8_t fine_tune = get_instr_fine_tune(ch->event_table[chan].instr_def);
-                    switch (at->data[mt->arpg_pos - 1]) {
-                    case 0:
-                        change_frequency(chan, nFreq(mt->arpg_note - 1) +
-                            fine_tune);
-                        break;
+                    uint8_t d = at->data[mt->arpg_pos - 1];
 
-                    case 1 ... 96:
+                    if (d == 0) {
+                        change_frequency(chan, nFreq(mt->arpg_note - 1) + fine_tune);
+                    } else if (d <= 96) {
+                        // 1 - 96:
                         change_frequency(chan, nFreq(max(mt->arpg_note + at->data[mt->arpg_pos], 97) - 1) +
                             fine_tune);
-                        break;
-
-                    case 0x80 ... 0x80+12*8+1:
+                    } else if (d >= 0x80 && d <= 0x80+12*8+1) {
+                        // 0x80 - 0x80+12*8+1:
                         change_frequency(chan, nFreq(at->data[mt->arpg_pos - 1] - 0x80 - 1) +
                             fine_tune);
-                        break;
                     }
                 }
             } else {
@@ -3390,10 +3384,14 @@ static inline void a2t_depack(void *src, int srcsize, void *dst)
     case 8: // unpacked
         memcpy(dst, src, srcsize);
         break;
-    case 9 ... 11: // apack (aPlib)
+    case 9:
+    case 10:
+    case 11: // apack (aPlib)
         aP_depack(src, dst);
         break;
-    case 12 ... 14: // lzh
+    case 12:
+    case 13:
+    case 14: // lzh
         LZH_decompress(src, dst, srcsize);
         break;
     }
@@ -3405,13 +3403,19 @@ static int a2t_read_varheader(char *blockptr, unsigned long size)
     uint8_t *varheader = (uint8_t *)blockptr;
 
     switch (ffver) {
-    case 1 ... 4:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
         if (A2T_VARHEADER_V1234_SIZE > size)
             return INT_MAX;
         for (int i = 0; i < 6; i++)
             len[i] = A2T_VARHEADER_V1234_LEN(varheader, i);
         return A2T_VARHEADER_V1234_SIZE;
-    case 5 ... 8:
+    case 5:
+    case 6:
+    case 7:
+    case 8:
         if (A2T_VARHEADER_V5678_SIZE > size)
             return INT_MAX;
         songinfo->common_flag = A2T_VARHEADER_V5678_COMMON_FLAG(varheader);
@@ -3441,7 +3445,10 @@ static int a2t_read_varheader(char *blockptr, unsigned long size)
         for (int i = 0; i < 20; i++)
             len[i] = A2T_VARHEADER_V10_LEN(varheader, i);
         return A2T_VARHEADER_V10_SIZE;
-    case 11 ... 14:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
         if (A2T_VARHEADER_V11_SIZE > size)
             return INT_MAX;
         songinfo->common_flag = A2T_VARHEADER_V11_COMMON_FLAG(varheader);
@@ -3819,7 +3826,10 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
     int retval = 0;
 
     switch (ffver) {
-    case 1 ... 4: // [4][16][64][9][4]
+    case 1:
+    case 2:
+    case 3:
+    case 4: // [4][16][64][9][4]
         {
         uint8_t *old = calloc(16, tPATTERN_DATA_V1234_SIZE);
 
@@ -3864,7 +3874,10 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
         free(old);
         break;
         }
-    case 5 ... 8: // [8][8][18][64][4]
+    case 5:
+    case 6:
+    case 7:
+    case 8: // [8][8][18][64][4]
         {
         uint8_t *old = calloc(8, tPATTERN_DATA_V5678_SIZE);
 
@@ -3905,7 +3918,12 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
         free(old);
         break;
         }
-    case 9 ... 14: // [16][8][20][256][6]
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+    case 13:
+    case 14: // [16][8][20][256][6]
         {
         uint8_t *old = calloc(8, tPATTERN_DATA_V9_14_SIZE);
 
@@ -4062,7 +4080,14 @@ static int a2m_read_varheader(char *blockptr, int npatt, unsigned long size)
     else lensize = 17;                  // 9,10,11 - uint32_t len[17];
 
     switch (ffver) {
-    case 1 ... 8:
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+    case 8:
         if (lensize * sizeof(tUINT16) > size) return INT_MAX;
 
         // skip possible rubbish (MARIO.A2M)
@@ -4070,7 +4095,12 @@ static int a2m_read_varheader(char *blockptr, int npatt, unsigned long size)
             len[i] = UINT16LE(src16[i]);
 
         return lensize * sizeof(tUINT16);
-    case 9 ... 14:
+    case 9:
+    case 10:
+    case 11:
+    case 12:
+    case 13:
+    case 14:
         if (lensize * sizeof(tUINT32) > size) return INT_MAX;
 
         for (int i = 0; i < lensize; i++)
