@@ -290,7 +290,8 @@ static void fmreg_table_allocate(size_t n, uint8_t *src)
                 rtd->panning = rts[13];       // panning
                 rtd->duration = rts[14];      // duration
                 rtd->macro_flags = rts[10] & 0xf0;
-                if (rtd->macro_flags) printf("rtd->macro_flags: 0x%x\n", rtd->macro_flags);
+                if (rtd->macro_flags)
+                    AdPlug_LogWrite("instr(%02x).macro_flags: 0x%x\n", i + 1, rtd->macro_flags);
             }
         }
     }
@@ -458,7 +459,10 @@ static void memory_usage()
 
 static inline bool note_in_range(uint8_t note)
 {
-    return ((note & 0x7f) > 0) && ((note & 0x7f) < 12 * 8 + 1);
+    if (note & keyoff_flag) {
+        AdPlug_LogWrite("note_in_range with keyoff=1\n");
+    }
+    return ((note & ~keyoff_flag) > 0) && ((note & ~keyoff_flag) < 12 * 8 + 1);
 }
 
 static inline uint16_t regoffs_n(int chan)
@@ -1316,7 +1320,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         if ((event->eff[slot ^ 1].def == ef_Extended) &&
             (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_ForceBpmSld)) {
 
-            printf("\n ef_GlobalFSlideUp or ef_GlobalFSlideDown with ef_ex_cmd_ForceBpmSld\n");
+            AdPlug_LogWrite("ef_GlobalFSlideUp or ef_GlobalFSlideDown with ef_ex_cmd_ForceBpmSld\n");
 
             if (def == ef_GlobalFSlideUp) {
                 update_playback_speed(val);
@@ -1402,9 +1406,31 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             break;
         }
 
+        bool reset_state = note_in_range(event->note & ~keyoff_flag);
+        // js: event->note || ch->event_table[chan].note || 0;
+        uint8_t new_note = note_in_range(event->note & ~keyoff_flag)
+            ? event->note & ~keyoff_flag
+            : (note_in_range(ch->event_table[chan].note & ~keyoff_flag)
+                ? ch->event_table[chan].note & ~keyoff_flag
+                : 0);
+
+        if (new_note) {
+            if (reset_state)
+                ch->arpgg_table[slot][chan].state = 0;
+
+            ch->arpgg_table[slot][chan].note = new_note;
+            if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
+                ch->arpgg_table[slot][chan].add1 = (val >> 4) & 0x0f;
+                ch->arpgg_table[slot][chan].add2 = val & 0x0f;
+            }
+        } else {
+            ch->effect_table[slot][chan].def = 0;
+            ch->effect_table[slot][chan].val = 0;
+        }
+#if 0
         if (note_in_range(event->note)) {
             ch->arpgg_table[slot][chan].state = 0;
-            ch->arpgg_table[slot][chan].note = event->note & 0x7f;
+            ch->arpgg_table[slot][chan].note = event->note & ~keyoff_flag;
             if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
                 ch->arpgg_table[slot][chan].add1 = val >> 4;
                 ch->arpgg_table[slot][chan].add2 = val & 0x0f;
@@ -1429,6 +1455,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 ch->effect_table[slot][chan].val = 0;
             }
         }
+#endif
         break;
 
     case ef_FSlideUp:
@@ -4150,8 +4177,6 @@ static int a2m_read_songdata(char *packed, unsigned long size)
         free(unpacked);
     } else { // 9 - 14
         if (len[0] > size) return INT_MAX;
-
-        //printf("offsetof: %d\n", __builtin_offsetof(tBPM_DATA, tempo_finetune));
 
         uint8_t *unpacked = calloc(1, A2M_SONGDATA_V9_14_SIZE);
 
