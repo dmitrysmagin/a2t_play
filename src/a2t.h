@@ -194,18 +194,18 @@ typedef enum {
 #define A2T_HEADER_SPEED(P)                 UINT8LE((P)+22)
 #define A2T_HEADER_SIZE                     (23)
 
-#define A2T_VARHEADER_V1234_LEN(P, I)       UINT16LE((P)+0+I*2)
+#define A2T_VARHEADER_V1234_LEN(P, I)       UINT16LE((P)+0+(I)*2)
 #define A2T_VARHEADER_V1234_SIZE            (12)
 
 #define A2T_VARHEADER_V5678_COMMON_FLAG(P)  UINT8LE ((P)+0)
-#define A2T_VARHEADER_V5678_LEN(P, I)       UINT16LE((P)+1+I*2)
+#define A2T_VARHEADER_V5678_LEN(P, I)       UINT16LE((P)+1+(I)*2)
 #define A2T_VARHEADER_V5678_SIZE            (21)
 
 #define A2T_VARHEADER_V9_COMMON_FLAG(P)     UINT8LE ((P)+0)
 #define A2T_VARHEADER_V9_PATT_LEN(P)        UINT16LE((P)+1)
 #define A2T_VARHEADER_V9_NM_TRACKS(P)       UINT8LE ((P)+3)
 #define A2T_VARHEADER_V9_MACRO_SPEEDUP(P)   UINT16LE((P)+4)
-#define A2T_VARHEADER_V9_LEN(P, I)          UINT32LE((P)+6+I*4)
+#define A2T_VARHEADER_V9_LEN(P, I)          UINT32LE((P)+6+(I)*4)
 #define A2T_VARHEADER_V9_SIZE               (86)
 
 #define A2T_VARHEADER_V10_COMMON_FLAG(P)    UINT8LE ((P)+0)
@@ -213,8 +213,8 @@ typedef enum {
 #define A2T_VARHEADER_V10_NM_TRACKS(P)      UINT8LE ((P)+3)
 #define A2T_VARHEADER_V10_MACRO_SPEEDUP(P)  UINT16LE((P)+4)
 #define A2T_VARHEADER_V10_FLAG_4OP(P)       UINT8LE ((P)+6)
-#define A2T_VARHEADER_V10_LOCK_FLAGS(P, I)  UINT8LE ((P)+7+I)
-#define A2T_VARHEADER_V10_LEN(P, I)         UINT32LE((P)+27+I*4)
+#define A2T_VARHEADER_V10_LOCK_FLAGS(P, I)  UINT8LE ((P)+7+(I))
+#define A2T_VARHEADER_V10_LEN(P, I)         UINT32LE((P)+27+(I)*4)
 #define A2T_VARHEADER_V10_SIZE              (107)
 
 #define A2T_VARHEADER_V11_COMMON_FLAG(P)    UINT8LE ((P)+0)
@@ -222,8 +222,8 @@ typedef enum {
 #define A2T_VARHEADER_V11_NM_TRACKS(P)      UINT8LE ((P)+3)
 #define A2T_VARHEADER_V11_MACRO_SPEEDUP(P)  UINT16LE((P)+4)
 #define A2T_VARHEADER_V11_FLAG_4OP(P)       UINT8LE ((P)+6)
-#define A2T_VARHEADER_V11_LOCK_FLAGS(P, I)  UINT8LE ((P)+7+I)
-#define A2T_VARHEADER_V11_LEN(P, I)         UINT32LE((P)+27+I*4)
+#define A2T_VARHEADER_V11_LOCK_FLAGS(P, I)  UINT8LE ((P)+7+(I))
+#define A2T_VARHEADER_V11_LEN(P, I)         UINT32LE((P)+27+(I)*4)
 #define A2T_VARHEADER_V11_SIZE              (111)
 
 #define tADTRACK2_EVENT_V1_8_SIZE           (4)
