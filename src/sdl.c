@@ -133,6 +133,10 @@ int show_info()
     for (int i = 0; i < 20; i++) {
         printf("%04x%s", ch->freq_table[i], i < 19 ? "|" : "\n");
     }
+    printf("PRTF: ");
+    for (int i = 0; i < 20; i++) {
+        printf("%04x%s", ch->porta_table[0][i].freq, i < 19 ? "|" : "\n");
+    }
     show_eff("EFF", ch->effect_table);
     show_eff("LEF", ch->last_effect);
     //show_eff("GLF", ch->glfsld_table);
@@ -147,7 +151,7 @@ int show_info()
     }
     printf("songend: %d\n", songend);
 
-    return 13;
+    return 14;
 }
 
 #undef main
