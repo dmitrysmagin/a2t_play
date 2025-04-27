@@ -1406,26 +1406,27 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             break;
         }
 
-        bool reset_state = note_in_range(event->note & ~keyoff_flag);
-        // js: event->note || ch->event_table[chan].note || 0;
-        uint8_t new_note = note_in_range(event->note & ~keyoff_flag)
-            ? event->note & ~keyoff_flag
-            : (note_in_range(ch->event_table[chan].note & ~keyoff_flag)
-                ? ch->event_table[chan].note & ~keyoff_flag
-                : 0);
+        {
+            bool reset_state = note_in_range(event->note & ~keyoff_flag);
+            uint8_t new_note = note_in_range(event->note & ~keyoff_flag)
+                ? event->note & ~keyoff_flag
+                : (note_in_range(ch->event_table[chan].note & ~keyoff_flag)
+                    ? ch->event_table[chan].note & ~keyoff_flag
+                    : 0);
 
-        if (new_note) {
-            if (reset_state)
-                ch->arpgg_table[slot][chan].state = 0;
+            if (new_note) {
+                if (reset_state)
+                    ch->arpgg_table[slot][chan].state = 0;
 
-            ch->arpgg_table[slot][chan].note = new_note;
-            if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
-                ch->arpgg_table[slot][chan].add1 = (val >> 4) & 0x0f;
-                ch->arpgg_table[slot][chan].add2 = val & 0x0f;
+                ch->arpgg_table[slot][chan].note = new_note;
+                if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
+                    ch->arpgg_table[slot][chan].add1 = (val >> 4) & 0x0f;
+                    ch->arpgg_table[slot][chan].add2 = val & 0x0f;
+                }
+            } else {
+                ch->effect_table[slot][chan].def = 0;
+                ch->effect_table[slot][chan].val = 0;
             }
-        } else {
-            ch->effect_table[slot][chan].def = 0;
-            ch->effect_table[slot][chan].val = 0;
         }
 #if 0
         if (note_in_range(event->note)) {
