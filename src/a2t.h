@@ -31,10 +31,6 @@ typedef signed char bool;
 #define true 1
 #endif
 
-// Make sure compiler doesn't pad byte arrays
-STATIC_ASSERT(sizeof(uint8_t[2]) == 2);
-STATIC_ASSERT(sizeof(uint8_t[4]) == 4);
-
 #define keyoff_flag         0x80
 #define fixed_note_flag     0x90
 #define pattern_loop_flag   0xe0

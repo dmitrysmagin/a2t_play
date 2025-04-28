@@ -4093,49 +4093,33 @@ static bool a2t_import(char *tune, unsigned long size)
     return true;
 }
 
-typedef uint8_t (tUINT16)[2];
-typedef uint8_t (tUINT32)[4];
-
 static int a2m_read_varheader(char *blockptr, int npatt, unsigned long size)
 {
-    int lensize;
-    int maxblock = (ffver < 5 ? npatt / 16 : npatt / 8) + 1;
+    unsigned int lensize;
+    unsigned int maxblock = (ffver < 5 ? npatt / 16 : npatt / 8) + 1;
 
-    tUINT16 *src16 = (tUINT16 *)blockptr;
-    tUINT32 *src32 = (tUINT32 *)blockptr;
+    uint8_t *src16 = (uint8_t *)blockptr;
+    uint8_t *src32 = (uint8_t *)blockptr;
 
     if (ffver < 5) lensize = 5;         // 1,2,3,4 - uint16_t len[5];
     else if (ffver < 9) lensize = 9;    // 5,6,7,8 - uint16_t len[9];
     else lensize = 17;                  // 9,10,11 - uint32_t len[17];
 
-    switch (ffver) {
-    case 1:
-    case 2:
-    case 3:
-    case 4:
-    case 5:
-    case 6:
-    case 7:
-    case 8:
-        if (lensize * sizeof(tUINT16) > size) return INT_MAX;
+    if (ffver >= 1 && ffver <= 8) { // 1 - 8
+        if (lensize * 2 > size) return INT_MAX;
 
         // skip possible rubbish (MARIO.A2M)
-        for (int i = 0; (i < lensize) && (i <= maxblock); i++)
-            len[i] = UINT16LE(src16[i]);
+        for (unsigned int i = 0; (i < lensize) && (i <= maxblock); i++)
+            len[i] = UINT16LE(src16 + i * 2);
 
-        return lensize * sizeof(tUINT16);
-    case 9:
-    case 10:
-    case 11:
-    case 12:
-    case 13:
-    case 14:
-        if (lensize * sizeof(tUINT32) > size) return INT_MAX;
+        return lensize * 2;
+    } else if (ffver >= 9 && ffver <= 14) { // 9 - 14
+        if (lensize * 4 > size) return INT_MAX;
 
-        for (int i = 0; i < lensize; i++)
-            len[i] = UINT32LE(src32[i]);
+        for (unsigned int i = 0; i < lensize; i++)
+            len[i] = UINT32LE(src32 + i * 4);
 
-        return lensize * sizeof(tUINT32);
+        return lensize * 4;
     }
 
     return INT_MAX;
