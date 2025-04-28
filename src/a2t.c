@@ -184,6 +184,16 @@ static inline tINSTR_DATA *get_instr_data_by_ch(int chan)
     return instrument ? &instrument->instr_data : NULL;
 }
 
+static inline char get_fm_connect_by_chan(int chan)
+{
+    tINSTR_DATA *instr = get_instr_data_by_ch(chan);
+    if (!instr) {
+        AdPlug_LogWrite("get_fm_connect_by_chan: instr not set for channel %d\n", chan);
+    }
+
+    return instr ? instr->fm.connect : 0;
+}
+
 static inline tINSTR_DATA *get_instr_data(uint8_t ins)
 {
     tINSTR_DATA_EXT *instrument = get_instr(ins);
@@ -828,7 +838,10 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     }
 
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
-    assert(instr);
+    if (!instr) {
+        AdPlug_LogWrite("set_ins_volume: instr not set for channel %d\n", chan);
+        return;
+    }
 
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
@@ -886,7 +899,10 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
-    assert(instr);
+    if (!instr) {
+        AdPlug_LogWrite("set_volume: instr not set for channel %d\n", chan);
+        return;
+    }
 
     // ** OPL3 emulation workaround **
     // force muted instrument volume with missing channel ADSR data
@@ -965,7 +981,10 @@ static void set_ins_volume_4op(uint8_t volume, uint8_t chan)
 static void reset_ins_volume(int chan)
 {
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
-    if (!instr) return;
+    if (!instr) {
+        AdPlug_LogWrite("reset_ins_volume: instr not set for channel %d\n", chan);
+        return;
+    }
 
     uint8_t vol_mod = instr->fm.volM;
     uint8_t vol_car = instr->fm.volC;
@@ -985,10 +1004,9 @@ static void set_global_volume()
         if (_4op_vol_valid_chan(chan)) {
             set_ins_volume_4op(BYTE_NULL, chan);
         } else if (ch->carrier_vol[chan] || ch->modulator_vol[chan]) {
-            tINSTR_DATA *instr = get_instr_data_by_ch(chan);
-            if (!instr) continue;
+            char instr_fm_connect = get_fm_connect_by_chan(chan);
 
-            set_ins_volume(instr->fm.connect ? ch->fmpar_table[chan].volM : BYTE_NULL, ch->fmpar_table[chan].volC, chan);
+            set_ins_volume(instr_fm_connect ? ch->fmpar_table[chan].volM : BYTE_NULL, ch->fmpar_table[chan].volC, chan);
         }
     }
 }
@@ -1285,8 +1303,6 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
 
 static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 {
-    tINSTR_DATA *instr = get_instr_data_by_ch(chan);
-
     uint8_t def = event->eff[slot].def;
     uint8_t val = event->eff[slot].val;
 
@@ -1428,35 +1444,6 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 ch->effect_table[slot][chan].val = 0;
             }
         }
-#if 0
-        if (note_in_range(event->note)) {
-            ch->arpgg_table[slot][chan].state = 0;
-            ch->arpgg_table[slot][chan].note = event->note & ~keyoff_flag;
-            if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
-                ch->arpgg_table[slot][chan].add1 = val >> 4;
-                ch->arpgg_table[slot][chan].add2 = val & 0x0f;
-            }
-        } else {
-            if (!event->note && note_in_range(ch->event_table[chan].note)) {
-
-                // This never occurs most probably
-                /*if ((def != ef_Arpeggio) &&
-                    (def != ef_ExtraFineArpeggio) &&
-                    (def != ef_ArpggVSlide) &&
-                    (def != ef_ArpggVSlideFine))
-                    ch->arpgg_table[slot][chan].state = 0;*/
-
-                ch->arpgg_table[slot][chan].note = ch->event_table[chan].note & ~keyoff_flag;
-                if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
-                    ch->arpgg_table[slot][chan].add1 = val / 16;
-                    ch->arpgg_table[slot][chan].add2 = val % 16;
-                }
-            } else {
-                ch->effect_table[slot][chan].def = 0;
-                ch->effect_table[slot][chan].val = 0;
-            }
-        }
-#endif
         break;
 
     case ef_FSlideUp:
@@ -1541,26 +1528,42 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         break;
 
     case ef_SetInsVolume:
-        if (_4op_vol_valid_chan(chan)) {
-            set_ins_volume_4op(63 - val, chan);
-        } else if (percussion_mode && ((chan >= 16) && (chan <= 19))) { //  in [17..20]
-            set_ins_volume(63 - val, BYTE_NULL, chan);
-        } else if (instr->fm.connect == 0) {
-            set_ins_volume(BYTE_NULL, 63 - val, chan);
-        } else {
-            set_ins_volume(63 - val, 63 - val, chan);
+        {
+            tINSTR_DATA *instr = get_instr_data_by_ch(chan);
+            if (!instr) {
+                AdPlug_LogWrite("ef_SetInsVolume: instr not set for channel %d\n", chan);
+                break;
+            }
+
+            if (_4op_vol_valid_chan(chan)) {
+                set_ins_volume_4op(63 - val, chan);
+            } else if (percussion_mode && ((chan >= 16) && (chan <= 19))) { //  in [17..20]
+                set_ins_volume(63 - val, BYTE_NULL, chan);
+            } else if (instr->fm.connect == 0) {
+                set_ins_volume(BYTE_NULL, 63 - val, chan);
+            } else {
+                set_ins_volume(63 - val, 63 - val, chan);
+            }
+            break;
         }
-        break;
 
     case ef_ForceInsVolume:
-        if (percussion_mode && ((chan >= 16) && (chan <= 19))) { //  in [17..20]
-            set_ins_volume(63 - val, BYTE_NULL, chan);
-        } else if (instr->fm.connect == 0) {
-            set_ins_volume(scale_volume(instr->fm.volM, 63 - val), 63 - val, chan);
-        } else {
-            set_ins_volume(63 - val, 63 - val, chan);
+        {
+            tINSTR_DATA *instr = get_instr_data_by_ch(chan);
+            if (!instr) {
+                AdPlug_LogWrite("ef_ForceInsVolume: instr not set for channel %d\n", chan);
+                break;
+            }
+
+            if (percussion_mode && ((chan >= 16) && (chan <= 19))) { //  in [17..20]
+                set_ins_volume(63 - val, BYTE_NULL, chan);
+            } else if (instr->fm.connect == 0) {
+                set_ins_volume(scale_volume(instr->fm.volM, 63 - val), 63 - val, chan);
+            } else {
+                set_ins_volume(63 - val, 63 - val, chan);
+            }
+            break;
         }
-        break;
 
     case ef_PositionJump:
         if (no_loop(chan, current_line)) {
@@ -2466,10 +2469,9 @@ static void tremolo(int slot, int chan)
 
 static inline int chanvol(int chan)
 {
-    tINSTR_DATA *instr = get_instr_data_by_ch(chan);
-    assert(instr);
+    char instr_fm_connect = get_fm_connect_by_chan(chan);
 
-    if (instr->fm.connect == 0)
+    if (instr_fm_connect == 0)
         return 63 - ch->fmpar_table[chan].volC;
     else
         return 63 - (ch->fmpar_table[chan].volM + ch->fmpar_table[chan].volC) / 2;
