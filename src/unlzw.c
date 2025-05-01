@@ -1,3 +1,31 @@
+/*
+ * Adplug - Replayer for many OPL2/OPL3 audio file formats.
+ * Copyright (C) 1999 - 2008 Simon Peter, <dn.tlp@gmx.net>, et al.
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ *
+ * unlzw.c - Custom LZW decompression routine from Adlib Tracker II
+ *           Adapted by Dmitry Smagin <dmitry.s.smagin@gmail.com>
+ *           Originally by Stanislav Baranec <subz3ro.altair@gmail.com>
+ *
+ * REFERENCES:
+ * https://github.com/ijsf/at2
+ * http://www.adlibtracker.net/
+ *
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -12,6 +40,7 @@ static uint16_t bitmask[5] = { 0x1ff, 0x3ff, 0x7ff, 0xfff, 0x1fff };
 static unsigned char *input_ptr;
 static int input_size;
 static unsigned char *output_ptr;
+static unsigned int output_maxsize;
 static int output_size;
 
 static int nextcode()
@@ -32,14 +61,14 @@ static int nextcode()
 
 static void LZW_decode()
 {
-    uint8_t *stack = calloc(1, 65536);
-    uint8_t *work_ptr = calloc(1, 65536);
+    uint8_t *stack = calloc(1, 65636);
+    uint8_t *work_ptr = calloc(1, 65636);
 
     uint8_t le76, le77;
     uint16_t le6a, le6c, le6e, le70, stringlength, le74;
 
     int code;
-    int output_idx;
+    unsigned int output_idx;
 
     int sp = 65536 - 1;
 
@@ -71,6 +100,7 @@ static void LZW_decode()
             le77 = code;
             le76 = code;
 
+	    if (output_idx >= output_maxsize) goto error_out;
             output_ptr[output_idx++] = code;
             continue;
         }
@@ -104,6 +134,7 @@ static void LZW_decode()
         stringlength++;
 
         while (stringlength--) {
+	    if (output_idx >= output_maxsize) goto error_out;
             output_ptr[output_idx++] = stack[sp++];
         }
 
@@ -123,16 +154,18 @@ static void LZW_decode()
         }
     }
 
+error_out:
     output_size = output_idx;
     free(stack);
     free(work_ptr);
 }
 
-int LZW_decompress(char *source, char *dest, int size)
+int LZW_decompress(char *source, char *dest, int source_size, int destination_size)
 {
     input_ptr = (unsigned char *)source;
-    input_size = size;
+    input_size = source_size;
     output_ptr = (unsigned char *)dest;
+    output_maxsize = destination_size;
 
     LZW_decode();
 

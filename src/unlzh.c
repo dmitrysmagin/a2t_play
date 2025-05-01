@@ -94,7 +94,7 @@ static int		bitcount;
 uch *input_buffer, *output_buffer;
 unsigned input_buffer_idx, output_buffer_idx, input_buffer_size;
 
-static uch try_byte()
+static uch try_byte(void)
 {
 	if (input_buffer_idx < input_buffer_size)
 		return input_buffer[input_buffer_idx++];
@@ -108,8 +108,7 @@ void write_buf(uch *ptr, ush size)
 	output_buffer_idx += size;
 }
 
-static void fillbuf(n)  /* Shift bitbuf n bits left, read n bits */
-	int n;
+static void fillbuf(int n)  /* Shift bitbuf n bits left, read n bits */
 {
 	bitbuf <<= n;
 	while (n > bitcount) {
@@ -121,8 +120,7 @@ static void fillbuf(n)  /* Shift bitbuf n bits left, read n bits */
 	bitbuf |= subbitbuf >> (bitcount -= n);
 }
 
-static unsigned getbits(n)
-	int n;
+static unsigned getbits(int n)
 {
 	unsigned x;
 
@@ -130,7 +128,7 @@ static unsigned getbits(n)
 	return x;
 }
 
-static void init_getbits()
+static void init_getbits(void)
 {
 	bitbuf = 0;	 subbitbuf = 0;	 bitcount = 0;
 	fillbuf(BITBUFSIZ);
@@ -140,11 +138,7 @@ static void init_getbits()
 		maketbl.c -- make table for decoding
 ***********************************************************/
 
-static void make_table(nchar, bitlen, tablebits, table)
-	int nchar;
-	uch bitlen[];
-	int tablebits;
-	ush table[];
+static void make_table(int nchar, uch bitlen[], int tablebits, ush table[])
 {
 	ush count[17], weight[17], start[18], *p;
 	unsigned i, k, len, ch, jutbits, avail, nextcode, mask;
@@ -206,10 +200,7 @@ static void make_table(nchar, bitlen, tablebits, table)
 		huf.c -- static Huffman
 ***********************************************************/
 
-static void read_pt_len(nn, nbit, i_special)
-	int nn;
-	int nbit;
-	int i_special;
+static void read_pt_len(int nn, int nbit, int i_special)
 {
 	int i, c, n;
 	unsigned mask;
@@ -241,7 +232,7 @@ static void read_pt_len(nn, nbit, i_special)
 	}
 }
 
-static void read_c_len()
+static void read_c_len(void)
 {
 	int i, c, n;
 	unsigned mask;
@@ -276,7 +267,7 @@ static void read_c_len()
 	}
 }
 
-static unsigned decode_c()
+static unsigned decode_c(void)
 {
 	unsigned j, mask;
 
@@ -303,7 +294,7 @@ static unsigned decode_c()
 	return j;
 }
 
-static unsigned decode_p()
+static unsigned decode_p(void)
 {
 	unsigned j, mask;
 
@@ -321,7 +312,7 @@ static unsigned decode_p()
 	return j;
 }
 
-static void huf_decode_start()
+static void huf_decode_start(void)
 {
 	init_getbits();	 blocksize = 0;
 }
@@ -342,9 +333,7 @@ static void decode_start()
 
 /* Decode the input and return the number of decoded bytes put in buffer
  */
-static unsigned decode(count, buffer)
-	unsigned count;
-	uch buffer[];
+static unsigned decode(unsigned count, uch buffer[])
 	/* The calling function must keep the number of
 	   bytes to be processed.  This function decodes
 	   either 'count' bytes or 'DIC_SIZE' bytes, whichever
@@ -408,16 +397,17 @@ int unlzh(in, out)
 }
 #endif
 
-int LZH_decompress(char *source, char *dest, int size)
+int LZH_decompress(char *source, char *dest, int source_size, int dest_size)
 {
 	unsigned char *ptr;
 	int size_temp;
 	char ultra;
 	uint32_t size_unpacked = 0;
+	int size;
 
 	input_buffer = (unsigned char *)source;
 	input_buffer_idx = 0;
-	input_buffer_size = size;
+	input_buffer_size = source_size;
 
 	ultra = input_buffer[input_buffer_idx++] & 1;
 
@@ -440,11 +430,11 @@ int LZH_decompress(char *source, char *dest, int size)
 		//DIC_SIZE = DIC_SIZE_DEF; // (1U << 13)
 	}
 
-	ptr = calloc(1, DIC_SIZE);
+	ptr = calloc(DIC_SIZE, 1);
 
 	decode_start();
 	size = size_unpacked;
-	while (size > 0) {
+	while ((size > 0) && dest_size) {
 		if (size > (int)DIC_SIZE) {
 			size_temp = DIC_SIZE;
 		} else {
@@ -452,7 +442,14 @@ int LZH_decompress(char *source, char *dest, int size)
 		}
 
 		decode(size_temp, ptr);
-		write_buf(ptr, size_temp);
+		if (dest_size >= size_temp)
+		{
+			write_buf(ptr, size_temp);
+			dest_size -= size_temp;
+		} else {
+			write_buf(ptr, dest_size);
+			dest_size = 0;
+		}
 		size -= size_temp;
     }
 

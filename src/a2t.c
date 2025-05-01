@@ -832,11 +832,6 @@ static bool _4op_vol_valid_chan(int chan)
 // inverted volume here
 static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
-    if (chan >= 20) {
-        AdPlug_LogWrite("set_ins_volume: channel %d out of bounds\n", chan);
-        return;
-    }
-
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
     if (!instr) {
         AdPlug_LogWrite("set_ins_volume: instr not set for channel %d\n", chan);
@@ -870,7 +865,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
             if (volume_scaling)
                 modulator = scale_volume(instr->fm.volM, modulator);
 
-            modulator = scale_volume(modulator, 63 - global_volume);
+            modulator = scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
             regm = scale_volume(modulator, 63 - overall_volume) + (ch->fmpar_table[chan].kslM << 6);
         } else {
             regm = modulator + (ch->fmpar_table[chan].kslM << 6);
@@ -888,7 +883,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
         if (volume_scaling)
             carrier = scale_volume(instr->fm.volC, carrier);
 
-        carrier = scale_volume(carrier, 63 - global_volume);
+        carrier = scale_volume(carrier, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
         regc = scale_volume(carrier, 63 - overall_volume) + (ch->fmpar_table[chan].kslC << 6);
 
         opl3out(0x40 + c, regc);
@@ -896,6 +891,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     }
 }
 
+// Used by set_ins_volume_4op() only
 static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
@@ -3396,34 +3392,35 @@ char *a2t_load(char *name)
     return fileptr;
 }
 
-static inline void a2t_depack(void *src, int srcsize, void *dst)
+static inline void a2t_depack(char *src, int srcsize, char *dst, int dstsize)
 {
     switch (ffver) {
     case 1:
     case 5: // sixpack
-        sixdepak(src, dst, srcsize);
+        sixdepak((unsigned short *)src, (unsigned char *)dst, srcsize);
         break;
     case 2:
     case 6: // lzw
-        LZW_decompress(src, dst, srcsize);
+        LZW_decompress(src, dst, srcsize, dstsize);
         break;
     case 3:
     case 7: // lzss
-        LZSS_decompress(src, dst, srcsize);
+        LZSS_decompress(src, dst, srcsize, dstsize);
         break;
     case 4:
     case 8: // unpacked
-        memcpy(dst, src, srcsize);
+        if (dstsize <= srcsize)
+            memcpy(dst, src, srcsize);
         break;
     case 9:
     case 10:
     case 11: // apack (aPlib)
-        aP_depack(src, dst);
+        aP_depack(src, dst, srcsize, dstsize);
         break;
     case 12:
     case 13:
     case 14: // lzh
-        LZH_decompress(src, dst, srcsize);
+        LZH_decompress(src, dst, srcsize, dstsize);
         break;
     }
 }
@@ -3526,7 +3523,7 @@ static int a2t_read_instruments(char *packed, unsigned long size)
     uint8_t *unpacked = (uint8_t *)calloc(1, unpackedsize);
     uint8_t *p = unpacked;
 
-    a2t_depack(packed, len[0], unpacked);
+    a2t_depack(packed, len[0], (char *)unpacked, unpackedsize);
 
     if (ffver == 14) {
         //memcpy(&songinfo->bpm_data, dst, sizeof(songinfo->bpm_data));
@@ -3569,7 +3566,7 @@ static int a2t_read_fmregtable(char *packed, unsigned long size)
     if (len[1] > size) return INT_MAX;
 
     uint8_t *unpacked = (uint8_t *)calloc(255, tFMREG_TABLE_V9_14_SIZE);
-    a2t_depack(packed, len[1], unpacked);
+    a2t_depack(packed, len[1], (char *)unpacked, 255 * tFMREG_TABLE_V9_14_SIZE);
 
     int count = instrinfo->count;
 
@@ -3604,7 +3601,7 @@ static int a2t_read_arpvibtable(char *packed, unsigned long size)
     if (len[2] > size) return INT_MAX;
 
     uint8_t *unpacked = (uint8_t *)calloc(255, tARPVIB_TABLE_V9_14_SIZE);
-    a2t_depack(packed, len[2], unpacked);
+    a2t_depack(packed, len[2], (char *)unpacked, 255 * tARPVIB_TABLE_V9_14_SIZE);
 
     // TODO: Calculate actual num of arp/vib tables
     arpvib_tables_allocate(255, unpacked);
@@ -3628,7 +3625,7 @@ static int a2t_read_disabled_fmregs(char *packed, unsigned long size)
 
     bool (*dis_fmregs)[255][28] = calloc(255, 28);
 
-    a2t_depack(packed, len[3], *dis_fmregs);
+    a2t_depack(packed, len[3], (char *)*dis_fmregs, 255 * 28);
 
     disabled_fmregs_import(instrinfo->count, *dis_fmregs);
 
@@ -3650,7 +3647,7 @@ static int a2t_read_order(char *packed, unsigned long size)
 
     if (len[i] > size) return INT_MAX;
 
-    a2t_depack(packed, len[i], songinfo->pattern_order);
+    a2t_depack(packed, len[i], (char *)songinfo->pattern_order, 128);
 
 #if 0
     FILE *f = fopen("4_order.dmp", "wb");
@@ -3874,7 +3871,7 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
                 return INT_MAX;
             }
 
-            a2t_depack(src, len[i+s], old);
+            a2t_depack(src, len[i+s], (char *)old, 16 * tPATTERN_DATA_V1234_SIZE);
 
             for (int p = 0; p < 16; p++) { // pattern
                 if (i * 8 + p >= eventsinfo->patterns)
@@ -3920,7 +3917,7 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
                 return INT_MAX;
             }
 
-            a2t_depack(src, len[i+s], old);
+            a2t_depack(src, len[i+s], (char *)old, 8 * tPATTERN_DATA_V5678_SIZE);
 
             for (int p = 0; p < 8; p++) { // pattern
                 if (i * 8 + p >= eventsinfo->patterns)
@@ -3966,7 +3963,7 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
                 return INT_MAX;
             }
 
-            a2t_depack(src, len[i+s], old);
+            a2t_depack(src, len[i+s], (char *)old, 8 * tPATTERN_DATA_V9_14_SIZE);
             src += len[i+s];
             size -= len[i+s];
             retval += len[i+s];
@@ -4133,7 +4130,7 @@ static int a2m_read_songdata(char *packed, unsigned long size)
         if (len[0] > size) return INT_MAX;
 
         uint8_t *unpacked = calloc(1, A2M_SONGDATA_V1_8_SIZE);
-        a2t_depack(packed, len[0], unpacked);
+        a2t_depack(packed, len[0], (char *)unpacked, A2M_SONGDATA_V1_8_SIZE);
 
         memcpy(songinfo->songname, A2M_SONGDATA_V1_8_SONGNAME_P(unpacked) + 1, 42);
         memcpy(songinfo->composer, A2M_SONGDATA_V1_8_COMPOSER_P(unpacked) + 1, 42);
@@ -4167,7 +4164,7 @@ static int a2m_read_songdata(char *packed, unsigned long size)
 
         uint8_t *unpacked = calloc(1, A2M_SONGDATA_V9_14_SIZE);
 
-        a2t_depack(packed, len[0], unpacked);
+        a2t_depack(packed, len[0], (char *)unpacked, A2M_SONGDATA_V9_14_SIZE);
 
         #if 0
             FILE *f = fopen("songdata_aplib.pck", "wb");
