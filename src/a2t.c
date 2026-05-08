@@ -3,8 +3,9 @@
     - Bug in the original player: need to reset global_volume after order restart
     - Implement fade_out_volume in set_ins_volume() and set_volume
     - Implement bpm_rows_per_beat and bpm_tempo_finetune
+    - Implement using custom vibrato/tremolo tables
 
-    In order to get into Adplug:
+    Refactoring:
     - Refactor update_song_position(), calc_following_order()
     - Refactor pattern_loop_flag and pattern_break_flag
     - Merge set_volume and set_ins_volume?
@@ -58,7 +59,7 @@ uint8_t overall_volume = 63;
 uint8_t global_volume = 63;
 
 const uint8_t def_vibtrem_speed_factor = 1;
-const uint8_t def_vibtrem_table_size = 32;
+const unsigned int def_vibtrem_table_size = 32;
 const uint8_t def_vibtrem_table[256] = {
     0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,255,
     253,250,244,235,224,212,197,180,161,141,120,97,74,49,24,
@@ -79,7 +80,7 @@ const uint8_t def_vibtrem_table[256] = {
 };
 
 uint8_t vibtrem_speed_factor;
-uint8_t vibtrem_table_size;
+unsigned int vibtrem_table_size;
 uint8_t vibtrem_table[256];
 
 uint8_t misc_register;
@@ -596,13 +597,8 @@ static uint16_t calc_freq_shift_down(uint16_t freq, uint16_t shift)
 /* == calc_vibtrem_shift() in AT2 */
 static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 {
-    uint8_t vibr[32] = {
-        0,24,49,74,97,120,141,161,180,197,212,224,235,244,250,253,255,
-        253,250,244,235,224,212,197,180,161,141,120,97,74,49,24
-    };
-
-    /* ATTENTION: wtf this calculation should be ? */
-    return (vibr[position & 0x1f] * depth) >> 6;
+    /* depth: 0..F, max result: FF*F=EF1 */
+    return (vibtrem_table[position & (vibtrem_table_size - 1)] * depth) >> 7; // >> 6
 }
 
 static void change_freq(int chan, uint16_t freq)
@@ -1291,7 +1287,7 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
         ch->effect_table[slot][chan].val = lval;
     } else {
         // x00 without any previous compatible command, should never happen
-        AdPlug_LogWrite("x00 without any previous compatible command\n");
+        AdPlug_LogWrite("x00 without any previous compatible command (%02x)\n", def);
         ch->effect_table[slot][chan].def = 0;
         ch->effect_table[slot][chan].val = 0;
     }
@@ -2164,6 +2160,7 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
         }
         break;
     case ef_SetCustomSpeedTab:
+        AdPlug_LogWrite("ef_SetCustomSpeedTab val: %02x\n", event->eff[slot].val);
         generate_custom_vibrato(event->eff[slot].val);
         break;
     }
@@ -2430,9 +2427,11 @@ static void vibrato(int slot, int chan)
 
     freq = ch->freq_table[chan];
 
-    ch->vibr_table[slot][chan].pos += ch->vibr_table[slot][chan].speed;
+    ch->vibr_table[slot][chan].pos += ch->vibr_table[slot][chan].speed * vibtrem_speed_factor;
     slide = calc_vibrato_shift(ch->vibr_table[slot][chan].depth, ch->vibr_table[slot][chan].pos);
-    direction = ch->vibr_table[slot][chan].pos & 0x20;
+    direction = ch->vibr_table[slot][chan].pos & vibtrem_table_size; // 32, 64. 128 or 256
+
+    //AdPlug_LogWrite("slot: %d, chan: %d, slide: %04x, d: %d\n", slot, chan, slide, direction);
 
     if (direction == 0)
         portamento_down(chan, slide, nFreq(0));
@@ -2450,9 +2449,9 @@ static void tremolo(int slot, int chan)
     uint8_t volM = ch->fmpar_table[chan].volM;
     uint8_t volC = ch->fmpar_table[chan].volC;
 
-    ch->trem_table[slot][chan].pos += ch->trem_table[slot][chan].speed;
+    ch->trem_table[slot][chan].pos += ch->trem_table[slot][chan].speed * vibtrem_speed_factor;
     slide = calc_vibrato_shift(ch->trem_table[slot][chan].depth, ch->trem_table[slot][chan].pos);
-    direction = ch->trem_table[slot][chan].pos & 0x20;
+    direction = ch->trem_table[slot][chan].pos & vibtrem_table_size; // 32, 64. 128 or 256
 
     if (direction == 0)
         slide_volume_down(chan, slide);
