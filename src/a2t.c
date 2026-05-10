@@ -57,6 +57,7 @@ int playback_speed_shift = 0;
 tPLAY_STATUS play_status = isStopped;
 uint8_t overall_volume = 63;
 uint8_t global_volume = 63;
+uint8_t fade_out_volume = 63;
 
 const uint8_t def_vibtrem_speed_factor = 1;
 const unsigned int def_vibtrem_table_size = 32;
@@ -118,6 +119,8 @@ unsigned int len[21];
 bool adsr_carrier[9]; // For importing from a2m v1234
 
 bool songend = false;
+
+static char effects[]  = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><";
 
 // Forward function declarations ==================================================================
 static void opl_out(uint8_t port, uint8_t val);
@@ -470,9 +473,9 @@ static void memory_usage()
 
 static inline bool note_in_range(uint8_t note)
 {
-    if (note & keyoff_flag) {
+    /*if (note & keyoff_flag) {
         AdPlug_LogWrite("note_in_range with keyoff=1\n");
-    }
+    }*/
     return ((note & ~keyoff_flag) > 0) && ((note & ~keyoff_flag) < 12 * 8 + 1);
 }
 
@@ -521,7 +524,7 @@ static inline uint16_t regoffs_c(int chan)
     return _ch_c[!!percussion_mode][chan];
 }
 
-#define FreqStart   0x156
+#define FreqStart   0x157
 #define FreqEnd     0x2ae
 #define FreqRange   (FreqEnd - FreqStart)
 
@@ -551,7 +554,7 @@ static void opl3exp(uint16_t data)
 
 static uint16_t nFreq(uint8_t note)
 {
-    static uint16_t Fnum[13] = {0x156,0x16b,0x181,0x198,0x1b0,0x1ca,0x1e5,
+    static uint16_t Fnum[13] = {0x157,0x16b,0x181,0x198,0x1b0,0x1ca,0x1e5,
                 0x202,0x220,0x241,0x263,0x287,0x2ae};
 
     if (note >= 12 * 8)
@@ -598,7 +601,12 @@ static uint16_t calc_freq_shift_down(uint16_t freq, uint16_t shift)
 static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
 {
     /* depth: 0..F, max result: FF*F=EF1 */
-    return (vibtrem_table[position & (vibtrem_table_size - 1)] * depth) >> 7; // >> 6
+    //return (vibtrem_table[position & (vibtrem_table_size - 1)] * depth) >> 7; // >> 6
+    uint16_t X = (uint16_t)depth * vibtrem_table[position & (vibtrem_table_size - 1)];
+    uint16_t rotated = (X << 1) | (X >> 15);
+    uint16_t result  = ((rotated >> 8) & 0xFF) | ((rotated & 1) << 8);
+
+    return result;
 }
 
 static void change_freq(int chan, uint16_t freq)
@@ -689,14 +697,9 @@ static inline uint16_t _macro_speedup()
     return macro_speedup ? macro_speedup : 1;
 }
 
-static void set_clock_rate(uint8_t clock_rate)
-{
-}
-
 static void update_timer(int Hz)
 {
     if (Hz == 0) {
-        set_clock_rate(0);
         return;
     } else {
         tempo = Hz;
@@ -720,8 +723,6 @@ static void update_timer(int Hz)
 
     while ((IRQ_freq + IRQ_freq_shift + playback_speed_shift > MAX_IRQ_FREQ) && (IRQ_freq_shift > 0))
         IRQ_freq_shift--;
-
-    set_clock_rate(1193180 / max(IRQ_freq + IRQ_freq_shift + playback_speed_shift, MAX_IRQ_FREQ));
 }
 
 void update_playback_speed(int speed_shift)
@@ -824,7 +825,6 @@ static bool _4op_vol_valid_chan(int chan)
     return d.mode && ch->vol4op_lock[chan] && d.ins1 && d.ins2;
 }
 
-// TODO here: fade_out_volume
 // inverted volume here
 static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
@@ -861,7 +861,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
             if (volume_scaling)
                 modulator = scale_volume(instr->fm.volM, modulator);
 
-            modulator = scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
+            modulator = scale_volume(modulator, scale_volume(63 - global_volume, 63 - fade_out_volume));
             regm = scale_volume(modulator, 63 - overall_volume) + (ch->fmpar_table[chan].kslM << 6);
         } else {
             regm = modulator + (ch->fmpar_table[chan].kslM << 6);
@@ -879,7 +879,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
         if (volume_scaling)
             carrier = scale_volume(instr->fm.volC, carrier);
 
-        carrier = scale_volume(carrier, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
+        carrier = scale_volume(carrier, scale_volume(63 - global_volume, 63 - fade_out_volume));
         regc = scale_volume(carrier, 63 - overall_volume) + (ch->fmpar_table[chan].kslC << 6);
 
         opl3out(0x40 + c, regc);
@@ -915,7 +915,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
         ch->fmpar_table[chan].volM = modulator;
 
         modulator = scale_volume(instr->fm.volM, modulator);
-        modulator = scale_volume(modulator, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
+        modulator = scale_volume(modulator, scale_volume(63 - global_volume, 63 - fade_out_volume));
 
         regm = scale_volume(modulator, 63 - overall_volume) + (ch->fmpar_table[chan].kslM << 6);
 
@@ -928,7 +928,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
         ch->fmpar_table[chan].volC = carrier;
 
         carrier = scale_volume(instr->fm.volC, carrier);
-        carrier = scale_volume(carrier, /*scale_volume(*/63 - global_volume/*, 63 - fade_out_volume)*/);
+        carrier = scale_volume(carrier, scale_volume(63 - global_volume, 63 - fade_out_volume));
 
         regc = scale_volume(carrier, 63 - overall_volume) + (ch->fmpar_table[chan].kslC << 6);
 
@@ -1005,7 +1005,7 @@ static void set_global_volume()
 
 void set_overall_volume(unsigned char level)
 {
-    overall_volume = max(level, 63);
+    overall_volume = min(level, 63);
     set_global_volume();
 }
 
@@ -3147,23 +3147,6 @@ static void macro_poll_proc()
     }
 }
 
-static void newtimer()
-{
-    if ((ticklooper == 0) && (irq_mode))
-        poll_proc();
-
-    if ((macro_ticklooper == 0) && (irq_mode))
-        macro_poll_proc();
-
-    ticklooper++;
-    if (ticklooper >= IRQ_freq / tempo)
-        ticklooper = 0;
-
-    macro_ticklooper++;
-    if (macro_ticklooper >= IRQ_freq / (tempo * _macro_speedup()))
-        macro_ticklooper = 0;
-}
-
 static void init_irq()
 {
     if (irq_initialized)
@@ -3548,12 +3531,6 @@ static int a2t_read_instruments(char *packed, unsigned long size)
         instrument_import(i + 1, p);
     }
 
-#if 0
-    FILE *f = fopen("0_inst.dmp", "wb");
-    fwrite(unpacked, 1, unpackedsize, f);
-    fclose(f);
-#endif
-
     free(unpacked);
 
     return len[0];
@@ -3585,12 +3562,6 @@ static int a2t_read_fmregtable(char *packed, unsigned long size)
 
     free(unpacked);
 
-#if 0
-    FILE *f = fopen("1_inst_macro.dmp", "wb");
-    fwrite(songinfo->fmreg_table, 1, sizeof(songinfo->fmreg_table), f);
-    fclose(f);
-#endif
-
     return len[1];
 }
 
@@ -3607,12 +3578,6 @@ static int a2t_read_arpvibtable(char *packed, unsigned long size)
     arpvib_tables_allocate(255, unpacked);
 
     free(unpacked);
-
-#if 0
-    FILE *f = fopen("2_macrotable.dmp", "wb");
-    fwrite(songinfo->macro_table, 1, sizeof(songinfo->macro_table), f);
-    fclose(f);
-#endif
 
     return len[2];
 }
@@ -3631,12 +3596,6 @@ static int a2t_read_disabled_fmregs(char *packed, unsigned long size)
 
     free(dis_fmregs);
 
-#if 0
-    FILE *f = fopen("3_fm_disregs.dmp", "wb");
-    fwrite(*dis_fmregs, 1, sizeof(*dis_fmregs), f);
-    fclose(f);
-#endif
-
     return len[3];
 }
 
@@ -3648,12 +3607,6 @@ static int a2t_read_order(char *packed, unsigned long size)
     if (len[i] > size) return INT_MAX;
 
     a2t_depack(packed, len[i], (char *)songinfo->pattern_order, 128);
-
-#if 0
-    FILE *f = fopen("4_order.dmp", "wb");
-    fwrite(songinfo->pattern_order, 1, sizeof(songinfo->pattern_order), f);
-    fclose(f);
-#endif
 
     return len[i];
 }
@@ -4166,12 +4119,6 @@ static int a2m_read_songdata(char *packed, unsigned long size)
 
         a2t_depack(packed, len[0], (char *)unpacked, A2M_SONGDATA_V9_14_SIZE);
 
-        #if 0
-            FILE *f = fopen("songdata_aplib.pck", "wb");
-            fwrite(packed, 1, len[0], f);
-            fclose(f);
-        #endif
-
         memcpy(songinfo->songname, A2M_SONGDATA_V9_14_SONGNAME_P(unpacked) + 1, 42);
         memcpy(songinfo->composer, A2M_SONGDATA_V9_14_COMPOSER_P(unpacked) + 1, 42);
 
@@ -4232,11 +4179,6 @@ static int a2m_read_songdata(char *packed, unsigned long size)
         // TODO: Implement these in player
         songinfo->bpm_rows_per_beat = A2M_SONGDATA_V9_14_BPM_ROWS_PER_BEAT(unpacked);
         songinfo->bpm_tempo_finetune = A2M_SONGDATA_V9_14_BPM_TEMPO_FINETUNE(unpacked);
-#if 0
-        FILE *f = fopen("instruments.dmp", "wb");
-        fwrite(data->instr_data, 1, sizeof(data->instr_data), f);
-        fclose(f);
-#endif
         free(unpacked);
     }
 
@@ -4248,12 +4190,6 @@ static int a2m_read_songdata(char *packed, unsigned long size)
     panlock         = (songinfo->common_flag >> 5) & 1;
     percussion_mode = (songinfo->common_flag >> 6) & 1;
     volume_scaling  = (songinfo->common_flag >> 7) & 1;
-
-#if 0
-    FILE *f = fopen("songinfo.dmp", "wb");
-    fwrite(songinfo, 1, sizeof(*songinfo), f);
-    fclose(f);
-#endif
 
     return len[0];
 }
