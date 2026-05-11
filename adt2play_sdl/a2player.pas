@@ -90,6 +90,11 @@ var
 var
   shadow_regs: array[0..1, 0..255] of Byte;
 
+type
+  tFRAME_HOOK = procedure;
+const
+  frame_hook: tFRAME_HOOK = NIL;
+
 procedure start_playing;
 procedure set_overall_volume(level: Byte);
 procedure stop_playing;
@@ -4224,6 +4229,9 @@ begin
       If (macro_ticklooper >= IRQ_freq DIV (tempo*_macro_speedup)) then
         macro_ticklooper := 0;
     end;
+
+  If Assigned(frame_hook) then
+    frame_hook;
 
   _debug_str_ := _debug_str_bak_;
 end;

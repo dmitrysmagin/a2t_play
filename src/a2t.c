@@ -4286,6 +4286,7 @@ static int irq_freq = 50;
 static opl3_chip opl;
 
 uint8_t shadow_regs[2][256];
+void (*frame_hook)(void) = NULL;
 
 static void opl_out(uint8_t port, uint8_t val)
 {
@@ -4346,6 +4347,8 @@ void a2t_update(unsigned char *stream, int len)
             macro_ticklooper++;
             if (macro_ticklooper >= irq_freq / (tempo * _macro_speedup()))
                 macro_ticklooper = 0;
+
+            if (frame_hook) frame_hook();
         }
 
         // this writes 4 bytes, i.e. one 16-bit stereo sample
