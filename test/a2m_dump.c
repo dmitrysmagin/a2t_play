@@ -2,6 +2,8 @@
  * a2m_dump - dump OPL3 register writes from an A2M/A2T file
  *
  * Build with -Dclocks to enable register dump output.
+ * Automatically creates <input_basename>.reg with the register dump.
+ *
  * This #include's a2t.c so all static functions/variables are accessible.
  */
 
@@ -15,10 +17,35 @@
 
 #include "../src/a2t.c"
 
+static void basename_no_ext(char *dst, size_t dstsize, const char *path)
+{
+    const char *p = strrchr(path, '/');
+    const char *q = strrchr(path, '\\');
+    if (q > p) p = q;
+    if (!p) p = path; else p++;
+
+    size_t len = strcspn(p, ".");
+    if (len >= dstsize) len = dstsize - 1;
+    memcpy(dst, p, len);
+    dst[len] = '\0';
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
         fprintf(stderr, "Usage: a2m_dump <file.a2m>\n");
+        return 1;
+    }
+
+    char outname[1032];
+    {
+        char base[1024];
+        basename_no_ext(base, sizeof(base), argv[1]);
+        snprintf(outname, sizeof(outname), "%s.reg", base);
+    }
+
+    if (!freopen(outname, "w", stdout)) {
+        fprintf(stderr, "Failed to open %s for writing\n", outname);
         return 1;
     }
 

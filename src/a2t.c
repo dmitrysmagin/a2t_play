@@ -461,6 +461,7 @@ static void memory_usage()
         narp += (arpeggio_table && arpeggio_table[i] ? 1 : 0);
     }
 
+#ifndef clocks
     printf("Memory usage:\n");
     printf("\tSonginfo: %zu bytes\n", sizeof(tSONGINFO));
     printf("\tPatterns * %d: %zu bytes\n", eventsinfo->patterns, eventsinfo->size);
@@ -468,6 +469,7 @@ static void memory_usage()
     printf("\tFmreg * %d: %zu bytes\n", nfmregs, nfmregs * sizeof(tFMREG_TABLE));
     printf("\tVibrato * %d: %zu bytes\n", nvib, nvib * sizeof(tVIBRATO_TABLE));
     printf("\tArpeggio * %d: %zu bytes\n", narp, narp * sizeof(tARPEGGIO_TABLE));
+#endif
 }
 // End of patterns helpers ========================================================================
 
@@ -3243,7 +3245,9 @@ static void init_player()
     opl2out(0x08, 0x40);
     opl3exp(0x0105);
     opl3exp(0x04 + (songinfo->flag_4op << 8));
+#ifndef clocks
     printf("flag_4op: %04x\n", songinfo->flag_4op);
+#endif
 
     key_off(16);
     key_off(17);
@@ -4036,6 +4040,7 @@ static bool a2t_import(char *tune, unsigned long size)
     result = a2t_read_patterns(blockptr, size - (blockptr - tune));
     if (result == INT_MAX) return false;
 
+#ifndef clocks
     printf("A2T version: %d\n", A2T_HEADER_FFVER(header));
     printf("Number of patterns: %d\n", A2T_HEADER_NPATT(header));
     printf("Rows per pattern: %d\n", songinfo->patt_len);
@@ -4044,6 +4049,7 @@ static bool a2t_import(char *tune, unsigned long size)
     printf("Speed: %d\n", A2T_HEADER_SPEED(header));
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
+#endif
 
     memory_usage();
 
@@ -4244,6 +4250,7 @@ static bool a2m_import(char *tune, unsigned long size)
     result = a2m_read_patterns(blockptr, size - (blockptr - tune));
     if (result == INT_MAX) return false;
 
+#ifndef clocks
     printf("A2M version: %d\n", A2M_HEADER_FFVER(header));
     printf("Number of patterns: %d\n", A2M_HEADER_NPATT(header));
     printf("Rows per pattern: %d\n", songinfo->patt_len);
@@ -4253,6 +4260,7 @@ static bool a2m_import(char *tune, unsigned long size)
     printf("Volume scaling: %d\n", volume_scaling);
     printf("Percussion mode: %d\n", percussion_mode);
     printf("Track volume lock: %d\n", lockvol);
+#endif
 
     memory_usage();
 
