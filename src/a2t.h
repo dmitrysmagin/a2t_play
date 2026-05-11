@@ -472,5 +472,6 @@ typedef struct _4op_data {
 
 extern tCHDATA *ch;
 extern bool songend;
+extern tPLAY_STATUS play_status;
 
 #endif // _A2T_H_
