@@ -4285,12 +4285,15 @@ static int framesmpl = 44100 / 50;
 static int irq_freq = 50;
 static opl3_chip opl;
 
+uint8_t shadow_regs[2][256];
+
 static void opl_out(uint8_t port, uint8_t val)
 {
     static uint8_t reg = 0;
     if ((port & 1) == 0) {
         reg = val;
     } else {
+        shadow_regs[port / 2][reg] = val;
 #ifdef clocks
         printf("%03x %02x\n", ((port / 2) << 8) | reg, val);
 #endif

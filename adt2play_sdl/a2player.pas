@@ -87,6 +87,9 @@ type
 var
   decay_bar: array[1..96] of tDECAY_BAR;
 
+var
+  shadow_regs: array[0..1, 0..255] of Byte;
+
 procedure start_playing;
 procedure set_overall_volume(level: Byte);
 procedure stop_playing;
@@ -247,16 +250,19 @@ var
 
 procedure opl2out_proc(reg,data: Word);
 begin
+  shadow_regs[reg shr 8, reg and $ff] := data;
   OPL3EMU_WriteReg(reg,data);
 end;
 
 procedure opl3out_proc(reg,data: Word);
 begin
+  shadow_regs[reg shr 8, reg and $ff] := data;
   OPL3EMU_WriteReg(reg,data);
 end;
 
 procedure opl3exp_proc(data: Word);
 begin
+  shadow_regs[1, data and $ff] := data shr 8;
   OPL3EMU_WriteReg((data AND $ff) OR $100,data SHR 8);
 end;
 
