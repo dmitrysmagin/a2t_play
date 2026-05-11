@@ -35,12 +35,15 @@ TMP=$TMPDIR timeout 30 "$REFS_DIR/adt2_dump" "$MODULE" "test/${base_noext}.ref.r
 # Compare
 c_reg="test/${base_noext}.c.reg"
 ref_reg="test/${base_noext}.ref.reg"
+diff_file="test/${base_noext}.diff"
 if [ -f "$c_reg" ] && [ -f "$ref_reg" ]; then
-  diff_lines=$(diff <(sort "$c_reg") <(sort "$ref_reg") 2>&1 | wc -l)
+  diff -u <(sort "$c_reg") <(sort "$ref_reg") > "$diff_file" 2>&1
+  diff_lines=$(wc -l < "$diff_file")
   if [ "$diff_lines" -eq 0 ]; then
+    rm -f "$diff_file"
     echo "OK: $base_noext"
   else
-    echo "DIFF: $base_noext ($diff_lines lines differ)"
+    echo "DIFF: $base_noext ($diff_lines lines differ, see $diff_file)"
   fi
 elif [ -f "$c_reg" ]; then
   echo "SKIP: $base_noext (no reference)"
