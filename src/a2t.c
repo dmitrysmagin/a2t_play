@@ -4296,7 +4296,7 @@ static void opl_out(uint8_t port, uint8_t val)
     } else {
         shadow_regs[port / 2][reg] = val;
 #ifdef clocks
-        printf("%03x %02x\n", ((port / 2) << 8) | reg, val);
+        // printf("%03x %02x\n", ((port / 2) << 8) | reg, val);
 #endif
         OPL3_WriteRegBuffered(&opl, ((port / 2) << 8) | reg, val);
     }

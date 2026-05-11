@@ -19,24 +19,24 @@ var
 
 procedure dump_opl2out(reg, data: Word);
 begin
-  s := LowerCase(IntToHex(reg AND $1ff, 3) + ' ' + IntToHex(data AND $ff, 2)) + #13#10;
-  FileWrite(outfd, s[1], Length(s));
+  // s := LowerCase(IntToHex(reg AND $1ff, 3) + ' ' + IntToHex(data AND $ff, 2)) + #13#10;
+  // FileWrite(outfd, s[1], Length(s));
   shadow_regs[reg shr 8, reg and $ff] := data;
   OPL3EMU_WriteReg(reg, data);
 end;
 
 procedure dump_opl3out(reg, data: Word);
 begin
-  s := LowerCase(IntToHex(reg AND $1ff, 3) + ' ' + IntToHex(data AND $ff, 2)) + #13#10;
-  FileWrite(outfd, s[1], Length(s));
+  // s := LowerCase(IntToHex(reg AND $1ff, 3) + ' ' + IntToHex(data AND $ff, 2)) + #13#10;
+  // FileWrite(outfd, s[1], Length(s));
   shadow_regs[reg shr 8, reg and $ff] := data;
   OPL3EMU_WriteReg(reg, data);
 end;
 
 procedure dump_opl3exp(data: Word);
 begin
-  s := LowerCase(IntToHex((data AND $ff) OR $100, 3) + ' ' + IntToHex(data SHR 8, 2)) + #13#10;
-  FileWrite(outfd, s[1], Length(s));
+  // s := LowerCase(IntToHex((data AND $ff) OR $100, 3) + ' ' + IntToHex(data SHR 8, 2)) + #13#10;
+  // FileWrite(outfd, s[1], Length(s));
   shadow_regs[1, data and $ff] := data shr 8;
   OPL3EMU_WriteReg((data AND $ff) OR $100, data SHR 8);
 end;
