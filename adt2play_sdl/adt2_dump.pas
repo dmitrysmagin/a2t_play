@@ -59,10 +59,10 @@ begin
     end;
   ws := '1:';
   for i := 0 to 255 do
-    ws := ws + ' ' + LowerCase(IntToHex(shadow_regs[0, i], 2));
+    ws := ws + LowerCase(IntToHex(shadow_regs[0, i], 2));
   ws := ws + ' 2:';
   for i := 0 to 255 do
-    ws := ws + ' ' + LowerCase(IntToHex(shadow_regs[1, i], 2));
+    ws := ws + LowerCase(IntToHex(shadow_regs[1, i], 2));
   ws := ws + #13#10;
   FileWrite(outfd, ws[1], Length(ws));
   Inc(frames_dumped);

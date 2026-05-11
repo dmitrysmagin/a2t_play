@@ -41,9 +41,9 @@ static void dump_frame(void)
         return;
     }
     printf("1:");
-    for (i = 0; i < 256; i++) printf(" %02x", shadow_regs[0][i]);
+    for (i = 0; i < 256; i++) printf("%02x", shadow_regs[0][i]);
     printf(" 2:");
-    for (i = 0; i < 256; i++) printf(" %02x", shadow_regs[1][i]);
+    for (i = 0; i < 256; i++) printf("%02x", shadow_regs[1][i]);
     printf("\n");
     frames_dumped++;
 }
