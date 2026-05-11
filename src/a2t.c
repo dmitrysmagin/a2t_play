@@ -462,12 +462,12 @@ static void memory_usage()
     }
 
     printf("Memory usage:\n");
-    printf("\tSonginfo: %d bytes\n", sizeof(tSONGINFO));
-    printf("\tPatterns * %d: %d bytes\n", eventsinfo->patterns, eventsinfo->size);
-    printf("\tInstruments * %d: %d bytes\n", instrinfo->count, instrinfo->size);
-    printf("\tFmreg * %d: %d bytes\n", nfmregs, nfmregs * sizeof(tFMREG_TABLE));
-    printf("\tVibrato * %d: %d bytes\n", nvib, nvib * sizeof(tVIBRATO_TABLE));
-    printf("\tArpeggio * %d: %d bytes\n", narp, narp * sizeof(tARPEGGIO_TABLE));
+    printf("\tSonginfo: %zu bytes\n", sizeof(tSONGINFO));
+    printf("\tPatterns * %d: %zu bytes\n", eventsinfo->patterns, eventsinfo->size);
+    printf("\tInstruments * %d: %zu bytes\n", instrinfo->count, instrinfo->size);
+    printf("\tFmreg * %d: %zu bytes\n", nfmregs, nfmregs * sizeof(tFMREG_TABLE));
+    printf("\tVibrato * %d: %zu bytes\n", nvib, nvib * sizeof(tVIBRATO_TABLE));
+    printf("\tArpeggio * %d: %zu bytes\n", narp, narp * sizeof(tARPEGGIO_TABLE));
 }
 // End of patterns helpers ========================================================================
 
