@@ -45,6 +45,21 @@ procedure dump_snd_settimer(freq: Longint);
 begin
 end;
 
+procedure dump_frame;
+var
+  i: Integer;
+  ws: AnsiString;
+begin
+  ws := '1:';
+  for i := 0 to 255 do
+    ws := ws + ' ' + LowerCase(IntToHex(shadow_regs[0, i], 2));
+  ws := ws + ' 2:';
+  for i := 0 to 255 do
+    ws := ws + ' ' + LowerCase(IntToHex(shadow_regs[1, i], 2));
+  ws := ws + #13#10;
+  FileWrite(outfd, ws[1], Length(ws));
+end;
+
 begin
   if ParamCount < 1 then
   begin
@@ -117,6 +132,8 @@ begin
 
   start_playing;
   set_overall_volume(63);
+
+  frame_hook := dump_frame;
 
   dump_ticks := 0;
   max_ticks := IRQ_freq * 600;

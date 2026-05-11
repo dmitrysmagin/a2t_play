@@ -30,6 +30,16 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
     dst[len] = '\0';
 }
 
+static void dump_frame(void)
+{
+    int i;
+    printf("1:");
+    for (i = 0; i < 256; i++) printf(" %02x", shadow_regs[0][i]);
+    printf(" 2:");
+    for (i = 0; i < 256; i++) printf(" %02x", shadow_regs[1][i]);
+    printf("\n");
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
@@ -63,6 +73,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to play %s\n", argv[1]);
         return 1;
     }
+
+    frame_hook = dump_frame;
 
     unsigned char buf[4096];
     memset(buf, 0, sizeof(buf));
