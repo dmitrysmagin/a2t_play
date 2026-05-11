@@ -672,6 +672,11 @@ static inline uint16_t max(uint16_t value, uint16_t maximum)
     return (value > maximum ? maximum : value);
 }
 
+static inline uint16_t min(uint16_t value, uint16_t minimum)
+{
+    return (value < minimum ? minimum : value);
+}
+
 static void change_frequency(int chan, uint16_t freq)
 {
     ch->macro_table[chan].vib_paused = true;
