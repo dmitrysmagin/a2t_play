@@ -1,5 +1,5 @@
 TARGET     := a2t_play
-TEST_TARGET := test/a2m_dump
+TEST_TARGET := a2m_dump
 SRC_DIR    := src
 
 SRCS      := $(wildcard $(SRC_DIR)/*.c)
@@ -37,7 +37,7 @@ $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 
 -include $(OBJS:.o=.d)
 
-$(TEST_TARGET): test/a2m_dump.c $(TEST_DEPS)
+$(TEST_TARGET): a2m_dump.c $(TEST_DEPS)
 	mkdir -p test
 	$(CC) $(BASE_CFLAGS) -Dclocks -I$(SRC_DIR) -o $@ $< $(TEST_DEPS) -lm
 
