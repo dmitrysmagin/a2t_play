@@ -16,6 +16,8 @@ var
   dump_ticks: Longint;
   max_ticks: Longint;
   s: String;
+  max_frames: Longint;
+  frames_dumped: Longint;
 
 procedure dump_opl2out(reg, data: Word);
 begin
@@ -50,6 +52,11 @@ var
   i: Integer;
   ws: AnsiString;
 begin
+  if frames_dumped >= max_frames then
+    begin
+      play_status := isStopped;
+      Exit;
+    end;
   ws := '1:';
   for i := 0 to 255 do
     ws := ws + ' ' + LowerCase(IntToHex(shadow_regs[0, i], 2));
@@ -58,12 +65,13 @@ begin
     ws := ws + ' ' + LowerCase(IntToHex(shadow_regs[1, i], 2));
   ws := ws + #13#10;
   FileWrite(outfd, ws[1], Length(ws));
+  Inc(frames_dumped);
 end;
 
 begin
   if ParamCount < 1 then
   begin
-    WriteLn('Usage: adt2_dump <module_file> [output.reg]');
+    WriteLn('Usage: adt2_dump <module_file> [output.reg] [max_frames]');
     Halt(1);
   end;
 
@@ -72,6 +80,12 @@ begin
     outfilename := ParamStr(2)
   else
     outfilename := filename + '.reg';
+
+  max_frames := 500;
+  if ParamCount >= 3 then
+    max_frames := StrToIntDef(ParamStr(3), 500);
+  if max_frames <= 0 then max_frames := 500;
+  frames_dumped := 0;
 
   OPL3EMU_init;
 

@@ -12,6 +12,7 @@ CC=${CC:-/c/Users/user/msys64/ucrt64/bin/x86_64-w64-mingw32-gcc}
 GMAKE=${GMAKE:-/c/Users/user/msys64/usr/bin/make}
 REFS_DIR="adt2play_sdl"
 TMPDIR="${TMPDIR:-/tmp}"
+MAX_FRAMES="${MAX_FRAMES:-500}"
 
 base=$(basename "$MODULE")
 base_noext="${base%.*}"
@@ -27,17 +28,17 @@ fi
 echo "--- $base ---"
 
 # a2m_dump
-TMP=$TMPDIR timeout 30 ./a2m_dump "$MODULE" "test/${base_noext}.c.reg" >/dev/null 2>&1 || echo "  a2m_dump: timeout/fail"
+TMP=$TMPDIR timeout 30 ./a2m_dump "$MODULE" "test/${base_noext}.c.reg" "$MAX_FRAMES" >/dev/null 2>&1 || echo "  a2m_dump: timeout/fail"
 
 # adt2_dump
-TMP=$TMPDIR timeout 30 "$REFS_DIR/adt2_dump" "$MODULE" "test/${base_noext}.ref.reg" 2>/dev/null || echo "  adt2_dump: timeout/fail"
+TMP=$TMPDIR timeout 30 "$REFS_DIR/adt2_dump" "$MODULE" "test/${base_noext}.ref.reg" "$MAX_FRAMES" 2>/dev/null || echo "  adt2_dump: timeout/fail"
 
 # Compare
 c_reg="test/${base_noext}.c.reg"
 ref_reg="test/${base_noext}.ref.reg"
 diff_file="test/${base_noext}.diff"
 if [ -f "$c_reg" ] && [ -f "$ref_reg" ]; then
-  diff -u <(sort "$c_reg") <(sort "$ref_reg") > "$diff_file" 2>&1
+  diff -u "$c_reg" "$ref_reg" > "$diff_file" 2>&1 || true
   diff_lines=$(wc -l < "$diff_file")
   if [ "$diff_lines" -eq 0 ]; then
     rm -f "$diff_file"

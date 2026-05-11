@@ -30,20 +30,28 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
     dst[len] = '\0';
 }
 
+static int max_frames = 500;
+static int frames_dumped = 0;
+
 static void dump_frame(void)
 {
     int i;
+    if (frames_dumped >= max_frames) {
+        play_status = isStopped;
+        return;
+    }
     printf("1:");
     for (i = 0; i < 256; i++) printf(" %02x", shadow_regs[0][i]);
     printf(" 2:");
     for (i = 0; i < 256; i++) printf(" %02x", shadow_regs[1][i]);
     printf("\n");
+    frames_dumped++;
 }
 
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
-        fprintf(stderr, "Usage: a2m_dump <file.a2m> [output.reg]\n");
+        fprintf(stderr, "Usage: a2m_dump <file.a2m> [output.reg] [max_frames]\n");
         return 1;
     }
 
@@ -54,6 +62,11 @@ int main(int argc, char *argv[])
         char base[1024];
         basename_no_ext(base, sizeof(base), argv[1]);
         snprintf(outname, sizeof(outname), "%s.reg", base);
+    }
+
+    if (argc >= 4) {
+        max_frames = atoi(argv[3]);
+        if (max_frames <= 0) max_frames = 500;
     }
 
     if (!freopen(outname, "w", stdout)) {
