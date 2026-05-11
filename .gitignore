@@ -12,3 +12,5 @@ a2t_play32-linux32
 *.pck
 *.d
 *.reg
+at2
+fpc
