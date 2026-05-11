@@ -2,7 +2,7 @@ TARGET     := a2t_play
 TEST_TARGET := a2m_dump
 SRC_DIR    := src
 
-SRCS      := $(wildcard $(SRC_DIR)/*.c)
+SRCS      := src/sdl.c src/a2t.c src/depack.c src/sixpack.c src/unlzh.c src/unlzw.c src/unlzss.c src/opl3.c src/debug.c
 OBJS      := $(SRCS:.c=.o)
 TEST_DEPS := $(filter-out $(SRC_DIR)/sdl.o $(SRC_DIR)/a2t.o, $(OBJS))
 
@@ -37,7 +37,7 @@ $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 
 -include $(OBJS:.o=.d)
 
-$(TEST_TARGET): a2m_dump.c $(TEST_DEPS)
+$(TEST_TARGET): src/a2m_dump.c $(TEST_DEPS)
 	mkdir -p test
 	$(CC) $(BASE_CFLAGS) -Dclocks -I$(SRC_DIR) -o $@ $< $(TEST_DEPS) -lm
 
