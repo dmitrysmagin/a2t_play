@@ -38,7 +38,6 @@ $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 -include $(OBJS:.o=.d)
 
 $(TEST_TARGET): src/a2m_dump.c $(TEST_DEPS)
-	mkdir -p test
 	$(CC) $(BASE_CFLAGS) -Dclocks -I$(SRC_DIR) -o $@ $< $(TEST_DEPS) -lm
 
 test: $(TEST_TARGET)

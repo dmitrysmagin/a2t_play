@@ -33,12 +33,14 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
-        fprintf(stderr, "Usage: a2m_dump <file.a2m>\n");
+        fprintf(stderr, "Usage: a2m_dump <file.a2m> [output.reg]\n");
         return 1;
     }
 
     char outname[1032];
-    {
+    if (argc >= 3) {
+        snprintf(outname, sizeof(outname), "%s", argv[2]);
+    } else {
         char base[1024];
         basename_no_ext(base, sizeof(base), argv[1]);
         snprintf(outname, sizeof(outname), "%s.reg", base);
