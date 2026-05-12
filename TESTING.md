@@ -24,7 +24,7 @@ frame_num starts at 0. No INIT dump is emitted.
 * run run_one_test.sh with module filename and MAX_FRAMES=100000
 * compare diffs, but ignore post songend diff
 * isolate the code region in a2t.c specific to frames at which diff is found
-* if needed, add additional dumping into a2t.c temporarily, don't forget to cleanup at final phase
+* if needed, add tCHDATA context dump into a2t.c temporarily, don't forget to cleanup at final phase
 * fix C code to match pascal and retest to check if diff is none or, at least, reduced.
 
 adt2play_sdl should be the source of truth, C tool should match Pascal one ultimately

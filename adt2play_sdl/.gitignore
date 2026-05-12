@@ -1,2 +1,5 @@
 *.ppu
 *.o
+*.a
+adt2play
+*.exe

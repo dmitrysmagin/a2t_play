@@ -29,6 +29,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | farhome | 21119 | 0 | PASS | |
 | badapple | - | - | FRAME-DIFF | 390 frame-level diffs |
 | badseed | 38019 | 0 | PASS | |
+| corridor | 49139 | 36020 | FRAME-DIFF | bank1 freq regs 1 step behind; vibrato/keyoff timing. C: tempo=90, IRQ_freq=270, speed=6. vibrato pos advances by 2 per tick (speed=2). Both C and Pascal have identical ticklooper/poll_proc timing. Root cause unclear — likely a subtly different effect processing order between play_line and update_effects. |
 | ca54 | - | - | FRAME-DIFF | |
 | crisis | - | - | FRAME-DIFF | 112 frame-level diffs |
 | fm-troni | - | - | FRAME-DIFF | 120 frame-level diffs |
