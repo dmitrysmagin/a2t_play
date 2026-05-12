@@ -1592,8 +1592,18 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         break;
 
     case ef_RetrigNote:
-    case ef_MultiRetrigNote:
         if (val) {
+            if (get_effect_group(ch->last_effect[slot][chan].def) != EFGR_RETRIGNOTE) {
+                ch->retrig_table[slot][chan] = 1;
+            }
+
+            ch->effect_table[slot][chan].def = def;
+            ch->effect_table[slot][chan].val = val;
+        }
+        break;
+
+    case ef_MultiRetrigNote:
+        if (val / 16) {
             if (get_effect_group(ch->last_effect[slot][chan].def) != EFGR_RETRIGNOTE) {
                 ch->retrig_table[slot][chan] = 1;
             }
@@ -2580,13 +2590,13 @@ static void update_effects_slot(int slot, int chan)
             case 12: slide_volume_up(chan, 8); break;
             case 13: slide_volume_up(chan, 16); break;
 
-            case 6: slide_volume_down(chan, chanvol(chan) - chanvol(chan) * 2 / 3);
+            case 6: slide_volume_down(chan, chanvol(chan) - (chanvol(chan) * 2 + 1) / 3);
                 break;
 
-            case 7: slide_volume_down(chan, chanvol(chan) - chanvol(chan) * 1 / 2);
+            case 7: slide_volume_down(chan, chanvol(chan) - (chanvol(chan) + 1) / 2);
                 break;
 
-            case 14: slide_volume_up(chan, max(chanvol(chan) * 3 / 2 - chanvol(chan), 63));
+            case 14: slide_volume_up(chan, max((chanvol(chan) * 3 + 1) / 2 - chanvol(chan), 63));
                 break;
 
             case 15: slide_volume_up(chan,max(chanvol(chan) * 2 - chanvol(chan), 63));
