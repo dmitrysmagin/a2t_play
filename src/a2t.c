@@ -3201,9 +3201,12 @@ static void init_buffers()
 
     if (!panlock) {
         memset(ch->panning_table, 0, sizeof(ch->panning_table));
+        memset(ch->pan_lock, 0, sizeof(ch->pan_lock));
     } else {
-        for (int i = 0; i < 20; i++)
-              ch->panning_table[i] = songinfo->lock_flags[i] & 3;
+        for (int i = 0; i < 20; i++) {
+            ch->panning_table[i] = songinfo->lock_flags[i] & 3;
+            ch->pan_lock[i] = true;
+        }
     }
 
     if (!lockVP) {
