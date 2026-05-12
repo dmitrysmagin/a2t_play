@@ -570,7 +570,7 @@ static uint16_t calc_freq_shift_up(uint16_t freq, uint16_t shift)
     uint16_t oc = (freq >> 10) & 7;
     int16_t fr = (freq & 0x3ff) + shift;
 
-    if (fr > FreqEnd) {
+    if (fr >= FreqEnd) {
         if (oc == 7) {
             fr = FreqEnd;
         } else {
@@ -611,7 +611,6 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
     return result;
 }
 
-extern int frames_dumped;
 static void change_freq(int chan, uint16_t freq)
 {
     if (is_4op_chan(chan) && is_4op_chan_hi(chan)) {
@@ -626,8 +625,6 @@ static void change_freq(int chan, uint16_t freq)
 
     opl3out(0xa0 + n, ch->freq_table[chan] & 0xFF);
     opl3out(0xb0 + n, (ch->freq_table[chan] >> 8) & 0xFF);
-
-
 
     if (is_4op_chan(chan) && is_4op_chan_lo(chan)) {
         ch->freq_table[chan - 1] = ch->freq_table[chan];
@@ -3241,9 +3238,6 @@ static void init_player()
     opl2out(0x08, 0x40);
     opl3exp(0x0105);
     opl3exp(0x04 + (songinfo->flag_4op << 8));
-#ifndef clocks
-    printf("flag_4op: %04x\n", songinfo->flag_4op);
-#endif
 
     key_off(16);
     key_off(17);
