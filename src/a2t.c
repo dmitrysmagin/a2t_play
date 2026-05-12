@@ -761,7 +761,7 @@ static void key_on(int chan)
 static void key_off(int chan)
 {
     ch->freq_table[chan] &= ~0x2000;
-    change_frequency(chan, ch->freq_table[chan]);
+    change_freq(chan, ch->freq_table[chan]);
     ch->event_table[chan].note |= keyoff_flag;
 }
 
@@ -2429,8 +2429,6 @@ static void vibrato(int slot, int chan)
     ch->vibr_table[slot][chan].pos += ch->vibr_table[slot][chan].speed * vibtrem_speed_factor;
     slide = calc_vibrato_shift(ch->vibr_table[slot][chan].depth, ch->vibr_table[slot][chan].pos);
     direction = ch->vibr_table[slot][chan].pos & vibtrem_table_size; // 32, 64. 128 or 256
-
-    //AdPlug_LogWrite("slot: %d, chan: %d, slide: %04x, d: %d\n", slot, chan, slide, direction);
 
     if (direction == 0)
         portamento_down(chan, slide, nFreq(0));
