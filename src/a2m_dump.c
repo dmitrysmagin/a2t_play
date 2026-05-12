@@ -32,10 +32,13 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
 
 static int max_frames = 500;
 int frames_dumped = 0;
+static char trace_buf[131072];
+static size_t trace_len = 0;
 
 static void init_trace(uint16_t reg, uint8_t val)
 {
-    fprintf(stderr, "WRITE:%03x %02x\n", reg, val);
+    if (trace_len < sizeof(trace_buf) - 8)
+        trace_len += (size_t)sprintf(trace_buf + trace_len, "%03x %02x\n", reg & 0x1ff, val & 0xff);
 }
 
 static void dump_frame(void)
@@ -95,6 +98,9 @@ int main(int argc, char *argv[])
     }
 
     set_overall_volume(63);
+
+    if (trace_len > 0)
+        fwrite(trace_buf, 1, trace_len, stdout);
 
     {
         int i;
