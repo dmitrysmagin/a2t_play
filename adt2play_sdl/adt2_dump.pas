@@ -65,10 +65,11 @@ begin
       play_status := isStopped;
       Exit;
     end;
-  ws := '1:';
+  ws := IntToStr(frames_dumped) + ' 0 ';
   for i := 0 to 255 do
     ws := ws + LowerCase(IntToHex(shadow_regs[0, i], 2));
-  ws := ws + ' 2:';
+  ws := ws + #13#10;
+  ws := ws + IntToStr(frames_dumped) + ' 1 ';
   for i := 0 to 255 do
     ws := ws + LowerCase(IntToHex(shadow_regs[1, i], 2));
   ws := ws + #13#10;

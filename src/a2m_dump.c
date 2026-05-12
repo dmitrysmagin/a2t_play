@@ -50,9 +50,10 @@ static void dump_frame(void)
         play_status = isStopped;
         return;
     }
-    printf("1:");
+    printf("%d 0 ", frames_dumped);
     for (i = 0; i < 256; i++) printf("%02x", shadow_regs[0][i]);
-    printf(" 2:");
+    printf("\n");
+    printf("%d 1 ", frames_dumped);
     for (i = 0; i < 256; i++) printf("%02x", shadow_regs[1][i]);
     printf("\n");
     frames_dumped++;
