@@ -12,14 +12,21 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
+| ALLOYRUN (VOID) | 19199 | 0 | PASS | |
+| HANGOVER (VOID) | 20479 | 0 | PASS | |
+| MINDFLUX (VOID) | 10891 | 0 | PASS | |
+| RASTER (VOID) | 31999 | 0 | PASS | |
+| TERRANIA (VOID) | 19199 | 0 | PASS | |
+| andromeda | 58316 | 0 | PASS | |
 | altair | 86399 | 0 | PASS | |
 | adven | 38399 | 0 | PASS | |
 | 1942 | 11997 | 0 | PASS | NOW PASSES (was INIT-ONLY) |
-| 2_prydz | - | - | PASS | |
+| top-2act | 43802 | 43562 | FRAME-DIFF | bank1 reg 0xa3 off by +4 at frame 10895; similar offset pattern to fank5 |
 | 3812funk | - | - | PASS | |
 | bxx_nowgone | - | - | PASS | |
 | fank5 | 93738 | 15768 | FRAME-DIFF | constant frequency offset on ch0 from frame 4812; ch0 start freq differs by 4 steps |
 | mmori | - | - | PASS | |
+| farhome | 21119 | 0 | PASS | |
 | badapple | - | - | FRAME-DIFF | 390 frame-level diffs |
 | badseed | 38019 | 0 | PASS | |
 | ca54 | - | - | FRAME-DIFF | |

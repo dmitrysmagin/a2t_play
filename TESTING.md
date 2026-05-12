@@ -28,3 +28,5 @@ frame_num starts at 0. No INIT dump is emitted.
 * fix C code to match pascal and retest to check if diff is none or, at least, reduced.
 
 adt2play_sdl should be the source of truth, C tool should match Pascal one ultimately
+
+take OPL.DOC (plain text) into account to facilitate register map identification
