@@ -15,6 +15,7 @@ var
   correction: Integer;
   dump_ticks: Longint;
   max_ticks: Longint;
+  pcm_buf: array[0..4095] of Byte;
   s: AnsiString;
   max_frames: Longint;
   frames_dumped: Longint;
@@ -151,6 +152,7 @@ begin
     Halt(4);
   end;
 
+  FillChar(pcm_buf, SizeOf(pcm_buf), 0);
   WriteLn('Dumping "', filename, '" -> ', outfilename, ' ...');
 
   { INIT trace disabled
@@ -182,7 +184,7 @@ begin
 
   while (play_status = isPlaying) and (not songend) and (dump_ticks < max_ticks) do
   begin
-    timer_poll_proc;
+    a2t_update_dump(@pcm_buf, SizeOf(pcm_buf));
     Inc(dump_ticks);
   end;
 
@@ -193,5 +195,5 @@ begin
   FreeMem(pattdata);
   pattdata := NIL;
 
-  WriteLn('Done: ', dump_ticks, ' IRQ ticks');
+  WriteLn('Done: ', dump_ticks, ' a2t_update(', SizeOf(pcm_buf), ' B) iterations');
 end.

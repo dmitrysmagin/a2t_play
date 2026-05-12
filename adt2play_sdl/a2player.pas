@@ -111,6 +111,7 @@ procedure count_order(var entries: Byte);
 procedure poll_proc;
 procedure macro_poll_proc;
 procedure timer_poll_proc;
+procedure a2t_update_dump(buf: Pointer; len: Longint);
 procedure opl2out_proc(reg,data: Word);
 procedure opl3out_proc(reg,data: Word);
 procedure opl3exp_proc(data: Word);
@@ -146,6 +147,9 @@ const
   fixed_note_flag    = $090;
   pattern_loop_flag  = $0e0;
   pattern_break_flag = $0f0;
+
+const
+  A2T_AUDIO_HZ = 44100;
 
 const
   MACRO_NOTE_RETRIG_FLAG = $80;
@@ -255,6 +259,11 @@ var
   volume_scaling,percussion_mode: Boolean;
   last_order: Byte;
   reset_chan: array[1..20] of Boolean;
+  a2t_audio_sample_cnt: Longint;
+  a2t_audio_framesmpl: Integer;
+  a2t_opl_scratch: LongWord;
+  a2t_opl_dummy_ch: array[1..18] of PDWord;
+  a2t_opl_dummy_ready: Boolean;
 
 procedure opl2out_proc(reg,data: Word);
 begin
@@ -4281,6 +4290,61 @@ begin
   _debug_str_ := _debug_str_bak_;
 end;
 
+procedure a2t_update_dump(buf: Pointer; len: Longint);
+
+var
+  cntr: Longint;
+  expected: Integer;
+  pb: PByte;
+  sample_off: PDword;
+  idx: Byte;
+
+begin
+  If NOT a2t_opl_dummy_ready then
+    begin
+      For idx := 1 to 18 do
+        a2t_opl_dummy_ch[idx] := @a2t_opl_scratch;
+      a2t_opl_dummy_ready := TRUE;
+    end;
+
+  If play_status <> isPlaying then
+    begin
+      If buf <> NIL then
+        FillChar(buf^, len, 0);
+      Exit;
+    end;
+
+  expected := A2T_AUDIO_HZ div IRQ_freq;
+  If a2t_audio_framesmpl <> expected then
+    a2t_audio_framesmpl := expected;
+
+  pb := PByte(buf);
+  cntr := 0;
+  While cntr < len do
+    begin
+      If a2t_audio_sample_cnt >= a2t_audio_framesmpl then
+        begin
+          a2t_audio_sample_cnt := 0;
+          If ticklooper = 0 then
+            poll_proc;
+          If macro_ticklooper = 0 then
+            macro_poll_proc;
+          Inc(ticklooper);
+          If ticklooper >= IRQ_freq div tempo then
+            ticklooper := 0;
+          Inc(macro_ticklooper);
+          If macro_ticklooper >= IRQ_freq div (tempo * _macro_speedup) then
+            macro_ticklooper := 0;
+          If Assigned(frame_hook) then
+            frame_hook;
+        end;
+      sample_off := PDword(PtrUInt(pb) + PtrUInt(cntr));
+      OPL3EMU_PollProc(sample_off, a2t_opl_dummy_ch);
+      Inc(a2t_audio_sample_cnt);
+      Inc(cntr, 4);
+    end;
+end;
+
 procedure TimerSetup(Hz: Longint);
 begin
   _debug_str_ := 'A2PLAYER.PAS:TimerSetup';
@@ -4578,6 +4642,8 @@ begin
   playback_speed_shift := 0;
 
   update_timer(songdata.tempo);
+  a2t_audio_sample_cnt := 0;
+  a2t_audio_framesmpl := A2T_AUDIO_HZ div IRQ_freq;
 end;
 
 procedure get_chunk(pattern,line,chan: Byte; var chunk: tCHUNK);
