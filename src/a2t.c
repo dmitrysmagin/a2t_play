@@ -108,7 +108,7 @@ tEVENTS_INFO _eventsinfo = { 0 }, *eventsinfo = &_eventsinfo;
 tCHDATA _ch, *ch = &_ch;
 
 // Timer
-int ticks, tickD, tickXF;
+int ticks, tick0, tickD, tickXF;
 int ticklooper, macro_ticklooper;
 
 // Loader
@@ -2868,19 +2868,24 @@ static void poll_proc()
 {
     if (pattern_delay) {
         update_effects();
+        ticks++;
         if (tickD > 1) {
             tickD--;
         } else {
+            tick0 = ticks;
+            update_song_position();
             pattern_delay = false;
         }
     } else {
-        if (ticks == 0) {
+        if (ticks - tick0 + 1 >= speed) {
             play_line();
-            ticks = speed;
+            update_effects();
             update_song_position();
+            tick0 = ticks;
+        } else {
+            update_effects();
+            ticks++;
         }
-        update_effects();
-        ticks--;
     }
 
     tickXF++;
@@ -3272,9 +3277,6 @@ static void init_player()
 
 void a2t_stop()
 {
-    if (play_status == isStopped)
-        return;
-
     irq_mode = false;
     play_status = isStopped;
     global_volume = 63;
@@ -3349,6 +3351,7 @@ bool a2t_play(char *tune) // start_playing()
     pattern_delay = false;
     tickXF = 0;
     ticks = 0;
+    tick0 = 0;
     next_line = 0;
     irq_mode = true;
     play_status = isPlaying;
@@ -4282,7 +4285,6 @@ static bool a2_import(char *tune)
 
 static int freqhz = 44100;
 static int framesmpl = 44100 / 50;
-static int irq_freq = 50;
 static opl3_chip opl;
 
 uint8_t shadow_regs[2][256];
@@ -4305,7 +4307,7 @@ static void opl_out(uint8_t port, uint8_t val)
 void a2t_init(int freq)
 {
     freqhz = freq;
-    framesmpl = freq / 50;
+    framesmpl = freqhz / IRQ_freq;
 
     OPL3_Reset(&opl, freqhz);
 }
@@ -4326,26 +4328,27 @@ void a2t_update(unsigned char *stream, int len)
         return;
     }
 
+    // Recalculate framesmpl if IRQ_freq changed (e.g. via update_timer)
+    int expected = freqhz / IRQ_freq;
+    if (framesmpl != expected)
+        framesmpl = expected;
+
     for (int cntr = 0; cntr < len; cntr += 4) {
         if (cnt >= framesmpl) {
             cnt = 0;
             if (ticklooper == 0) {
                 poll_proc();
-                if (irq_freq != tempo * _macro_speedup()) {
-                    irq_freq = (tempo < 18 ? 18 : tempo) * _macro_speedup();
-                    framesmpl = freqhz / irq_freq;
-                }
             }
 
             if (macro_ticklooper == 0)
                 macro_poll_proc();
 
             ticklooper++;
-            if (ticklooper >= irq_freq / tempo)
+            if (ticklooper >= IRQ_freq / tempo)
                 ticklooper = 0;
 
             macro_ticklooper++;
-            if (macro_ticklooper >= irq_freq / (tempo * _macro_speedup()))
+            if (macro_ticklooper >= IRQ_freq / (tempo * _macro_speedup()))
                 macro_ticklooper = 0;
 
             if (frame_hook) frame_hook();
