@@ -2894,7 +2894,7 @@ static void macro_poll_proc()
 
         bool force_macro_keyon = false;
 
-        if (rt && rt->length /* && (speed != 0)*/) { // FIXME: what speed?
+        if (rt && rt->length && speed != 0) {
             if (mt->fmreg_duration > 1) {
                 mt->fmreg_duration--;
             } else {
