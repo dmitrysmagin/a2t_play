@@ -90,6 +90,9 @@ var
 var
   shadow_regs: array[0..1, 0..255] of Byte;
 
+var
+  songend: Boolean;
+
 type
   tFRAME_HOOK = procedure;
 const
@@ -3723,44 +3726,65 @@ begin
   calc_following_order := result;
 end;
 
-function calc_order_jump: Integer;
+procedure set_current_order(new_order: Byte);
 
 var
-  temp: Byte;
-  result: Integer;
+  i: Integer;
+  old_order: Byte;
+
+begin
+  _debug_str_ := 'A2PLAYER.PAS:set_current_order';
+  If new_order >= $80 then
+    current_order := 0
+  else
+    current_order := new_order;
+
+  If (songdata.pattern_order[current_order] < $80) then
+    Exit;
+
+  i := 0;
+  Repeat
+    If (songdata.pattern_order[current_order] > $7f) then
+      begin
+        old_order := current_order;
+        current_order := songdata.pattern_order[current_order]-$80;
+        If (current_order <= old_order) then
+          songend := TRUE;
+      end;
+    Inc(i);
+  until (i >= 128) or (songdata.pattern_order[current_order] < $80);
+
+  If (i >= 128) then
+    begin
+      songend := TRUE;
+      stop_playing;
+    end;
+end;
+
+function calc_order_jump: Integer;
 
 begin
   _debug_str_ := 'A2PLAYER.PAS:calc_order_jump';
-  result := 0;
-  temp := 0;
-
-  Repeat
-    If (songdata.pattern_order[current_order] > $7f) then
-      current_order := songdata.pattern_order[current_order]-$80;
-    Inc(temp);
-  until (temp > $7f) or (songdata.pattern_order[current_order] < $80);
-
-  If (temp > $7f) then begin stop_playing; result := -1; end;
-  calc_order_jump := result;
+  set_current_order(current_order);
+  If (play_status = isStopped) then
+    calc_order_jump := -1
+  else
+    calc_order_jump := 0;
 end;
 
 procedure update_song_position;
 
 var
   temp: Byte;
+  old_order: Byte;
+  val: Byte;
+  new_order: Byte;
+  break_chan: Byte;
 
 begin
   _debug_str_ := 'A2PLAYER.PAS:update_song_position';
   If (current_line < PRED(songdata.patt_len)) and NOT pattern_break then Inc(current_line)
   else begin
-         If NOT (pattern_break and (next_line AND $0f0 = pattern_loop_flag)) and
-                (current_order < $7f) then
-           begin
-             FillChar(loopbck_table,SizeOf(loopbck_table),BYTE_NULL);
-             FillChar(loop_table,SizeOf(loop_table),BYTE_NULL);
-             Inc(current_order);
-           end;
-
          If pattern_break and (next_line AND $0f0 = pattern_loop_flag) then
            begin
              temp := next_line-pattern_loop_flag;
@@ -3768,15 +3792,31 @@ begin
              If (loop_table[temp][current_line] <> 0) then
                Dec(loop_table[temp][current_line]);
            end
-         else If pattern_break and (next_line AND $0f0 = pattern_break_flag) then
+         else begin
+              FillChar(loopbck_table,SizeOf(loopbck_table),BYTE_NULL);
+              FillChar(loop_table,SizeOf(loop_table),BYTE_NULL);
+
+              If pattern_break and (next_line AND $0f0 = pattern_break_flag) then
                 begin
-                  If (event_table[next_line-pattern_break_flag].effect_def2 = ef_PositionJump) then
-                    current_order := event_table[next_line-pattern_break_flag].effect2
-                  else current_order := event_table[next_line-pattern_break_flag].effect;
+                  old_order := current_order;
+                  break_chan := next_line-pattern_break_flag;
+                  If (event_table[break_chan].effect_def2 = ef_PositionJump) then
+                    val := event_table[break_chan].effect2
+                  else
+                    val := event_table[break_chan].effect;
+                  set_current_order(val);
+                  If (current_order <= old_order) then
+                    songend := TRUE;
                   pattern_break := FALSE;
                 end
-              else If (current_order > $7f) then
-                     current_order := 0;
+              else begin
+                If (current_order < $7f) then
+                  new_order := current_order+1
+                else
+                  new_order := 0;
+                set_current_order(new_order);
+              end;
+         end;
 
          If (songdata.pattern_order[current_order] > $7f) then
            If (calc_order_jump = -1) then EXIT;
@@ -4187,6 +4227,11 @@ begin
          timer_20hz_flag := TRUE;
        end;
 
+  { songend must halt the engine even when pattern order loops backward (Bxx / jump chain);
+    otherwise poll_proc keeps advancing while play_status stays isPlaying. }
+  If songend and (play_status = isPlaying) then
+    stop_playing;
+
   If NOT replay_forbidden then
     begin
       If (current_order = 0) and (current_line = 0) and
@@ -4505,7 +4550,9 @@ begin
   If (error_code <> 0) then EXIT
   else init_player;
 
-  current_order := 0;
+  songend := FALSE;
+  set_current_order(0);
+
   If (songdata.pattern_order[current_order] > $7f) then
     If (calc_order_jump = -1) then EXIT;
 

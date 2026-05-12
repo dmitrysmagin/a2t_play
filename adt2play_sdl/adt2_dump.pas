@@ -180,7 +180,7 @@ begin
   dump_ticks := 0;
   max_ticks := IRQ_freq * 600;
 
-  while (play_status = isPlaying) and (dump_ticks < max_ticks) do
+  while (play_status = isPlaying) and (not songend) and (dump_ticks < max_ticks) do
   begin
     timer_poll_proc;
     Inc(dump_ticks);

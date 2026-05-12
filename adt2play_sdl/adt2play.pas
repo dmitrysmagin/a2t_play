@@ -66,6 +66,7 @@ var
 var
   temp,temp2: Byte;
   _ParamStr: array[0..255] of String[80];
+  exit_after_song: Boolean;
 
 const
   jukebox: Boolean = FALSE;
@@ -264,6 +265,7 @@ begin
   vid_init;
 
   error_code := 0;
+  exit_after_song := FALSE;
 
   If (error_code <> -2) then
     GetMem(pattdata,PATTERN_SIZE*128);
@@ -490,7 +492,8 @@ begin
             SDL_Delay(20);
 
           until (fkey = kENTER) or
-                (fkey = kESC);
+                (fkey = kESC) or
+                songend;
 
           fade_out;
           stop_playing;
@@ -505,11 +508,13 @@ begin
                                    PRED(MaxCol),' '),
                            PRED(MaxCol)),$07,0);
           CWriteLn('',$07,0);
-          If (fkey = kESC) then BREAK;
+          If songend then
+            exit_after_song := TRUE;
+          If (fkey = kESC) or exit_after_song then BREAK;
         Until (FindNext(dirinfo) <> 0);
         FindClose(dirinfo);
       end;
-  until (index = ParamCount);
+  until (index = ParamCount) or exit_after_song;
 
   done_timer_proc;
   snd_done;
