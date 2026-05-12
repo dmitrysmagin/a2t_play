@@ -2006,7 +2006,6 @@ static void play_line()
                 ch->effect_table[slot][chan].def = ch->glfsld_table[slot][chan].def;
                 ch->effect_table[slot][chan].val = ch->glfsld_table[slot][chan].val;
             } else {
-                ch->effect_table[slot][chan].def = 0;
                 ch->effect_table[slot][chan].val = 0;
             }
         }
