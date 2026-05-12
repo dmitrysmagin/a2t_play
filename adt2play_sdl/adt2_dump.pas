@@ -1,5 +1,5 @@
 program AdT2_Dump;
-{$S-,Q-,R-,V-,B-,X+}
+{$S-,Q-,R-,V-,B-,X+,F+}
 {$PACKRECORDS 1}
 
 uses
@@ -15,30 +15,38 @@ var
   correction: Integer;
   dump_ticks: Longint;
   max_ticks: Longint;
-  s: String;
+  s: AnsiString;
   max_frames: Longint;
   frames_dumped: Longint;
+  trace_init: Boolean;
+  i: Integer;
 
 procedure dump_opl2out(reg, data: Word);
 begin
-  // s := LowerCase(IntToHex(reg AND $1ff, 3) + ' ' + IntToHex(data AND $ff, 2)) + #13#10;
-  // FileWrite(outfd, s[1], Length(s));
+  if trace_init then
+    begin
+      s := s + LowerCase(IntToHex(reg AND $1ff, 3)) + ' ' + LowerCase(IntToHex(data AND $ff, 2)) + #13#10;
+    end;
   shadow_regs[reg shr 8, reg and $ff] := data;
   OPL3EMU_WriteReg(reg, data);
 end;
 
 procedure dump_opl3out(reg, data: Word);
 begin
-  // s := LowerCase(IntToHex(reg AND $1ff, 3) + ' ' + IntToHex(data AND $ff, 2)) + #13#10;
-  // FileWrite(outfd, s[1], Length(s));
+  if trace_init then
+    begin
+      s := s + LowerCase(IntToHex(reg AND $1ff, 3)) + ' ' + LowerCase(IntToHex(data AND $ff, 2)) + #13#10;
+    end;
   shadow_regs[reg shr 8, reg and $ff] := data;
   OPL3EMU_WriteReg(reg, data);
 end;
 
 procedure dump_opl3exp(data: Word);
 begin
-  // s := LowerCase(IntToHex((data AND $ff) OR $100, 3) + ' ' + IntToHex(data SHR 8, 2)) + #13#10;
-  // FileWrite(outfd, s[1], Length(s));
+  if trace_init then
+    begin
+      s := s + LowerCase(IntToHex((data AND $ff) OR $100, 3)) + ' ' + LowerCase(IntToHex(data SHR 8, 2)) + #13#10;
+    end;
   shadow_regs[1, data and $ff] := data shr 8;
   OPL3EMU_WriteReg((data AND $ff) OR $100, data SHR 8);
 end;
@@ -144,8 +152,23 @@ begin
 
   WriteLn('Dumping "', filename, '" -> ', outfilename, ' ...');
 
+  s := '';
+  trace_init := True;
   start_playing;
   set_overall_volume(63);
+  trace_init := False;
+
+  if Length(s) > 0 then
+    FileWrite(outfd, s[1], Length(s));
+
+  s := 'INIT:';
+  for i := 0 to 255 do
+    s := s + LowerCase(IntToHex(shadow_regs[0, i], 2));
+  s := s + ' ';
+  for i := 0 to 255 do
+    s := s + LowerCase(IntToHex(shadow_regs[1, i], 2));
+  s := s + #13#10;
+  FileWrite(outfd, s[1], Length(s));
 
   frame_hook := dump_frame;
 

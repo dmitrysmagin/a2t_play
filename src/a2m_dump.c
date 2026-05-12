@@ -33,6 +33,11 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
 static int max_frames = 500;
 static int frames_dumped = 0;
 
+static void init_trace(uint16_t reg, uint8_t val)
+{
+    fprintf(stderr, "WRITE:%03x %02x\n", reg, val);
+}
+
 static void dump_frame(void)
 {
     int i;
@@ -82,9 +87,22 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    write_trace_hook = init_trace;
+
     if (!a2t_play(data)) {
         fprintf(stderr, "Failed to play %s\n", argv[1]);
         return 1;
+    }
+
+    write_trace_hook = NULL;
+
+    {
+        int i;
+        printf("INIT:");
+        for (i = 0; i < 256; i++) printf("%02x", shadow_regs[0][i]);
+        printf(" ");
+        for (i = 0; i < 256; i++) printf("%02x", shadow_regs[1][i]);
+        printf("\n");
     }
 
     frame_hook = dump_frame;

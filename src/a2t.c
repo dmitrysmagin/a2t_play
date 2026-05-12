@@ -4287,6 +4287,7 @@ static opl3_chip opl;
 
 uint8_t shadow_regs[2][256];
 void (*frame_hook)(void) = NULL;
+void (*write_trace_hook)(uint16_t reg, uint8_t val) = NULL;
 
 static void opl_out(uint8_t port, uint8_t val)
 {
@@ -4295,10 +4296,9 @@ static void opl_out(uint8_t port, uint8_t val)
         reg = val;
     } else {
         shadow_regs[port / 2][reg] = val;
-#ifdef clocks
-        // printf("%03x %02x\n", ((port / 2) << 8) | reg, val);
-#endif
-        OPL3_WriteRegBuffered(&opl, ((port / 2) << 8) | reg, val);
+        uint16_t full_reg = ((uint16_t)(port / 2) << 8) | reg;
+        if (write_trace_hook) write_trace_hook(full_reg, val);
+        OPL3_WriteRegBuffered(&opl, full_reg, val);
     }
 }
 
