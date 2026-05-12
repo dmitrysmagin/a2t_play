@@ -596,7 +596,7 @@ static uint16_t calc_freq_shift_down(uint16_t freq, uint16_t shift)
         }
     }
 
-    return (uint16_t)((oc << 10) | fr);
+    return (uint16_t)((oc << 10) + fr); // + fr handles overflow wrap here
 }
 
 /* == calc_vibtrem_shift() in AT2 */
