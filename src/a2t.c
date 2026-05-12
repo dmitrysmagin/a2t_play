@@ -556,8 +556,8 @@ static void opl3exp(uint16_t data)
 
 static uint16_t nFreq(uint8_t note)
 {
-    static uint16_t Fnum[13] = {0x157,0x16b,0x181,0x198,0x1b0,0x1ca,0x1e5,
-                0x202,0x220,0x241,0x263,0x287,0x2ae};
+    static uint16_t Fnum[12] = {0x157,0x16b,0x181,0x198,0x1b0,0x1ca,0x1e5,
+                0x202,0x220,0x241,0x263,0x287};
 
     if (note >= 12 * 8)
         return (7 << 10) | FreqEnd;
@@ -568,7 +568,7 @@ static uint16_t nFreq(uint8_t note)
 static uint16_t calc_freq_shift_up(uint16_t freq, uint16_t shift)
 {
     uint16_t oc = (freq >> 10) & 7;
-    int16_t fr = (freq & 0x3ff) + shift;
+    uint16_t fr = (freq & 0x3ff) + shift;
 
     if (fr >= FreqEnd) {
         if (oc == 7) {
@@ -585,9 +585,9 @@ static uint16_t calc_freq_shift_up(uint16_t freq, uint16_t shift)
 static uint16_t calc_freq_shift_down(uint16_t freq, uint16_t shift)
 {
     uint16_t oc = (freq >> 10) & 7;
-    int16_t fr = (freq & 0x3ff) - shift;
+    uint16_t fr = (freq & 0x3ff) - shift;
 
-    if (fr < FreqStart) {
+    if (fr <= FreqStart) {
         if (oc == 0) {
             fr = FreqStart;
         } else {

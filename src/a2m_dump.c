@@ -15,6 +15,8 @@
 /* nothing needed, a2t.c's opl_out() has the #ifdef clocks dump */
 #endif
 
+int frames_dumped = 0;
+
 #include "../src/a2t.c"
 
 static void basename_no_ext(char *dst, size_t dstsize, const char *path)
@@ -31,7 +33,6 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
 }
 
 static int max_frames = 500;
-int frames_dumped = 0;
 static char trace_buf[131072];
 static size_t trace_len = 0;
 
