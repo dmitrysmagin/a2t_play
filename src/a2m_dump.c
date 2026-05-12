@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    write_trace_hook = NULL;
+    set_overall_volume(63);
 
     {
         int i;
@@ -104,6 +104,8 @@ int main(int argc, char *argv[])
         for (i = 0; i < 256; i++) printf("%02x", shadow_regs[1][i]);
         printf("\n");
     }
+
+    write_trace_hook = NULL;
 
     frame_hook = dump_frame;
 

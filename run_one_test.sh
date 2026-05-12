@@ -12,7 +12,7 @@ CC=${CC:-/c/Users/user/msys64/ucrt64/bin/x86_64-w64-mingw32-gcc}
 GMAKE=${GMAKE:-/c/Users/user/msys64/usr/bin/make}
 REFS_DIR="adt2play_sdl"
 TMPDIR="${TMPDIR:-/tmp}"
-MAX_FRAMES="${MAX_FRAMES:-500}"
+MAX_FRAMES="${MAX_FRAMES:-1500}"
 
 base=$(basename "$MODULE")
 base_noext="${base%.*}"
