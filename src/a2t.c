@@ -579,7 +579,7 @@ static uint16_t calc_freq_shift_up(uint16_t freq, uint16_t shift)
         }
     }
 
-    return (uint16_t)((oc << 10) | fr);
+    return (uint16_t)((oc << 10) + fr);
 }
 
 static uint16_t calc_freq_shift_down(uint16_t freq, uint16_t shift)
@@ -1937,31 +1937,34 @@ static bool no_swap_and_restart(tADTRACK2_EVENT *event)
             (event->eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart));
 }
 
-static bool is_eff_porta(tADTRACK2_EVENT *event)
+/* Pascal play_line uses LO(effect_table[chan]) — merged global freq slide etc. */
+static bool effect_def_is_porta(uint8_t def)
 {
-    int eff0 = event->eff[0].def;
-    bool is_p0 = (eff0 == ef_TonePortamento) ||
-                (eff0 == ef_TPortamVolSlide) ||
-                (eff0 == ef_TPortamVSlideFine);
-    int eff1 = event->eff[1].def;
-    bool is_p1 = (eff1 == ef_TonePortamento) ||
-                (eff1 == ef_TPortamVolSlide) ||
-                (eff1 == ef_TPortamVSlideFine);
-    return is_p0 || is_p1;
+    return def == ef_TonePortamento || def == ef_TPortamVolSlide ||
+           def == ef_TPortamVSlideFine;
 }
 
-static bool is_eff_notedelay(tADTRACK2_EVENT *event)
+static bool is_tporta_flag_ch(int chan)
 {
-    return (
-        (event->eff[0].def == ef_Extended2 && (event->eff[0].val / 16 == ef_ex2_NoteDelay)) ||
-        (event->eff[1].def == ef_Extended2 && (event->eff[1].val / 16 == ef_ex2_NoteDelay))
-    );
+    return effect_def_is_porta(ch->effect_table[0][chan].def) ||
+           effect_def_is_porta(ch->effect_table[1][chan].def);
+}
+
+static bool is_notedelay_ch(int chan)
+{
+    for (int slot = 0; slot < 2; slot++) {
+        if (ch->effect_table[slot][chan].def == ef_Extended2 &&
+            (ch->effect_table[slot][chan].val / 16 == ef_ex2_NoteDelay)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 static void new_process_note(tADTRACK2_EVENT *event, int chan)
 {
-    bool tporta_flag = is_eff_porta(event);
-    bool notedelay_flag = is_eff_notedelay(event);
+    bool tporta_flag = is_tporta_flag_ch(chan);
+    bool notedelay_flag = is_notedelay_ch(chan);
 
     if (event->note == 0)
         return;
@@ -1983,12 +1986,19 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
         return;
     }
 
-    // if previous note was off'ed or restart_adsr enabled for channel
-    // and we are doing portamento to a new note
-    if (ch->event_table[chan].note & keyoff_flag || ch->portaFK_table[chan]) {
-        output_note(ch->event_table[chan].note & ~keyoff_flag, ch->voice_table[chan], chan, false, true);
-    } else {
-        ch->event_table[chan].note = event->note;
+    /* a2player.pas: old note had keyoff — retrigger from stored pitch */
+    if ((event->note != 0) && tporta_flag && (ch->event_table[chan].note & keyoff_flag)) {
+        output_note(ch->event_table[chan].note & ~keyoff_flag,
+                    ch->voice_table[chan], chan, false, true);
+        return;
+    }
+
+    if (event->note != 0) {
+        if (ch->portaFK_table[chan] && tporta_flag) {
+            output_note(event->note, event->instr_def, chan, false, true);
+        } else {
+            ch->event_table[chan].note = event->note;
+        }
     }
 }
 
@@ -2446,12 +2456,20 @@ static void tremolo(int slot, int chan)
 
     ch->trem_table[slot][chan].pos += ch->trem_table[slot][chan].speed * vibtrem_speed_factor;
     slide = calc_vibrato_shift(ch->trem_table[slot][chan].depth, ch->trem_table[slot][chan].pos);
-    direction = ch->trem_table[slot][chan].pos & vibtrem_table_size; // 32, 64. 128 or 256
 
-    if (direction == 0)
-        slide_volume_down(chan, slide);
-    else
-        slide_volume_up(chan, slide);
+    /* a2player.pas: tremolo uses calc_vibtrem_shift dir; tremolo2 uses (pos = 0) after Inc. */
+    if (slot == 1) {
+        if (ch->trem_table[slot][chan].pos == 0)
+            slide_volume_down(chan, slide);
+        else
+            slide_volume_up(chan, slide);
+    } else {
+        direction = ch->trem_table[slot][chan].pos & vibtrem_table_size;
+        if (direction == 0)
+            slide_volume_down(chan, slide);
+        else
+            slide_volume_up(chan, slide);
+    }
 
     // is this needed?
     ch->fmpar_table[chan].volM = volM;
