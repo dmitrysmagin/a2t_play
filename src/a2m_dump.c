@@ -33,6 +33,7 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
 }
 
 static int max_frames = 500;
+/* INIT trace disabled
 static char trace_buf[131072];
 static size_t trace_len = 0;
 
@@ -41,7 +42,7 @@ static void init_trace(uint16_t reg, uint8_t val)
     if (trace_len < sizeof(trace_buf) - 8)
         trace_len += (size_t)sprintf(trace_buf + trace_len, "%03x %02x\n", reg & 0x1ff, val & 0xff);
 }
-
+*/
 static void dump_frame(void)
 {
     int i;
@@ -91,7 +92,9 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    /* INIT trace disabled
     write_trace_hook = init_trace;
+    */
 
     if (!a2t_play(data)) {
         fprintf(stderr, "Failed to play %s\n", argv[1]);
@@ -100,6 +103,7 @@ int main(int argc, char *argv[])
 
     set_overall_volume(63);
 
+    /* INIT trace disabled
     if (trace_len > 0)
         fwrite(trace_buf, 1, trace_len, stdout);
 
@@ -113,6 +117,7 @@ int main(int argc, char *argv[])
     }
 
     write_trace_hook = NULL;
+    */
 
     frame_hook = dump_frame;
 

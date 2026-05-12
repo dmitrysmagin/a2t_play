@@ -152,6 +152,7 @@ begin
 
   WriteLn('Dumping "', filename, '" -> ', outfilename, ' ...');
 
+  { INIT trace disabled
   s := '';
   trace_init := True;
   start_playing;
@@ -169,7 +170,10 @@ begin
     s := s + LowerCase(IntToHex(shadow_regs[1, i], 2));
   s := s + #13#10;
   FileWrite(outfd, s[1], Length(s));
+  }
 
+  start_playing;
+  set_overall_volume(63);
   frame_hook := dump_frame;
 
   dump_ticks := 0;
