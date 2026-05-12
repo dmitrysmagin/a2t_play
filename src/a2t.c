@@ -120,8 +120,6 @@ bool adsr_carrier[9]; // For importing from a2m v1234
 
 bool songend = false;
 
-static char effects[]  = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><";
-
 // Forward function declarations ==================================================================
 static void opl_out(uint8_t port, uint8_t val);
 static inline bool is_4op_chan(int chan);
@@ -598,7 +596,7 @@ static uint16_t calc_freq_shift_down(uint16_t freq, uint16_t shift)
         }
     }
 
-    return (uint16_t)((oc << 10) + fr); // + fr handles overflow wrap here
+    return (uint16_t)((oc << 10) + fr);
 }
 
 /* == calc_vibtrem_shift() in AT2 */
