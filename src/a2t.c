@@ -822,7 +822,10 @@ static t4OP_DATA get_4op_data(uint8_t chan)
     if (d.ins2 == 0) d.ins2 = ch->voice_table[d.ch2];
 
     if (d.ins1 && d.ins2) {
-        d.conn = (get_instr_data(d.ins1)->fm.connect << 1) | get_instr_data(d.ins2)->fm.connect;
+        tINSTR_DATA *id1 = get_instr_data(d.ins1);
+        tINSTR_DATA *id2 = get_instr_data(d.ins2);
+        if (id1 && id2)
+            d.conn = (id1->fm.connect << 1) | id2->fm.connect;
     }
 
     return d;
@@ -842,17 +845,6 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     if (!instr) {
         AdPlug_LogWrite("set_ins_volume: instr not set for channel %d\n", chan);
         return;
-    }
-
-    // ** OPL3 emulation workaround **
-    // force muted instrument volume with missing channel ADSR data
-    // when there is additionally no FM-reg macro defined for this instrument
-    tFMREG_TABLE *fmreg = get_fmreg_table(ch->voice_table[chan]);
-    uint8_t fmreg_length = fmreg ? fmreg->length : 0;
-
-    if (is_chan_adsr_data_empty(chan) && !fmreg_length) {
-            modulator = 63;
-            carrier = 63;
     }
 
     uint16_t m = regoffs_m(chan);
@@ -904,17 +896,6 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     if (!instr) {
         AdPlug_LogWrite("set_volume: instr not set for channel %d\n", chan);
         return;
-    }
-
-    // ** OPL3 emulation workaround **
-    // force muted instrument volume with missing channel ADSR data
-    // when there is additionally no FM-reg macro defined for this instrument
-    tFMREG_TABLE *fmreg = get_fmreg_table(ch->voice_table[chan]);
-    uint8_t fmreg_length = fmreg ? fmreg->length : 0;
-
-    if (is_chan_adsr_data_empty(chan) && !fmreg_length) {
-            modulator = 63;
-            carrier = 63;
     }
 
     uint16_t m = regoffs_m(chan);
