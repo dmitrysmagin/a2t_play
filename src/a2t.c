@@ -177,7 +177,6 @@ static tINSTR_DATA_EXT *get_instr(uint8_t ins)
 static inline int8_t get_instr_fine_tune(uint8_t ins)
 {
     tINSTR_DATA_EXT *instrument = get_instr(ins);
-
     return instrument ? instrument->instr_data.fine_tune : 0;
 }
 
@@ -3001,10 +3000,6 @@ static void macro_poll_proc()
                             if (ch->freq_table[chan]) {
                                 ch->zero_fq_table[chan] = ch->freq_table[chan];
                                 ch->freq_table[chan] &= ~0x1fff;
-                                change_freq(chan, ch->freq_table[chan]);
-                            } else if (ch->zero_fq_table[chan]) {
-                                ch->freq_table[chan] = ch->zero_fq_table[chan];
-                                ch->zero_fq_table[chan] = 0;
                                 change_freq(chan, ch->freq_table[chan]);
                             }
                         } else if (ch->zero_fq_table[chan]) {
