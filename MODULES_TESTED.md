@@ -18,7 +18,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | RASTER (VOID) | 31999 | 0 | PASS | |
 | TERRANIA (VOID) | 19199 | 0 | PASS | |
 | andromeda | 58316 | 0 | PASS | |
-| altair | 86399 | 0 | PASS | |
+| altair | 86399 | 0 | PASS | Re-checked 2026-05-13 with `MAX_FRAMES=100000`; 0 diff. `run_one_test.sh` now defaults `TIMEOUT_SEC=120` for long dumps. |
 | adven | 38399 | 0 | PASS | |
 | 1942 | 11997 | 0 | PASS | NOW PASSES (was INIT-ONLY) |
 | top-2act | 43802 | 43562 | FRAME-DIFF | bank1 reg 0xa3 off by +4 at frame 10895; similar offset pattern to fank5 |

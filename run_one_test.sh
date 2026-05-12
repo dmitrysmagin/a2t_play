@@ -13,6 +13,8 @@ GMAKE=${GMAKE:-/c/Users/user/msys64/usr/bin/make}
 REFS_DIR="adt2play_sdl"
 TMPDIR="${TMPDIR:-/tmp}"
 MAX_FRAMES="${MAX_FRAMES:-15000}"
+# Large MAX_FRAMES need more wall time (a2m_dump can take ~45s+ for 100k frames).
+TIMEOUT_SEC="${TIMEOUT_SEC:-120}"
 
 base=$(basename "$MODULE")
 base_noext="${base%.*}"
@@ -28,10 +30,10 @@ fi
 echo "--- $base ---"
 
 # a2m_dump
-TMP=$TMPDIR timeout 30 ./a2m_dump "$MODULE" "test/${base_noext}.c.reg" "$MAX_FRAMES" >/dev/null 2>&1 || echo "  a2m_dump: timeout/fail"
+TMP=$TMPDIR timeout "$TIMEOUT_SEC" ./a2m_dump "$MODULE" "test/${base_noext}.c.reg" "$MAX_FRAMES" >/dev/null 2>&1 || echo "  a2m_dump: timeout/fail"
 
 # adt2_dump
-TMP=$TMPDIR timeout 30 "$REFS_DIR/adt2_dump" "$MODULE" "test/${base_noext}.ref.reg" "$MAX_FRAMES" 2>/dev/null || echo "  adt2_dump: timeout/fail"
+TMP=$TMPDIR timeout "$TIMEOUT_SEC" "$REFS_DIR/adt2_dump" "$MODULE" "test/${base_noext}.ref.reg" "$MAX_FRAMES" 2>/dev/null || echo "  adt2_dump: timeout/fail"
 
 # Compare
 c_reg="test/${base_noext}.c.reg"
