@@ -3011,6 +3011,10 @@ static void macro_poll_proc()
                                 ch->zero_fq_table[chan] = 0;
                                 change_freq(chan, ch->freq_table[chan]);
                             }
+                        } else if (ch->zero_fq_table[chan]) {
+                            ch->freq_table[chan] = ch->zero_fq_table[chan];
+                            ch->zero_fq_table[chan] = 0;
+                            change_freq(chan, ch->freq_table[chan]);
                         }
 
                         int freq_slide = d->freq_slide;
