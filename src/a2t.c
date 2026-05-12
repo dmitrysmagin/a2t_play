@@ -791,7 +791,7 @@ static void release_sustaining_sound(int chan)
 // inverted volume here
 static uint8_t scale_volume(uint8_t volume, uint8_t scale_factor)
 {
-    return 63 - ((63 - volume) * (63 - scale_factor) / 63);
+    return 63 - (((63 - volume) * (63 - scale_factor) + 31) / 63);
 }
 
 // former _4op_data_flag()
