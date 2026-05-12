@@ -33,12 +33,12 @@ $(TARGET): $(OBJS)
 	$(CC) $(ALL_CFLAGS) -o $@ $^ $(ALL_LDFLAGS)
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(ALL_CFLAGS) -MMD -MP -c -o $@ $<
+	TMP=/tmp TEMP=/tmp $(CC) $(ALL_CFLAGS) -MMD -MP -c -o $@ $<
 
 -include $(OBJS:.o=.d)
 
-$(TEST_TARGET): src/a2m_dump.c $(TEST_DEPS)
-	$(CC) $(BASE_CFLAGS) -Dclocks -I$(SRC_DIR) -o $@ $< $(TEST_DEPS) -lm
+$(TEST_TARGET): src/a2m_dump.c src/a2t.c src/a2t.h $(TEST_DEPS)
+	TMP=/tmp TEMP=/tmp $(CC) $(BASE_CFLAGS) -Dclocks -I$(SRC_DIR) -o $@ $< $(TEST_DEPS) -lm
 
 test: $(TEST_TARGET)
 
