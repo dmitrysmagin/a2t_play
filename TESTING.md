@@ -9,7 +9,8 @@ supports songend
 
 * Pascal Tool - adt2play_sdl/adt2_dump - the reference
 how to build: go into adt2play_sdl and use Makefile and FreePascal
-doesn support songend, loops forever
+it is source of truth, C tool should match Pascal one
+in case of bugs, they should be replicated in C and marked as 'adt2play bug'
 
 # Output format
 
@@ -24,9 +25,9 @@ frame_num starts at 0. No INIT dump is emitted.
 * run run_one_test.sh with module filename and MAX_FRAMES=100000
 * compare diffs, but ignore post songend diff
 * isolate the code region in a2t.c specific to frames at which diff is found
-* if needed, add tCHDATA context dump into a2t.c temporarily, don't forget to cleanup at final phase
-* fix C code to match pascal and retest to check if diff is none or, at least, reduced.
+* if needed, invoke dump_context() from debug.c from isolated code in a2t.c, don't forget to cleanup at final phase
+* analyze context dump and fix C code to match pascal and retest to check if diff is none or, at least, reduced.
 
-adt2play_sdl should be the source of truth, C tool should match Pascal one ultimately
+
 
 take OPL.DOC (plain text) into account to facilitate register map identification

@@ -32,10 +32,15 @@
 #ifndef H_DEBUG
 #define H_DEBUG
 
-//extern "C"
+#include "a2t.h"
+
+// extern "C"
 //{
-        void AdPlug_LogFile(const char *filename);
-        void AdPlug_LogWrite(const char *fmt, ...);
+void AdPlug_LogFile(const char *filename);
+void AdPlug_LogWrite(const char *fmt, ...);
+
+/** Full textual dump of channel runtime state (stdout). */
+void dump_context(const tCHDATA *ctx);
 //}
 
 #endif
