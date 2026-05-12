@@ -526,7 +526,7 @@ static inline uint16_t regoffs_c(int chan)
     return _ch_c[!!percussion_mode][chan];
 }
 
-#define FreqStart   0x157
+#define FreqStart   0x156
 #define FreqEnd     0x2ae
 #define FreqRange   (FreqEnd - FreqStart)
 
@@ -611,6 +611,7 @@ static uint16_t calc_vibrato_shift(uint8_t depth, uint8_t position)
     return result;
 }
 
+extern int frames_dumped;
 static void change_freq(int chan, uint16_t freq)
 {
     if (is_4op_chan(chan) && is_4op_chan_hi(chan)) {
@@ -625,6 +626,8 @@ static void change_freq(int chan, uint16_t freq)
 
     opl3out(0xa0 + n, ch->freq_table[chan] & 0xFF);
     opl3out(0xb0 + n, (ch->freq_table[chan] >> 8) & 0xFF);
+
+
 
     if (is_4op_chan(chan) && is_4op_chan_lo(chan)) {
         ch->freq_table[chan - 1] = ch->freq_table[chan];
@@ -3089,7 +3092,7 @@ static void macro_poll_proc()
                         change_frequency(chan, nFreq(mt->arpg_note - 1) + fine_tune);
                     } else if (d <= 96) {
                         // 1 - 96:
-                        change_frequency(chan, nFreq(max(mt->arpg_note + at->data[mt->arpg_pos], 97) - 1) +
+                        change_frequency(chan, nFreq(max(mt->arpg_note + d, 97) - 1) +
                             fine_tune);
                     } else if (d >= 0x80 && d <= 0x80+12*8+1) {
                         // 0x80 - 0x80+12*8+1:
@@ -3145,9 +3148,9 @@ static void macro_poll_proc()
                     if ((mt->vib_pos != 0) &&
                         (mt->vib_pos != IDLE) && (mt->vib_pos != finished_flag)) {
                         if (vt->data[mt->vib_pos - 1] > 0)
-                            macro_vibrato__porta_up(chan, vt->data[mt->vib_pos]);
+                            macro_vibrato__porta_up(chan, vt->data[mt->vib_pos - 1]);
                         else if (vt->data[mt->vib_pos - 1] < 0)
-                            macro_vibrato__porta_down(chan, abs(vt->data[mt->vib_pos]));
+                            macro_vibrato__porta_down(chan, abs(vt->data[mt->vib_pos - 1]));
                         else
                             change_freq(chan, mt->vib_freq);
                     }

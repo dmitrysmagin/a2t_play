@@ -31,7 +31,7 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
 }
 
 static int max_frames = 500;
-static int frames_dumped = 0;
+int frames_dumped = 0;
 
 static void init_trace(uint16_t reg, uint8_t val)
 {
