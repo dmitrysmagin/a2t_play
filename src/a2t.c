@@ -529,6 +529,9 @@ static inline uint16_t regoffs_c(int chan)
 #define FreqEnd     0x2ae
 #define FreqRange   (FreqEnd - FreqStart)
 
+/* Round a/b to nearest integer (matching Pascal's Round(a/b) for positive ints) */
+#define ROUND_DIV(a, b) (((a) + (b) / 2) / (b))
+
 /* PLAYER */
 static void opl2out(uint16_t reg, uint16_t data)
 {
@@ -2466,7 +2469,7 @@ static inline int chanvol(int chan)
     if (instr_fm_connect == 0)
         return 63 - ch->fmpar_table[chan].volC;
     else
-        return 63 - (ch->fmpar_table[chan].volM + ch->fmpar_table[chan].volC) / 2;
+        return 63 - ROUND_DIV(ch->fmpar_table[chan].volM + ch->fmpar_table[chan].volC, 2);
 }
 
 static void update_effects_slot(int slot, int chan)
@@ -2590,16 +2593,16 @@ static void update_effects_slot(int slot, int chan)
             case 12: slide_volume_up(chan, 8); break;
             case 13: slide_volume_up(chan, 16); break;
 
-            case 6: slide_volume_down(chan, chanvol(chan) - (chanvol(chan) * 2 + 1) / 3);
+            case 6: slide_volume_down(chan, chanvol(chan) - ROUND_DIV(chanvol(chan) * 2, 3));
                 break;
 
-            case 7: slide_volume_down(chan, chanvol(chan) - (chanvol(chan) + 1) / 2);
+            case 7: slide_volume_down(chan, chanvol(chan) - ROUND_DIV(chanvol(chan), 2));
                 break;
 
-            case 14: slide_volume_up(chan, max((chanvol(chan) * 3 + 1) / 2 - chanvol(chan), 63));
+            case 14: slide_volume_up(chan, max(ROUND_DIV(chanvol(chan) * 3, 2) - chanvol(chan), 63));
                 break;
 
-            case 15: slide_volume_up(chan,max(chanvol(chan) * 2 - chanvol(chan), 63));
+            case 15: slide_volume_up(chan, max(chanvol(chan) * 2 - chanvol(chan), 63));
                 break;
             }
 
