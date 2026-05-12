@@ -12,5 +12,7 @@ a2t_play32-linux32
 *.pck
 *.d
 *.reg
+*.*trace
 at2
 fpc
+test
