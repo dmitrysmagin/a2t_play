@@ -1336,6 +1336,87 @@ static void play_line_arpgg_cleanup_pascal(const tADTRACK2_EVENT *event, int cha
     }
 }
 
+/* a2player.pas play_line first loop (~1364–1442): GlobalFSlide for column 1 then 2,
+ * per channel, before the cross-channel effect_def / effect_def2 Case passes. */
+static void play_line_apply_global_fslide_row(tADTRACK2_EVENT *event, int chan)
+{
+    for (int slot = 0; slot < 2; slot++) {
+        uint8_t def = event->eff[slot].def;
+        uint8_t val = event->eff[slot].val;
+
+        if ((def != ef_GlobalFSlideUp) && (def != ef_GlobalFSlideDown))
+            continue;
+
+        if ((event->eff[slot ^ 1].def == ef_Extended) &&
+            (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_ForceBpmSld)) {
+
+            AdPlug_LogWrite("ef_GlobalFSlideUp or ef_GlobalFSlideDown with ef_ex_cmd_ForceBpmSld\n");
+
+            if (def == ef_GlobalFSlideUp) {
+                update_playback_speed(val);
+            } else {
+                update_playback_speed(-val);
+            }
+        } else {
+            uint8_t eff;
+
+            switch (def) {
+            case ef_GlobalFSlideUp:
+                eff = ef_FSlideUp;
+
+                if ((event->eff[slot ^ 1].def == ef_Extended) &&
+                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
+                    eff = ef_GlobalFreqSlideUpXF;
+                }
+
+                if ((event->eff[slot ^ 1].def == ef_Extended) &&
+                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
+                    eff = ef_FSlideUpFine;
+                }
+
+                ch->effect_table[slot][chan].def = eff;
+                ch->effect_table[slot][chan].val = val;
+                break;
+            case ef_GlobalFSlideDown:
+                eff = ef_FSlideDown;
+
+                if ((event->eff[slot ^ 1].def == ef_Extended) &&
+                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
+                    eff = ef_GlobalFreqSlideDnXF;
+                }
+
+                if ((event->eff[slot ^ 1].def == ef_Extended) &&
+                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
+                    eff = ef_FSlideDownFine;
+                }
+
+                ch->effect_table[slot][chan].def = eff;
+                ch->effect_table[slot][chan].val = val;
+                break;
+            }
+
+            for (int c = chan; c < songinfo->nm_tracks; c++) {
+                ch->fslide_table[slot][c] = val;
+                ch->glfsld_table[slot][c].def = ch->effect_table[slot][chan].def;
+                ch->glfsld_table[slot][c].val = ch->effect_table[slot][chan].val;
+            }
+        }
+    }
+}
+
+/* a2player.pas ~1452–1466: once per row after init loop, from pattern columns. */
+static void play_line_tremor_row_reset(const tADTRACK2_EVENT *event, int chan)
+{
+    if (ch->tremor_table[0][chan].pos && (event->eff[0].def != ef_Tremor)) {
+        ch->tremor_table[0][chan].pos = 0;
+        set_ins_volume(ch->tremor_table[0][chan].volM, ch->tremor_table[0][chan].volC, chan);
+    }
+    if (ch->tremor_table[1][chan].pos && (event->eff[1].def != ef_Tremor)) {
+        ch->tremor_table[1][chan].pos = 0;
+        set_ins_volume(ch->tremor_table[1][chan].volM, ch->tremor_table[1][chan].volC, chan);
+    }
+}
+
 static void process_effects_slot_prepare(tADTRACK2_EVENT *event, int slot, int chan)
 {
     uint8_t def = event->eff[slot].def;
@@ -1366,78 +1447,11 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
     uint8_t def = event->eff[slot].def;
     uint8_t val = event->eff[slot].val;
 
-    if ((def == ef_GlobalFSlideUp) || (def == ef_GlobalFSlideDown)) {
-        if ((event->eff[slot ^ 1].def == ef_Extended) &&
-            (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd * 16 + ef_ex_cmd_ForceBpmSld)) {
-
-            AdPlug_LogWrite("ef_GlobalFSlideUp or ef_GlobalFSlideDown with ef_ex_cmd_ForceBpmSld\n");
-
-            if (def == ef_GlobalFSlideUp) {
-                update_playback_speed(val);
-            } else {
-                update_playback_speed(-val);
-            }
-        } else {
-            uint8_t eff;
-
-            switch (def) {
-            case ef_GlobalFSlideUp:
-                eff = ef_FSlideUp;
-
-                // >xx + ZFE
-                if ((event->eff[slot ^ 1].def == ef_Extended) &&
-                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
-                    eff = ef_GlobalFreqSlideUpXF;
-                }
-
-                 // >xx + ZFD
-                if ((event->eff[slot ^ 1].def == ef_Extended) &&
-                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
-                    eff = ef_FSlideUpFine;
-                }
-
-                ch->effect_table[slot][chan].def = eff;
-                ch->effect_table[slot][chan].val = val;
-                break;
-            case ef_GlobalFSlideDown:
-                eff = ef_FSlideDown;
-
-                 // <xx + ZFE
-                if ((event->eff[slot ^ 1].def == ef_Extended) &&
-                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
-                    eff = ef_GlobalFreqSlideDnXF;
-                }
-
-                 // <xx + ZFD
-                if ((event->eff[slot ^ 1].def == ef_Extended) &&
-                    (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
-                    eff = ef_FSlideDownFine;
-                }
-
-                ch->effect_table[slot][chan].def = eff;
-                ch->effect_table[slot][chan].val = val;
-                break;
-            }
-
-            // shouldn't it be int c = 0 ??
-            for (int c = chan; c < songinfo->nm_tracks; c++) {
-                ch->fslide_table[slot][c] = val;
-                ch->glfsld_table[slot][c].def = ch->effect_table[slot][chan].def;
-                ch->glfsld_table[slot][c].val = ch->effect_table[slot][chan].val;
-            }
-        }
-    }
-
-    if (ch->tremor_table[slot][chan].pos && (def != ef_Tremor)) {
-        ch->tremor_table[slot][chan].pos = 0;
-        set_ins_volume(ch->tremor_table[slot][chan].volM, ch->tremor_table[slot][chan].volC, chan);
-    }
-
     switch (def) {
     case ef_Arpeggio:
         if (!val)
             break;
-
+        /* fall through */
     case ef_ExtraFineArpeggio:
     case ef_ArpggVSlide:
     case ef_ArpggVSlideFine:
@@ -2087,7 +2101,17 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
 
 static void play_line()
 {
-    tADTRACK2_EVENT _event, *event = &_event;
+    /* Align with a2player.pas play_line:
+     * - Per channel: pattern + set_ins + prepare both slots + arpeggio cleanup + GlobalFSlide
+     *   (Pascal’s first loop), then tremor row reset (second loop).
+     * - Then process column-1 (slot 0) row effects for *all* channels, then column-2
+     *   for all (Pascal’s Case effect_def then Case effect_def2).
+     *   Running both columns per channel before advancing let column-2 effects (e.g.
+     *   Z21 pattern-delay-rows: tickD = speed * n) see a stale speed when a higher
+     *   channel’s column-1 had Dxx SetSpeed (tunes/MLF/PINK.A2T).
+     * - Final pass: new_process_note + swap macros + update_fine_effects per channel. */
+    tADTRACK2_EVENT events[20];
+    tADTRACK2_EVENT *event;
     /* // This can be omitted, no side effects for ZCx/ZDx
     bool do_pattern_loop = pattern_break && ((next_line & 0xf0) == pattern_loop_flag);
 
@@ -2098,7 +2122,10 @@ static void play_line()
     }
     */
 
+    assert((int)songinfo->nm_tracks <= 20);
+
     for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
+        event = &events[chan];
         // save effect_table into last_effect
         for (int slot = 0; slot < 2; slot++) {
             if (ch->effect_table[slot][chan].def | ch->effect_table[slot][chan].val) {
@@ -2137,21 +2164,26 @@ static void play_line()
         process_effects_slot_prepare(event, 0, chan);
         process_effects_slot_prepare(event, 1, chan);
         play_line_arpgg_cleanup_pascal(event, chan);
+        play_line_apply_global_fslide_row(event, chan);
+    }
+
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
+        event = &events[chan];
+        play_line_tremor_row_reset(event, chan);
+    }
+
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
+        event = &events[chan];
         process_effects_slot_body(event, 0, chan);
+    }
+
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
+        event = &events[chan];
         process_effects_slot_body(event, 1, chan);
+    }
 
-        // TODO: is that needed here?
-        /*for (int slot = 0; slot < 2; slot++) {
-            if (event->eff[slot].def | event->eff[slot].val) {
-                ch->event_table[chan].eff[slot].def = event->eff[slot].def;
-                ch->event_table[chan].eff[slot].val = event->eff[slot].val;
-            } else if (ch->glfsld_table[slot][chan].def == 0 && ch->glfsld_table[slot][chan].val == 0) {
-                ch->effect_table[slot][chan].def = 0;
-                ch->effect_table[slot][chan].val = 0;
-            }
-        }*/
-
-        // alters ch->event_table[].note
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
+        event = &events[chan];
         new_process_note(event, chan);
 
         check_swap_arp_vibr(event, 0, chan);
@@ -2973,7 +3005,12 @@ static void poll_proc()
         if (ticks - tick0 + 1 >= speed) {
             play_line();
             update_effects();
-            update_song_position();
+            /* Pascal poll_proc: update_song_position only if NOT pattern_delay
+             * (or fast_forward — not used in this port). Otherwise the row /
+             * order advances immediately and tickD-based pattern delay never runs
+             * (divergence vs adt2_dump, e.g. tunes/MLF/PINK.A2T). */
+            if (!pattern_delay)
+                update_song_position();
             tick0 = ticks;
         } else {
             update_effects();
