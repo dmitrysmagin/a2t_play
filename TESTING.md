@@ -29,15 +29,18 @@ Both tools output 2 lines per IRQ frame:
 
 frame_num starts at 0. No INIT dump is emitted.
 
-# Testing and Fixing
+# Testing and Fixing a2t.c
 * run run_one_test.sh with module filename and MAX_FRAMES=100000
-* compare diffs, but ignore post songend diff
-* isolate the frames region at which diff is found
-* add context tracing within isolated frames
-* analyze context dumps deeper and fix C code to match pascal if possible, retest to check if diff is smaller or none
+* compare diffs, note the frames region at which diff is found
+* a2m_dump: modify to isolate the frame region at which diff starts
+* a2m_dump: add additional dumping information if needed
+* a2m_dump: build with trace enabled A2M_DUMP_CONTEXT=1 and rerun test
+* analyze trace output to determine root cause
+* apply fix and retest to check if diff is smaller or none
 * don't edit out comments!
 * propose next possible actions if diff not resolved completely
-* update MODULES_TESTED.md with new info
+* update MODULES_TESTED.md in any case - success (leave notes void) or fail (add notes then)
+* cleanup any trace or dump or debug code in a2t.c
 
 ## `A2M_DUMP_CONTEXT` (stderr trace)
 
@@ -48,8 +51,6 @@ rm -f a2m_dump a2m_dump.exe
 TMP=/tmp make -f Makefile a2m_dump DUMP_CONTEXT=1 CC=/path/to/mingw-gcc
 ./a2m_dump modules/<tune>.a2m /dev/null <max_frames+margin> 2>test/<tune>_ctx.log
 ```
-
-Selected IRQ frames are listed in **`src/a2m_dump.c`** (`a2m_dump_context_irq_requested` / **`want[]`**). For **top-2act**, IRQ **10893–10902** use **`a2m_dump_top2act_ch9_compact()`** only (no full **`dump_context_f`** on those lines). Example: **`wc -l test/top-2act_ctx.log`** ~**18526**; **`grep '^######## top-2act' test/top-2act_ctx.log`** → **10** blocks.
 
 
 take OPL.DOC (plain text) into account to facilitate register map identification
