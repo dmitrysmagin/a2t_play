@@ -472,10 +472,9 @@ static void memory_usage()
 
 static inline bool note_in_range(uint8_t note)
 {
-    /*if (note & keyoff_flag) {
-        AdPlug_LogWrite("note_in_range with keyoff=1\n");
-    }*/
-    return ((note & ~keyoff_flag) > 0) && ((note & ~keyoff_flag) < 12 * 8 + 1);
+    uint8_t n = note & (uint8_t)~keyoff_flag;
+    /* Pascal output_note: NOT (note in [1..12*8+1]) uses the inclusive upper bound 97 (a2player.pas). */
+    return n >= 1 && n <= (uint8_t)(12 * 8 + 1);
 }
 
 static inline uint16_t regoffs_n(int chan)
