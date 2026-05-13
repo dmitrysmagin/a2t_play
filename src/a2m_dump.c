@@ -32,6 +32,8 @@ int frames_dumped = 0;
 static void a2m_dump_context_at_irq_frames(void)
 {
     static const int want[] = {
+        /* badapple: primary shadow_regs[0][0xa5] vs Pascal @ IRQ 14878 (logical chan 4, regoffs_n=5) */
+        14874, 14875, 14876, 14877, 14878, 14879, 14880,
         /* fm-troni: just before / at / after first Pascal-C divergence (0xA2), plus later bursts */
         15259, 15260, 15261, 15262, 15263,
         15620, 15621, 15622,
@@ -71,6 +73,12 @@ static void a2m_dump_context_at_irq_frames(void)
                 "freq9=0x%04x freq10=0x%04x  shadow[1][a0/b0]=%02x/%02x\n",
                 (unsigned)ch->freq_table[9], (unsigned)ch->freq_table[10],
                 shadow_regs[1][0xa0], shadow_regs[1][0xb0]);
+        fprintf(stderr,
+                "peek ch4 (regoffs_n(4)=0x05 -> primary 0xA5): freq_table[4]=0x%04x zero_fq[4]=0x%04x "
+                "macro vib_freq=0x%04x vib_paused=%d shadow[0][a5/b5]=0x%02x/0x%02x\n",
+                (unsigned)ch->freq_table[4], (unsigned)ch->zero_fq_table[4],
+                (unsigned)ch->macro_table[4].vib_freq, (int)ch->macro_table[4].vib_paused,
+                shadow_regs[0][0xa5], shadow_regs[0][0xb5]);
         dump_context_f(stderr, ch);
         fflush(stderr);
         return;
