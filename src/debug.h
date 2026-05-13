@@ -34,13 +34,17 @@
 
 #include "a2t.h"
 
+#include <stdio.h>
+
 // extern "C"
 //{
 void AdPlug_LogFile(const char *filename);
 void AdPlug_LogWrite(const char *fmt, ...);
 
-/** Full textual dump of channel runtime state (stdout). */
+/** Full textual dump of channel runtime state. */
 void dump_context(const tCHDATA *ctx);
+/** Same on an arbitrary stream (use stderr when stdout is redirected, e.g. a2m_dump). */
+void dump_context_f(FILE *out, const tCHDATA *ctx);
 //}
 
 #endif

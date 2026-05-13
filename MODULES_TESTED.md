@@ -20,7 +20,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | andromeda | 58316 | 0 | PASS | |
 | altair | 86399 | 0 | PASS | Re-checked 2026-05-13 with `MAX_FRAMES=100000`; 0 diff. `run_one_test.sh` now defaults `TIMEOUT_SEC=120` for long dumps. |
 | adven | 38399 | 0 | PASS | |
-| 1942 | 11997 | 0 | PASS | NOW PASSES (was INIT-ONLY) |
+| 1942 | 100000 | 0 | PASS | Re-checked 2026-05-13 (`MAX_FRAMES=100000`); 0 diff. (Earlier note: was INIT-ONLY once; now identical to Pascal for full dump.) |
 | top-2act | 43802 | 38758 | FRAME-DIFF | Re-run 2026-05-13 (`MAX_FRAMES=100000`): 38758-line diff; first diverging frame **10895**, bank1 **`shadow_regs[1][0xA3]`** (OPL sec. ch slot for **track 10 / 0x1A3**): C=`81`, Pascal=`7d` (+4 f-num low, same “+4 steps” family as fank5). No safe `a2t.c` tweak in this pass reduced the diff (prototyped freq-shift / note routing — dropped to avoid regressions). |
 | 3812funk | - | - | PASS | |
 | bxx_nowgone | - | - | PASS | |
@@ -32,7 +32,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | corridor | 49139 | 36020 | FRAME-DIFF | bank1 freq regs 1 step behind; vibrato/keyoff timing. C: tempo=90, IRQ_freq=270, speed=6. vibrato pos advances by 2 per tick (speed=2). Both C and Pascal have identical ticklooper/poll_proc timing. Root cause unclear — likely a subtly different effect processing order between play_line and update_effects. |
 | ca54 | - | - | FRAME-DIFF | |
 | crisis | 100000 | 28298 | FRAME-DIFF | Re-run 2026-05-13 (`MAX_FRAMES=100000`): **28298**-line `diff -u`; first diverging frame **19580**, **bank 0** only at that instant: **`shadow_regs[0][0xA1]`** C=`57`, Pascal=`58` (f-num low byte one step low on the channel mapped to OPL **0xA1**). Bank 1 line matches at frame 19580. `calc_freq_shift_up` already uses Pascal-style `(oc<<10)+fr`. Earlier `new_process_note` / porta–note-delay alignment attempts did **not** shrink this diff; next step is a frame-local trace (vibrato + `freq_table` vs OPL) around 19579–19580. |
-| fm-troni | - | - | FRAME-DIFF | 120 frame-level diffs |
+| fm-troni | 100000 | 170 | FRAME-DIFF | Re-run 2026-05-13 (`MAX_FRAMES=100000`): **170**-line `diff -u`; **48** IRQ frames differ (**15261–34571**). First: **15261**, **`shadow_regs[0][0xA2]`** C=`2f` vs Pascal=`9f`. **`dump_context`** (`-DA2M_DUMP_CONTEXT`, `a2m_dump.c`): divergence lines up with **track 5** (**`regoffs_n` → 0xA2**). At 15261, **`freq_table[5]=0x0a2f`** and **`macro_table[5].vib_freq=0x0a2f`** while Pascal’s register implies **`~0x0a9f`**; **`0x9f−0x2f = 0x70`** equals **`fslide_table[0][5]=112`** and **`effect_table[0][5]`** tone-porta **`val=0x70`**. Suggests **portamento / macro-freq merge** mismatch on that row (row **80**, pattern **4**, order **6**). |
 | fm63b_rv | - | - | FRAME-DIFF | 321 frame-level diffs |
 | os_sblas | 68181 | 10499 | FRAME-DIFF | tone portamento target includes fine_tune in C but not in Pascal |
 | pink | - | 1503 | FRAME-DIFF | not yet investigated |

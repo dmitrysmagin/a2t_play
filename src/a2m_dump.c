@@ -19,6 +19,50 @@ int frames_dumped = 0;
 
 #include "../src/a2t.c"
 
+/*
+ * Instrumentation: build a2m_dump with -DA2M_DUMP_CONTEXT to emit dump_context_f(stderr)
+ * on selected IRQ frame numbers (see static list in a2m_dump_context_at_irq_frames).
+ * Example: ... -DA2M_DUMP_CONTEXT -Dclocks -o a2m_dump ...
+ * Run: ./a2m_dump tune.a2m /dev/null 40000 2>ctx.log
+ */
+
+#ifdef A2M_DUMP_CONTEXT
+#include "debug.h"
+
+static void a2m_dump_context_at_irq_frames(void)
+{
+    static const int want[] = {
+        /* fm-troni: just before / at / after first Pascal-C divergence (0xA2), plus later bursts */
+        15259, 15260, 15261, 15262, 15263,
+        15620, 15621, 15622,
+        34556, 34557, 34558, 34559,
+        -1
+    };
+    int i;
+
+    for (i = 0; want[i] >= 0; i++) {
+        if (frames_dumped != want[i])
+            continue;
+
+        fprintf(stderr,
+                "\n######## A2M_DUMP_CONTEXT irq_frame=%d ticks=%d row=%u pattern=%u order=%u ########\n",
+                frames_dumped, ticks, (unsigned)current_line, (unsigned)current_pattern,
+                (unsigned)current_order);
+        fprintf(stderr,
+                "peek shadow primary A/B regs: [0xa0..a8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x  [0xb0..b8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+                shadow_regs[0][0xa0], shadow_regs[0][0xa1], shadow_regs[0][0xa2],
+                shadow_regs[0][0xa3], shadow_regs[0][0xa4], shadow_regs[0][0xa5],
+                shadow_regs[0][0xa6], shadow_regs[0][0xa7], shadow_regs[0][0xa8],
+                shadow_regs[0][0xb0], shadow_regs[0][0xb1], shadow_regs[0][0xb2],
+                shadow_regs[0][0xb3], shadow_regs[0][0xb4], shadow_regs[0][0xb5],
+                shadow_regs[0][0xb6], shadow_regs[0][0xb7], shadow_regs[0][0xb8]);
+        dump_context_f(stderr, ch);
+        fflush(stderr);
+        return;
+    }
+}
+#endif
+
 static void basename_no_ext(char *dst, size_t dstsize, const char *path)
 {
     const char *p = strrchr(path, '/');
@@ -46,6 +90,9 @@ static void init_trace(uint16_t reg, uint8_t val)
 static void dump_frame(void)
 {
     int i;
+#ifdef A2M_DUMP_CONTEXT
+    a2m_dump_context_at_irq_frames();
+#endif
     if (frames_dumped >= max_frames) {
         play_status = isStopped;
         return;
