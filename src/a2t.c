@@ -1981,12 +1981,6 @@ static bool effect_def_is_porta(uint8_t def)
            def == ef_TPortamVSlideFine;
 }
 
-static bool is_tporta_flag_ch(int chan)
-{
-    return effect_def_is_porta(ch->effect_table[0][chan].def) ||
-           effect_def_is_porta(ch->effect_table[1][chan].def);
-}
-
 /* play_line loop 2 (a2player.pas ~2626): tporta_flag uses pattern event defs only — not LO(effect_table).
  * Branches after the NOT(porta|notedelay) output_note use this flag; mixing in effect_table breaks
  * continued porta (x00) rows vs Pascal (fm63b_rv ~IRQ 5305 secondary key-on). */
@@ -1996,22 +1990,32 @@ static bool is_tporta_flag_ev(const tADTRACK2_EVENT *event)
            effect_def_is_porta(event->eff[1].def);
 }
 
-static bool is_notedelay_ch(int chan)
+/* Pascal play_line ~2648–2655: one compound guard per effect slot — LO(effect_table[chan])
+ * or LO(effect_table2[chan]) in {TonePortamento family, Extended2+NoteDelay packed LO}.
+ * When either slot blocks, skip immediate output_note (~2666) and use ~2668+2672 chain.
+ * Do NOT early-return on NoteDelay alone: that prevented ~2668 (key-off + pattern porta)
+ * from matching Pascal (notedelay active in LO still allows output_note stripped old pitch).
+ */
+static bool effect_slot_blocks_same_row_immediate_note(int slot, int chan)
 {
-    for (int slot = 0; slot < 2; slot++) {
-        if (ch->effect_table[slot][chan].def == ef_Extended2 &&
-            (ch->effect_table[slot][chan].val / 16 == ef_ex2_NoteDelay)) {
-            return true;
-        }
-    }
-    return false;
+    uint8_t def = ch->effect_table[slot][chan].def;
+    uint8_t val = ch->effect_table[slot][chan].val;
+
+    if (effect_def_is_porta(def))
+        return true;
+    return def == ef_Extended2 && (val / 16 == ef_ex2_NoteDelay);
+}
+
+static bool play_line_note_deferred_by_effect_lo(int chan)
+{
+    return effect_slot_blocks_same_row_immediate_note(0, chan) ||
+           effect_slot_blocks_same_row_immediate_note(1, chan);
 }
 
 static void new_process_note(tADTRACK2_EVENT *event, int chan)
 {
-    bool porta_lo = is_tporta_flag_ch(chan);
+    bool defer_note_row = play_line_note_deferred_by_effect_lo(chan);
     bool tporta_flag_ev = is_tporta_flag_ev(event);
-    bool notedelay_flag = is_notedelay_ch(chan);
 
     if (event->note == 0)
         return;
@@ -2027,13 +2031,8 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
         return;
     }
 
-    if (notedelay_flag) {
-        ch->event_table[chan].note = event->note;
-        return;
-    }
-
-    /* Same-row immediate output (cf. a2player.pas ~2656–2667): NOT LO(porta) AND NOT LO(notedelay). */
-    if (!porta_lo) {
+    /* Same-row immediate output (a2player.pas ~2656–2667): both slots must lack porta & notedelay in LO. */
+    if (!defer_note_row) {
         output_note(event->note, ch->voice_table[chan], chan, true, no_swap_and_restart(event));
         return;
     }
