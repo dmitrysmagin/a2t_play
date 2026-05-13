@@ -268,13 +268,37 @@ static void raw_fill_from_fmdata(uint8_t *dst, tFM_INST_DATA *fm)
 
 // Helpers for macro tables =======================================================================
 
+/* If FMREG length byte is 0 but loop/keyoff/arp/vib header fields are non-zero, infer span from
+ * macro cells (avoid trusting a lone stale length byte vs Pascal instr_macros[]). */
+static uint8_t fmreg_infer_length_from_cells(const uint8_t *src)
+{
+    uint8_t inferred = 0;
+
+    for (unsigned int e = 0; e < 255; e++) {
+        const uint8_t *cell = &src[6 + e * tREGISTER_TABLE_DEF_V9_14_SIZE];
+        uint8_t dur = cell[14];
+        int16_t fs = (int16_t)(cell[11] | (cell[12] << 8));
+        uint8_t mf = (uint8_t)(cell[10] & 0xf0);
+
+        if (dur != 0 || fs != 0 || mf != 0)
+            inferred = (uint8_t)(e + 1);
+    }
+
+    return inferred;
+}
+
 static void fmreg_table_allocate(size_t n, uint8_t *src)
 {
     n = editor_mode ? 255 : n;
 
     // Note: for editor_mode allocate max entries possible
     for (unsigned int i = 0; i < n; i++, src += tFMREG_TABLE_V9_14_SIZE) {
-        if (editor_mode || src[0] /* length */) {
+        uint8_t real_length = src[0];
+
+        if (real_length == 0 && (src[1] | src[2] | src[3] | src[4] | src[5]))
+            real_length = fmreg_infer_length_from_cells(src);
+
+        if (editor_mode || real_length) {
             tINSTR_DATA_EXT *instrument = get_instr(i + 1);
             assert(instrument);
             if (!instrument)
@@ -284,7 +308,7 @@ static void fmreg_table_allocate(size_t n, uint8_t *src)
             assert(instrument->fmreg);
 
             // Copy field by field
-            instrument->fmreg->length         = src[0]; // length
+            instrument->fmreg->length         = real_length;
             instrument->fmreg->loop_begin     = src[1]; // loop_begin
             instrument->fmreg->loop_length    = src[2]; // loop_length
             instrument->fmreg->keyoff_pos     = src[3]; // keyoff_pos
