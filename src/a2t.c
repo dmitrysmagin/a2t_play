@@ -1449,13 +1449,21 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     case ef_TonePortamento:
         update_effect_table(slot, chan, EFGR_TONEPORTAMENTO, def, val);
 
-        if (note_in_range(event->note)) {
-            ch->porta_table[slot][chan].speed = val;
-            if (!(event->note & keyoff_flag))
-                ch->porta_table[slot][chan].freq = nFreq(event->note - 1) +
-                    get_instr_fine_tune(ch->event_table[chan].instr_def);
-        } else {
-            ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
+        ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
+        /* Key-off note (e.g. 0xff→note|0x80): target must be current pitch — nFreq(nb)
+         * can disagree in octave encoding with freq after FSlide, so one tone_porta
+         * tick would otherwise slide wrong (fm-troni ~15261 vs adt2_dump). */
+        {
+            uint8_t nb = event->note & (uint8_t)~keyoff_flag;
+
+            if (nb >= 1 && nb <= 12 * 8 + 1) {
+                if (event->note & keyoff_flag)
+                    ch->porta_table[slot][chan].freq = ch->freq_table[chan] & 0x1fff;
+                else
+                    ch->porta_table[slot][chan].freq =
+                        nFreq((uint8_t)(nb - 1)) +
+                        get_instr_fine_tune(ch->event_table[chan].instr_def);
+            }
         }
         break;
 
@@ -1474,8 +1482,12 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             ch->vibr_table[slot][chan].fine = true;
         }
 
-        ch->vibr_table[slot][chan].speed = val / 16;
-        ch->vibr_table[slot][chan].depth = val % 16;
+        /* Pascal: vibr_table.speed := HI(effect_table) DIV 16 (after merge / x00 carry). */
+        {
+            uint8_t m = ch->effect_table[slot][chan].val;
+            ch->vibr_table[slot][chan].speed = m / 16;
+            ch->vibr_table[slot][chan].depth = m % 16;
+        }
         break;
 
     case ef_Tremolo:
@@ -1487,8 +1499,11 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
             ch->trem_table[slot][chan].fine = true;
         }
 
-        ch->trem_table[slot][chan].speed = val / 16;
-        ch->trem_table[slot][chan].depth = val % 16;
+        {
+            uint8_t m = ch->effect_table[slot][chan].val;
+            ch->trem_table[slot][chan].speed = m / 16;
+            ch->trem_table[slot][chan].depth = m % 16;
+        }
         break;
 
     case ef_VibratoVolSlide:
@@ -2214,7 +2229,8 @@ static void macro_vibrato__porta_down(int chan, uint8_t depth)
 static void tone_portamento(int slot, int chan)
 {
     uint16_t freq = ch->freq_table[chan] & 0x1fff;
-    uint16_t portafreq = ch->porta_table[slot][chan].freq & 0x1fff;
+    /* Pascal tone_portamento: compare to porta_table.freq without masking (cf. a2player.pas). */
+    uint16_t portafreq = ch->porta_table[slot][chan].freq;
 
     if (freq > portafreq) {
         portamento_down(chan, ch->porta_table[slot][chan].speed, portafreq);
