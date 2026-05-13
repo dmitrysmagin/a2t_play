@@ -24,6 +24,7 @@ int frames_dumped = 0;
  * on selected IRQ frame numbers (see static list in a2m_dump_context_at_irq_frames).
  * Example: ... -DA2M_DUMP_CONTEXT -Dclocks -o a2m_dump ...
  * Run: ./a2m_dump tune.a2m /dev/null 40000 2>ctx.log
+ * top-2act IRQ 10893–10902: compact ch9 trace only (no dump_context_f).
  */
 
 #ifdef A2M_DUMP_CONTEXT
@@ -42,6 +43,8 @@ static bool a2m_dump_context_irq_requested(void)
         47228, 47229, 47230, 47231, 47232, 47233, 47234, 47235, 47236,
         /* fm63b_rv: ~IRQ 5305 secondary shadow_regs[1][0xb1] key-on vs Pascal (logical chan ~12 / regoffs 0x101) */
         5302, 5303, 5304, 5305, 5306, 5307, 5308, 5309, 5310, 5311, 5312, 5313, 5314, 5315,
+        /* top-2act: bank1 shadow_regs[1][0xa3] vs Pascal ~10895 (logical chan 9 / track 10, regoffs_n=0x103) */
+        10893, 10894, 10895, 10896, 10897, 10898, 10899, 10900, 10901, 10902,
         -1
     };
     int i;
@@ -53,10 +56,147 @@ static bool a2m_dump_context_irq_requested(void)
     return false;
 }
 
+/* Compact trace for top-2act — avoids multi-screen dump_context_f at each IRQ. */
+static void a2m_dump_top2act_ch9_compact(void)
+{
+    const int c = 9;
+    tCH_MACRO_TABLE *mt = &ch->macro_table[c];
+    tFMREG_TABLE *rt = get_fmreg_table(mt->fmreg_ins);
+    tVIBRATO_TABLE *vt = get_vibrato_table(mt->vib_table);
+    uint16_t freq = ch->freq_table[c];
+    uint16_t vlow = mt->vib_freq & 0x1fff;
+    int8_t vcell = 0;
+
+    fprintf(stderr,
+            "\n######## top-2act irq_frame=%d ticks=%d row=%u pattern=%u order=%u ########\n",
+            frames_dumped, ticks, (unsigned)current_line, (unsigned)current_pattern,
+            (unsigned)current_order);
+    fprintf(stderr,
+            "bank1 pitch slot ch9: shadow[1][a3/b3]=0x%02x/0x%02x  freq_table[9]=0x%04x key_on_hi=%d\n",
+            shadow_regs[1][0xa3], shadow_regs[1][0xb3], (unsigned)freq,
+            (freq & 0x2000) ? 1 : 0);
+    fprintf(stderr,
+            "ch9 regoffs_n=0x%03x 4op_hi=%d 4op_lo=%d voice_ins=%u event_note=0x%02x instr_def=%u\n",
+            (unsigned)regoffs_n(c), (int)is_4op_chan_hi(c), (int)is_4op_chan_lo(c),
+            (unsigned)ch->voice_table[c], ch->event_table[c].note,
+            (unsigned)ch->event_table[c].instr_def);
+    fprintf(stderr,
+            "ch9 macro: fmreg_ins=%u fmreg_pos=%u fmreg_duration=%u "
+            "arpg_table=%u arpg_pos=%u arpg_count=%u\n",
+            (unsigned)mt->fmreg_ins, (unsigned)mt->fmreg_pos, (unsigned)mt->fmreg_duration,
+            (unsigned)mt->arpg_table, (unsigned)mt->arpg_pos, (unsigned)mt->arpg_count);
+    fprintf(stderr,
+            "ch9 macro vib: vib_table=%u vib_pos=%u vib_count=%u vib_freq=0x%04x vib_delay=%u vib_paused=%d\n",
+            (unsigned)mt->vib_table, (unsigned)mt->vib_pos, (unsigned)mt->vib_count,
+            (unsigned)mt->vib_freq, (unsigned)mt->vib_delay, (int)mt->vib_paused);
+    if (vt && vt->length) {
+        fprintf(stderr,
+                "  vibrato_tbl: len=%u speed=%u delay_hdr=%u loop_b=%u loop_len=%u keyoff_pos=%u\n",
+                (unsigned)vt->length, (unsigned)vt->speed, (unsigned)vt->delay,
+                (unsigned)vt->loop_begin, (unsigned)vt->loop_length,
+                (unsigned)vt->keyoff_pos);
+        if (mt->vib_pos >= 1 && mt->vib_pos <= vt->length) {
+            vcell = vt->data[mt->vib_pos - 1];
+            fprintf(stderr, "  data[vib_pos=%u]=%d\n", (unsigned)mt->vib_pos, (int)vcell);
+        } else {
+            fprintf(stderr, "  data[vib_pos=%u]=(out of range for len=%u)\n",
+                    (unsigned)mt->vib_pos, (unsigned)vt->length);
+        }
+    } else {
+        fprintf(stderr, "  vibrato_tbl: (null or len 0)\n");
+    }
+
+    if (rt && rt->length) {
+        fprintf(stderr,
+                "ch9 fmreg_tbl: len=%u keyoff_pos=%u global_speed=%u\n",
+                (unsigned)rt->length, (unsigned)rt->keyoff_pos, (unsigned)speed);
+        if (mt->fmreg_pos >= 1 && mt->fmreg_pos <= rt->length) {
+            const tREGISTER_TABLE_DEF *d = &rt->data[mt->fmreg_pos - 1];
+            uint32_t dis = 0;
+
+            if (mt->fmreg_ins >= 1 && mt->fmreg_ins <= instrinfo->count)
+                dis = instrinfo->instruments[mt->fmreg_ins - 1].dis_fmreg_cols;
+            fprintf(stderr,
+                    "  active_cell[%u]: dur=%u freq_slide=%d macro_flags=0x%02x "
+                    "dis_fmreg_cols=0x%08x col26_freq_slide_active=%d\n",
+                    (unsigned)(mt->fmreg_pos - 1), (unsigned)d->duration,
+                    (int)d->freq_slide, (unsigned)d->macro_flags,
+                    (unsigned)dis, (int)((dis & (1u << 26)) == 0));
+        } else {
+            fprintf(stderr, "  active_cell: fmreg_pos=%u (idle/end)\n",
+                    (unsigned)mt->fmreg_pos);
+        }
+    } else {
+        fprintf(stderr, "ch9 fmreg_tbl: (null or len 0)\n");
+    }
+
+    fprintf(stderr,
+            "ch9 partner ch10: freq_table[10]=0x%04x shadow[1][a0/b0]=0x%02x/0x%02x\n",
+            (unsigned)ch->freq_table[10],
+            shadow_regs[1][0xa0], shadow_regs[1][0xb0]);
+    fprintf(stderr,
+            "ch9 effects: eff_s0=%02x/%02x eff_s1=%02x/%02x last_s0=%02x/%02x last_s1=%02x/%02x "
+            "fslide=%u/%u porta_s0=%u@%u porta_s1=%u@%u ftune=%d\n",
+            ch->effect_table[0][c].def, ch->effect_table[0][c].val,
+            ch->effect_table[1][c].def, ch->effect_table[1][c].val,
+            ch->last_effect[0][c].def, ch->last_effect[0][c].val,
+            ch->last_effect[1][c].def, ch->last_effect[1][c].val,
+            (unsigned)ch->fslide_table[0][c], (unsigned)ch->fslide_table[1][c],
+            (unsigned)ch->porta_table[0][c].freq, (unsigned)ch->porta_table[0][c].speed,
+            (unsigned)ch->porta_table[1][c].freq, (unsigned)ch->porta_table[1][c].speed,
+            (int)ch->ftune_table[c]);
+
+    {
+        uint8_t vb = ch->voice_table[c];
+        uint8_t eb = ch->event_table[c].instr_def;
+        uint8_t nb = ch->event_table[c].note & (uint8_t)~keyoff_flag;
+        int ft_v = (int)get_instr_fine_tune(vb);
+        int ft_e = (int)get_instr_fine_tune(eb);
+        uint16_t nf = 0;
+
+        if (nb >= 1 && nb <= 12 * 8 + 1)
+            nf = nFreq((uint8_t)(nb - 1));
+        fprintf(stderr,
+                "ch9 pitch_decode: note_cleared=0x%02x nFreq(nb-1)=0x%04x fine_tune(voice_ins%u)=%d "
+                "fine_tune(event_instr%u)=%d ftune_row=%d\n",
+                (unsigned)nb, (unsigned)nf,
+                (unsigned)vb, ft_v, (unsigned)eb, ft_e, (int)ch->ftune_table[c]);
+        fprintf(stderr,
+                "  expect Pascal output_note base: 0x%04x + ftune_row => 0x%04x ; freq_table&1fff=0x%04x (delta=%d)\n",
+                (unsigned)(uint16_t)(nf + ft_v),
+                (unsigned)(uint16_t)((uint16_t)(nf + ft_v) + (uint16_t)ch->ftune_table[c]),
+                (unsigned)(ch->freq_table[c] & 0x1fff),
+                (int)(ch->freq_table[c] & 0x1fff) -
+                    (int)((uint16_t)(nf + ft_v) + (uint16_t)ch->ftune_table[c]));
+    }
+
+    /* Same math as macro_vibrato__porta_* / portamento (preview only). */
+    if (vcell > 0)
+        fprintf(stderr,
+                "preview macro_vibrato: calc_freq_shift_up(vib&1fff=0x%04x,depth=%u)=0x%04x\n",
+                (unsigned)vlow, (unsigned)(uint8_t)vcell,
+                (unsigned)calc_freq_shift_up(vlow, (uint16_t)(uint8_t)vcell));
+    else if (vcell < 0)
+        fprintf(stderr,
+                "preview macro_vibrato: calc_freq_shift_down(vib&1fff=0x%04x,depth=%u)=0x%04x\n",
+                (unsigned)vlow, (unsigned)(uint8_t)(int)-vcell,
+                (unsigned)calc_freq_shift_down(vlow, (uint16_t)(uint8_t)(-(int)vcell)));
+    else
+        fprintf(stderr,
+                "preview macro_vibrato: depth 0 -> change_freq center vib_freq low=0x%04x\n",
+                (unsigned)vlow);
+}
+
 static void a2m_dump_context_at_irq_frames(void)
 {
     if (!a2m_dump_context_irq_requested())
         return;
+
+    if (frames_dumped >= 10893 && frames_dumped <= 10902) {
+        a2m_dump_top2act_ch9_compact();
+        fflush(stderr);
+        return;
+    }
 
     fprintf(stderr,
             "\n######## A2M_DUMP_CONTEXT irq_frame=%d ticks=%d row=%u pattern=%u order=%u ########\n",
