@@ -1364,11 +1364,13 @@ static void play_line_apply_global_fslide_row(tADTRACK2_EVENT *event, int chan)
             case ef_GlobalFSlideUp:
                 eff = ef_FSlideUp;
 
+                // >xx + ZFE
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
                     eff = ef_GlobalFreqSlideUpXF;
                 }
 
+                // >xx + ZFD
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
                     eff = ef_FSlideUpFine;
@@ -1380,11 +1382,13 @@ static void play_line_apply_global_fslide_row(tADTRACK2_EVENT *event, int chan)
             case ef_GlobalFSlideDown:
                 eff = ef_FSlideDown;
 
+                // <xx + ZFE
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FTrm_XFGFS)) {
                     eff = ef_GlobalFreqSlideDnXF;
                 }
 
+                // <xx + ZFD
                 if ((event->eff[slot ^ 1].def == ef_Extended) &&
                     (event->eff[slot ^ 1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_FVib_FGFS)) {
                     eff = ef_FSlideDownFine;
@@ -1395,6 +1399,7 @@ static void play_line_apply_global_fslide_row(tADTRACK2_EVENT *event, int chan)
                 break;
             }
 
+            // shouldn't it be int c = 0 ??
             for (int c = chan; c < songinfo->nm_tracks; c++) {
                 ch->fslide_table[slot][c] = val;
                 ch->glfsld_table[slot][c].def = ch->effect_table[slot][chan].def;
