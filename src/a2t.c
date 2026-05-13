@@ -1991,6 +1991,15 @@ static bool is_tporta_flag_ch(int chan)
            effect_def_is_porta(ch->effect_table[1][chan].def);
 }
 
+/* play_line loop 2 (a2player.pas ~2626): tporta_flag uses pattern event defs only — not LO(effect_table).
+ * Branches after the NOT(porta|notedelay) output_note use this flag; mixing in effect_table breaks
+ * continued porta (x00) rows vs Pascal (fm63b_rv ~IRQ 5305 secondary key-on). */
+static bool is_tporta_flag_ev(const tADTRACK2_EVENT *event)
+{
+    return effect_def_is_porta(event->eff[0].def) ||
+           effect_def_is_porta(event->eff[1].def);
+}
+
 static bool is_notedelay_ch(int chan)
 {
     for (int slot = 0; slot < 2; slot++) {
@@ -2004,7 +2013,8 @@ static bool is_notedelay_ch(int chan)
 
 static void new_process_note(tADTRACK2_EVENT *event, int chan)
 {
-    bool tporta_flag = is_tporta_flag_ch(chan);
+    bool porta_lo = is_tporta_flag_ch(chan);
+    bool tporta_flag_ev = is_tporta_flag_ev(event);
     bool notedelay_flag = is_notedelay_ch(chan);
 
     if (event->note == 0)
@@ -2026,20 +2036,21 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
         return;
     }
 
-    if (!tporta_flag) {
+    /* Same-row immediate output (cf. a2player.pas ~2656–2667): NOT LO(porta) AND NOT LO(notedelay). */
+    if (!porta_lo) {
         output_note(event->note, ch->voice_table[chan], chan, true, no_swap_and_restart(event));
         return;
     }
 
     /* a2player.pas: old note had keyoff — retrigger from stored pitch */
-    if ((event->note != 0) && tporta_flag && (ch->event_table[chan].note & keyoff_flag)) {
+    if ((event->note != 0) && tporta_flag_ev && (ch->event_table[chan].note & keyoff_flag)) {
         output_note(ch->event_table[chan].note & ~keyoff_flag,
                     ch->voice_table[chan], chan, false, true);
         return;
     }
 
     if (event->note != 0) {
-        if (ch->portaFK_table[chan] && tporta_flag) {
+        if (ch->portaFK_table[chan] && tporta_flag_ev) {
             output_note(event->note, event->instr_def, chan, false, true);
         } else {
             ch->event_table[chan].note = event->note;
