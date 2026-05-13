@@ -1281,7 +1281,34 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
     }
 }
 
-static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
+/* a2player.pas play_line first loop: single else-if between arpgg_table and arpgg_table2 — not two
+ * independent cleanups, and cleanup runs before Case effect_def (FineTune etc.) on either column. */
+static void play_line_arpgg_cleanup_pascal(const tADTRACK2_EVENT *event, int chan)
+{
+    uint8_t d0 = event->eff[0].def;
+    uint8_t v0 = event->eff[0].val;
+    uint8_t d1 = event->eff[1].def;
+    uint8_t v1 = event->eff[1].val;
+
+    bool col1_arp = (((d0 == ef_Arpeggio) && (v0 != 0)) || (d0 == ef_ExtraFineArpeggio));
+    bool col2_arp = (((d1 == ef_Arpeggio) && (v1 != 0)) || (d1 == ef_ExtraFineArpeggio));
+
+    if (!col1_arp &&
+        ch->arpgg_table[0][chan].note != 0 &&
+        ch->arpgg_table[0][chan].state != 1) {
+        ch->arpgg_table[0][chan].state = 1;
+        change_frequency(chan, nFreq(ch->arpgg_table[0][chan].note - 1) +
+            get_instr_fine_tune(ch->event_table[chan].instr_def));
+    } else if (!col2_arp &&
+               ch->arpgg_table[1][chan].note != 0 &&
+               ch->arpgg_table[1][chan].state != 1) {
+        ch->arpgg_table[1][chan].state = 1;
+        change_frequency(chan, nFreq(ch->arpgg_table[1][chan].note - 1) +
+            get_instr_fine_tune(ch->event_table[chan].instr_def));
+    }
+}
+
+static void process_effects_slot_prepare(tADTRACK2_EVENT *event, int slot, int chan)
 {
     uint8_t def = event->eff[slot].def;
     uint8_t val = event->eff[slot].val;
@@ -1304,13 +1331,12 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
     if ((def != ef_Tremolo) &&
         (def != ef_ExtraFineTremolo))
         memset(&ch->trem_table[slot][chan], 0, sizeof(ch->trem_table[slot][chan]));
+}
 
-    if (!(((def == ef_Arpeggio) && (val != 0)) || (def == ef_ExtraFineArpeggio)) &&
-        (ch->arpgg_table[slot][chan].note != 0) && (ch->arpgg_table[slot][chan].state != 1)) {
-        ch->arpgg_table[slot][chan].state = 1;
-        change_frequency(chan, nFreq(ch->arpgg_table[slot][chan].note - 1) +
-            get_instr_fine_tune(ch->event_table[chan].instr_def));
-    }
+static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan)
+{
+    uint8_t def = event->eff[slot].def;
+    uint8_t val = event->eff[slot].val;
 
     if ((def == ef_GlobalFSlideUp) || (def == ef_GlobalFSlideDown)) {
         if ((event->eff[slot ^ 1].def == ef_Extended) &&
@@ -2070,8 +2096,11 @@ static void play_line()
         set_ins_data(event->instr_def, chan);
 
         // set effect_table here
-        process_effects(event, 0, chan);
-        process_effects(event, 1, chan);
+        process_effects_slot_prepare(event, 0, chan);
+        process_effects_slot_prepare(event, 1, chan);
+        play_line_arpgg_cleanup_pascal(event, chan);
+        process_effects_slot_body(event, 0, chan);
+        process_effects_slot_body(event, 1, chan);
 
         // TODO: is that needed here?
         /*for (int slot = 0; slot < 2; slot++) {
