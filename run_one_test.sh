@@ -21,16 +21,35 @@ base_noext="${base%.*}"
 
 mkdir -p test
 
-# Build a2m_dump if not present
-if [ ! -f a2m_dump.exe ] && [ ! -f a2m_dump ]; then
-  echo "=== Building a2m_dump ==="
-  TMP=$TMPDIR $GMAKE -f Makefile a2m_dump CC="$CC" 2>&1
+# Resolve dump binary name (Windows vs Unix)
+DUMPBIN=""
+if [ -f a2m_dump.exe ]; then DUMPBIN=a2m_dump.exe
+elif [ -f a2m_dump ]; then DUMPBIN=a2m_dump
+fi
+
+# Build a2m_dump if missing, or when sources are newer (Makefile uses Embarcadero
+# `make` on some PATHs — always invoke GNU make as $GMAKE for this target).
+need_dump_build=0
+if [ -z "$DUMPBIN" ]; then need_dump_build=1
+elif [ src/a2t.c -nt "$DUMPBIN" ] || [ src/a2m_dump.c -nt "$DUMPBIN" ]; then need_dump_build=1
+fi
+if [ "$need_dump_build" = 1 ]; then
+  echo "=== Building a2m_dump (GNU make, CC=$CC) ==="
+  TMP=$TMPDIR $GMAKE -f Makefile a2m_dump CC="$CC"
+  DUMPBIN=""
+  [ -f a2m_dump.exe ] && DUMPBIN=a2m_dump.exe
+  [ -z "$DUMPBIN" ] && [ -f a2m_dump ] && DUMPBIN=a2m_dump
+fi
+
+if [ -z "$DUMPBIN" ]; then
+  echo "ERROR: a2m_dump binary missing after build attempt (set GMAKE to GNU make, CC to mingw gcc)" >&2
+  exit 1
 fi
 
 echo "--- $base ---"
 
 # a2m_dump
-TMP=$TMPDIR timeout "$TIMEOUT_SEC" ./a2m_dump "$MODULE" "test/${base_noext}.c.reg" "$MAX_FRAMES" >/dev/null 2>&1 || echo "  a2m_dump: timeout/fail"
+TMP=$TMPDIR timeout "$TIMEOUT_SEC" "./$DUMPBIN" "$MODULE" "test/${base_noext}.c.reg" "$MAX_FRAMES" >/dev/null 2>&1 || echo "  a2m_dump: timeout/fail"
 
 # adt2_dump
 TMP=$TMPDIR timeout "$TIMEOUT_SEC" "$REFS_DIR/adt2_dump" "$MODULE" "test/${base_noext}.ref.reg" "$MAX_FRAMES" 2>/dev/null || echo "  adt2_dump: timeout/fail"

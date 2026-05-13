@@ -29,7 +29,7 @@ int frames_dumped = 0;
 #ifdef A2M_DUMP_CONTEXT
 #include "debug.h"
 
-static void a2m_dump_context_at_irq_frames(void)
+static bool a2m_dump_context_irq_requested(void)
 {
     static const int want[] = {
         /* badapple: primary shadow_regs[0][0xa5] vs Pascal @ IRQ 14878 (logical chan 4, regoffs_n=5) */
@@ -40,45 +40,55 @@ static void a2m_dump_context_at_irq_frames(void)
         34556, 34557, 34558, 34559,
         /* fank5: secondary shadow_regs[1][0xb0] key-on vs Pascal ~IRQ 47232 (chan index 10, regoffs_n=0x100) */
         47228, 47229, 47230, 47231, 47232, 47233, 47234, 47235, 47236,
+        /* fm63b_rv: ~IRQ 5305 secondary shadow_regs[1][0xb1] key-on vs Pascal (logical chan ~12 / regoffs 0x101) */
+        5302, 5303, 5304, 5305, 5306, 5307, 5308, 5309, 5310, 5311, 5312, 5313, 5314, 5315,
         -1
     };
     int i;
 
     for (i = 0; want[i] >= 0; i++) {
-        if (frames_dumped != want[i])
-            continue;
+        if (frames_dumped == want[i])
+            return true;
+    }
+    return false;
+}
 
-        fprintf(stderr,
-                "\n######## A2M_DUMP_CONTEXT irq_frame=%d ticks=%d row=%u pattern=%u order=%u ########\n",
-                frames_dumped, ticks, (unsigned)current_line, (unsigned)current_pattern,
-                (unsigned)current_order);
-        fprintf(stderr,
-                "peek shadow primary A/B regs: [0xa0..a8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x  [0xb0..b8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
-                shadow_regs[0][0xa0], shadow_regs[0][0xa1], shadow_regs[0][0xa2],
-                shadow_regs[0][0xa3], shadow_regs[0][0xa4], shadow_regs[0][0xa5],
-                shadow_regs[0][0xa6], shadow_regs[0][0xa7], shadow_regs[0][0xa8],
-                shadow_regs[0][0xb0], shadow_regs[0][0xb1], shadow_regs[0][0xb2],
-                shadow_regs[0][0xb3], shadow_regs[0][0xb4], shadow_regs[0][0xb5],
-                shadow_regs[0][0xb6], shadow_regs[0][0xb7], shadow_regs[0][0xb8]);
-        fprintf(stderr,
-                "peek shadow SECONDARY (bank 1) A/B: [0xa0..a8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x  [0xb0..b8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
-                shadow_regs[1][0xa0], shadow_regs[1][0xa1], shadow_regs[1][0xa2],
-                shadow_regs[1][0xa3], shadow_regs[1][0xa4], shadow_regs[1][0xa5],
-                shadow_regs[1][0xa6], shadow_regs[1][0xa7], shadow_regs[1][0xa8],
-                shadow_regs[1][0xb0], shadow_regs[1][0xb1], shadow_regs[1][0xb2],
-                shadow_regs[1][0xb3], shadow_regs[1][0xb4], shadow_regs[1][0xb5],
-                shadow_regs[1][0xb6], shadow_regs[1][0xb7], shadow_regs[1][0xb8]);
-        fprintf(stderr,
-                "peek ch9/ch10 freq_table & shadow slot (regoffs_n 10=0x100 -> sec A0/B0): "
-                "freq9=0x%04x freq10=0x%04x  shadow[1][a0/b0]=%02x/%02x\n",
-                (unsigned)ch->freq_table[9], (unsigned)ch->freq_table[10],
-                shadow_regs[1][0xa0], shadow_regs[1][0xb0]);
-        fprintf(stderr,
-                "peek ch4 (regoffs_n(4)=0x05 -> primary 0xA5): freq_table[4]=0x%04x zero_fq[4]=0x%04x "
-                "macro vib_freq=0x%04x vib_paused=%d shadow[0][a5/b5]=0x%02x/0x%02x\n",
-                (unsigned)ch->freq_table[4], (unsigned)ch->zero_fq_table[4],
-                (unsigned)ch->macro_table[4].vib_freq, (int)ch->macro_table[4].vib_paused,
-                shadow_regs[0][0xa5], shadow_regs[0][0xb5]);
+static void a2m_dump_context_at_irq_frames(void)
+{
+    if (!a2m_dump_context_irq_requested())
+        return;
+
+    fprintf(stderr,
+            "\n######## A2M_DUMP_CONTEXT irq_frame=%d ticks=%d row=%u pattern=%u order=%u ########\n",
+            frames_dumped, ticks, (unsigned)current_line, (unsigned)current_pattern,
+            (unsigned)current_order);
+    fprintf(stderr,
+            "peek shadow primary A/B regs: [0xa0..a8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x  [0xb0..b8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+            shadow_regs[0][0xa0], shadow_regs[0][0xa1], shadow_regs[0][0xa2],
+            shadow_regs[0][0xa3], shadow_regs[0][0xa4], shadow_regs[0][0xa5],
+            shadow_regs[0][0xa6], shadow_regs[0][0xa7], shadow_regs[0][0xa8],
+            shadow_regs[0][0xb0], shadow_regs[0][0xb1], shadow_regs[0][0xb2],
+            shadow_regs[0][0xb3], shadow_regs[0][0xb4], shadow_regs[0][0xb5],
+            shadow_regs[0][0xb6], shadow_regs[0][0xb7], shadow_regs[0][0xb8]);
+    fprintf(stderr,
+            "peek shadow SECONDARY (bank 1) A/B: [0xa0..a8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x  [0xb0..b8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+            shadow_regs[1][0xa0], shadow_regs[1][0xa1], shadow_regs[1][0xa2],
+            shadow_regs[1][0xa3], shadow_regs[1][0xa4], shadow_regs[1][0xa5],
+            shadow_regs[1][0xa6], shadow_regs[1][0xa7], shadow_regs[1][0xa8],
+            shadow_regs[1][0xb0], shadow_regs[1][0xb1], shadow_regs[1][0xb2],
+            shadow_regs[1][0xb3], shadow_regs[1][0xb4], shadow_regs[1][0xb5],
+            shadow_regs[1][0xb6], shadow_regs[1][0xb7], shadow_regs[1][0xb8]);
+    fprintf(stderr,
+            "peek ch9/ch10 freq_table & shadow slot (regoffs_n 10=0x100 -> sec A0/B0): "
+            "freq9=0x%04x freq10=0x%04x  shadow[1][a0/b0]=%02x/%02x\n",
+            (unsigned)ch->freq_table[9], (unsigned)ch->freq_table[10],
+            shadow_regs[1][0xa0], shadow_regs[1][0xb0]);
+    fprintf(stderr,
+            "peek ch4 (regoffs_n(4)=0x05 -> primary 0xA5): freq_table[4]=0x%04x zero_fq[4]=0x%04x "
+            "macro vib_freq=0x%04x vib_paused=%d shadow[0][a5/b5]=0x%02x/0x%02x\n",
+            (unsigned)ch->freq_table[4], (unsigned)ch->zero_fq_table[4],
+            (unsigned)ch->macro_table[4].vib_freq, (int)ch->macro_table[4].vib_paused,
+            shadow_regs[0][0xa5], shadow_regs[0][0xb5]);
         /* Decode pitch like output_note / Pascal — compare to Pascal SHORTINT(ins_parameter(ins,12)) */
         if (frames_dumped >= 14874 && frames_dumped <= 14880) {
             const int c = 4;
@@ -163,10 +173,41 @@ static void a2m_dump_context_at_irq_frames(void)
                 }
             }
         }
-        dump_context_f(stderr, ch);
-        fflush(stderr);
-        return;
+
+    /* fm63b_rv: ch11–ch13 + fmreg summary (must stay inside explicit want[] IRQ range above). */
+    if (frames_dumped >= 5302 && frames_dumped <= 5315) {
+        fprintf(stderr,
+                "fm63b_ctx irq=%d: flag_4op=0x%02x percussion=%u nm_tracks=%u shadow[1][b1/a1]=0x%02x/0x%02x\n",
+                frames_dumped,
+                (unsigned)songinfo->flag_4op, (unsigned)percussion_mode,
+                (unsigned)songinfo->nm_tracks,
+                shadow_regs[1][0xb1], shadow_regs[1][0xa1]);
+        for (int cc = 9; cc <= 13; cc++) {
+            uint16_t fq = ch->freq_table[cc];
+            uint8_t mt_ins = ch->macro_table[cc].fmreg_ins;
+            tFMREG_TABLE *rt = get_fmreg_table(mt_ins);
+            uint16_t pos = ch->macro_table[cc].fmreg_pos;
+            uint16_t dur = ch->macro_table[cc].fmreg_duration;
+            uint8_t mflags = 0;
+
+            if (rt && pos >= 1 && pos <= rt->length)
+                mflags = rt->data[pos - 1].macro_flags;
+
+            fprintf(stderr,
+                    "  ch%02d: freq=0x%04x key_on_hi=%d note=0x%02x regoffs_n=0x%03x "
+                    "4op_hi=%d 4op_lo=%d fmreg_ins=%u pos=%u dur=%u macro_flags=0x%02x "
+                    "(nr_bit=%d env_bit=%d zfq_bit=%d)\n",
+                    cc, (unsigned)fq, (fq & 0x2000) ? 1 : 0,
+                    ch->event_table[cc].note,
+                    (unsigned)regoffs_n(cc),
+                    (int)is_4op_chan_hi(cc), (int)is_4op_chan_lo(cc),
+                    (unsigned)mt_ins, (unsigned)pos, (unsigned)dur, (unsigned)mflags,
+                    (mflags & 0x80) ? 1 : 0, (mflags & 0x40) ? 1 : 0, (mflags & 0x20) ? 1 : 0);
+        }
     }
+
+    dump_context_f(stderr, ch);
+    fflush(stderr);
 }
 #endif
 
