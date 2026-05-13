@@ -27,7 +27,7 @@ frame_num starts at 0. No INIT dump is emitted.
 * isolate the code region in a2t.c specific to frames at which diff is found
 * use invoke dump_context() from isolated frames to explore deeper, don't forget to cleanup at final phase
 * analyze context dump and fix C code to match pascal and retest to check if diff is none or, at least, reduced.
-
+* propose next possible actions if diff not resolved completely
 
 
 take OPL.DOC (plain text) into account to facilitate register map identification

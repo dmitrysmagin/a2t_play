@@ -79,6 +79,90 @@ static void a2m_dump_context_at_irq_frames(void)
                 (unsigned)ch->freq_table[4], (unsigned)ch->zero_fq_table[4],
                 (unsigned)ch->macro_table[4].vib_freq, (int)ch->macro_table[4].vib_paused,
                 shadow_regs[0][0xa5], shadow_regs[0][0xb5]);
+        /* Decode pitch like output_note / Pascal — compare to Pascal SHORTINT(ins_parameter(ins,12)) */
+        if (frames_dumped >= 14874 && frames_dumped <= 14880) {
+            const int c = 4;
+            uint8_t raw_note = ch->event_table[c].note;
+            uint8_t nb = raw_note & (uint8_t)~keyoff_flag;
+            uint8_t vins = ch->voice_table[c];
+            uint8_t idef = ch->event_table[c].instr_def;
+            int ft_slot = (int)ch->ftune_table[c];
+            int8_t fi_v = get_instr_fine_tune(vins);
+            int8_t fi_e = get_instr_fine_tune(idef);
+            uint16_t nf = 0;
+            if (nb >= 1 && nb <= 12 * 8 + 1)
+                nf = nFreq((uint8_t)(nb - 1));
+            int sum = (int)nf + (int)fi_v + ft_slot;
+            uint16_t got_low = ch->freq_table[c] & (uint16_t)0x1fff;
+            tINSTR_DATA *id_v = get_instr_data(vins);
+            tINSTR_DATA *id_e = get_instr_data(idef);
+            fprintf(stderr,
+                    "badapple ch4 freq_decode: nb=%u (from note 0x%02x) nFreq(nb-1)=0x%04x "
+                    "fine_tune(voice_ins%u)=%d fine_tune(event_instr%u)=%d ftune_table=%d "
+                    "=> sum(nFreq+fine_voice+ftune)=%d freq_table&1fff=0x%04x (delta=%d)\n",
+                    (unsigned)nb, (unsigned)raw_note, (unsigned)nf,
+                    (unsigned)vins, (int)fi_v, (unsigned)idef, (int)fi_e, ft_slot,
+                    sum, (unsigned)got_low, (int)got_low - sum);
+            fprintf(stderr,
+                    "badapple ch4 instr_data: voice instr_record fine_tune=%d event_def instr_record fine_tune=%d\n",
+                    id_v ? (int)id_v->fine_tune : -999,
+                    id_e ? (int)id_e->fine_tune : -999);
+            fprintf(stderr,
+                    "badapple ch4 4op/partner: hi=%d lo5=%d freq[5]=0x%04x regoffs_n(4)=0x%03x\n",
+                    (int)is_4op_chan_hi(c), (int)is_4op_chan_lo(5),
+                    (unsigned)ch->freq_table[5], (unsigned)regoffs_n(c));
+            fprintf(stderr,
+                    "badapple ch4 porta/fslide/glfsld: "
+                    "s0 porta(freq=%u speed=%u) s1 porta(freq=%u speed=%u) "
+                    "fslide s0=%u s1=%u glfsld s0=%02x/%02x s1=%02x/%02x "
+                    "eff_table s0=%02x/%02x s1=%02x/%02x "
+                    "last_eff s0=%02x/%02x s1=%02x/%02x\n",
+                    (unsigned)ch->porta_table[0][c].freq,
+                    (unsigned)ch->porta_table[0][c].speed,
+                    (unsigned)ch->porta_table[1][c].freq,
+                    (unsigned)ch->porta_table[1][c].speed,
+                    (unsigned)ch->fslide_table[0][c],
+                    (unsigned)ch->fslide_table[1][c],
+                    ch->glfsld_table[0][c].def, ch->glfsld_table[0][c].val,
+                    ch->glfsld_table[1][c].def, ch->glfsld_table[1][c].val,
+                    ch->effect_table[0][c].def, ch->effect_table[0][c].val,
+                    ch->effect_table[1][c].def, ch->effect_table[1][c].val,
+                    ch->last_effect[0][c].def, ch->last_effect[0][c].val,
+                    ch->last_effect[1][c].def, ch->last_effect[1][c].val);
+            {
+                uint8_t mt_ins = ch->macro_table[c].fmreg_ins;
+                unsigned pos = ch->macro_table[c].fmreg_pos;
+                tFMREG_TABLE *rt = get_fmreg_table(mt_ins);
+                uint32_t dis = 0;
+
+                if (mt_ins >= 1 && mt_ins <= instrinfo->count)
+                    dis = instrinfo->instruments[mt_ins - 1].dis_fmreg_cols;
+                fprintf(stderr,
+                        "badapple ch4 fmreg: macro_fmreg_ins=%u fmreg_pos=%u fmreg_duration=%u "
+                        "dis_fmreg_cols=0x%08x freq_slide_col26_active=%d\n",
+                        (unsigned)mt_ins, pos,
+                        (unsigned)ch->macro_table[c].fmreg_duration,
+                        (unsigned)dis,
+                        (int)((dis & (1u << 26)) == 0));
+                if (rt && rt->length) {
+                    fprintf(stderr,
+                            "badapple ch4 fmreg rt: length=%u keyoff_pos=%u ",
+                            (unsigned)rt->length, (unsigned)rt->keyoff_pos);
+                    if (pos >= 1 && pos <= rt->length) {
+                        const tREGISTER_TABLE_DEF *d = &rt->data[pos - 1];
+
+                        fprintf(stderr,
+                                "active_cell[%u] dur=%u freq_slide=%d macro_flags=0x%02x\n",
+                                (unsigned)(pos - 1), (unsigned)d->duration, (int)d->freq_slide,
+                                (unsigned)d->macro_flags);
+                    } else {
+                        fprintf(stderr, "(no active_cell pos=%u)\n", pos);
+                    }
+                } else {
+                    fprintf(stderr, "badapple ch4 fmreg rt: (null or length 0)\n");
+                }
+            }
+        }
         dump_context_f(stderr, ch);
         fflush(stderr);
         return;
