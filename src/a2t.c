@@ -1195,14 +1195,10 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
     if (note) {
         ch->event_table[chan].note = note;
 
-        if (is_4op_chan(chan) && is_4op_chan_lo(chan)) {
+        /* Pascal (a2player.pas ~1163–1165): If is_4op_chan(chan) then
+         * event_table[PRED(chan)].note := note — applies to hi and lo tracks. */
+        if (is_4op_chan(chan) && chan >= 1)
             ch->event_table[chan - 1].note = note;
-        }
-
-        // Do we need that?
-        /*if (is_4op_chan(chan) && is_4op_chan_hi(chan)) {
-            ch->event_table[chan + 1].note = note;
-        }*/
 
         if (restart_macro) {
             // Check if no ZFF - force no restart
