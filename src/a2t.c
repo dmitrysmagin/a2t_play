@@ -2957,7 +2957,7 @@ static void macro_poll_proc()
     uint16_t chan;
     uint16_t finished_flag;
 
-    for (chan = 0; chan < 20; chan++) {
+    for (chan = 0; chan < songinfo->nm_tracks; chan++) {
         finished_flag = ch->keyoff_loop[chan] ? IDLE : FINISHED;
 
         tCH_MACRO_TABLE *mt = &ch->macro_table[chan];
