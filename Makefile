@@ -47,8 +47,14 @@ $(SRC_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_TMP)
 
 -include $(OBJS:.o=.d)
 
+# Optional: make test DUMP_CONTEXT=1  →  -DA2M_DUMP_CONTEXT (stderr dump_context_f at selected IRQ frames)
+TEST_EXTRA_CPPFLAGS :=
+ifeq ($(DUMP_CONTEXT),1)
+TEST_EXTRA_CPPFLAGS += -DA2M_DUMP_CONTEXT
+endif
+
 $(TEST_TARGET): src/a2m_dump.c src/a2t.c src/a2t.h $(TEST_DEPS) | $(BUILD_TMP)
-	$(TMP_ENV) $(CC) $(BASE_CFLAGS) -Dclocks -I$(SRC_DIR) -o $@ $< $(TEST_DEPS) -lm
+	$(TMP_ENV) $(CC) $(BASE_CFLAGS) $(TEST_EXTRA_CPPFLAGS) -Dclocks -I$(SRC_DIR) -o $@ $< $(TEST_DEPS) -lm
 
 test: $(TEST_TARGET)
 

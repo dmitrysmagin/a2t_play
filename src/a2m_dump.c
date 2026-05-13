@@ -36,6 +36,8 @@ static void a2m_dump_context_at_irq_frames(void)
         15259, 15260, 15261, 15262, 15263,
         15620, 15621, 15622,
         34556, 34557, 34558, 34559,
+        /* fank5: secondary shadow_regs[1][0xb0] key-on vs Pascal ~IRQ 47232 (chan index 10, regoffs_n=0x100) */
+        47228, 47229, 47230, 47231, 47232, 47233, 47234, 47235, 47236,
         -1
     };
     int i;
@@ -56,6 +58,19 @@ static void a2m_dump_context_at_irq_frames(void)
                 shadow_regs[0][0xb0], shadow_regs[0][0xb1], shadow_regs[0][0xb2],
                 shadow_regs[0][0xb3], shadow_regs[0][0xb4], shadow_regs[0][0xb5],
                 shadow_regs[0][0xb6], shadow_regs[0][0xb7], shadow_regs[0][0xb8]);
+        fprintf(stderr,
+                "peek shadow SECONDARY (bank 1) A/B: [0xa0..a8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x  [0xb0..b8]=%02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+                shadow_regs[1][0xa0], shadow_regs[1][0xa1], shadow_regs[1][0xa2],
+                shadow_regs[1][0xa3], shadow_regs[1][0xa4], shadow_regs[1][0xa5],
+                shadow_regs[1][0xa6], shadow_regs[1][0xa7], shadow_regs[1][0xa8],
+                shadow_regs[1][0xb0], shadow_regs[1][0xb1], shadow_regs[1][0xb2],
+                shadow_regs[1][0xb3], shadow_regs[1][0xb4], shadow_regs[1][0xb5],
+                shadow_regs[1][0xb6], shadow_regs[1][0xb7], shadow_regs[1][0xb8]);
+        fprintf(stderr,
+                "peek ch9/ch10 freq_table & shadow slot (regoffs_n 10=0x100 -> sec A0/B0): "
+                "freq9=0x%04x freq10=0x%04x  shadow[1][a0/b0]=%02x/%02x\n",
+                (unsigned)ch->freq_table[9], (unsigned)ch->freq_table[10],
+                shadow_regs[1][0xa0], shadow_regs[1][0xb0]);
         dump_context_f(stderr, ch);
         fflush(stderr);
         return;

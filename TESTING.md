@@ -25,7 +25,7 @@ frame_num starts at 0. No INIT dump is emitted.
 * run run_one_test.sh with module filename and MAX_FRAMES=100000
 * compare diffs, but ignore post songend diff
 * isolate the code region in a2t.c specific to frames at which diff is found
-* if needed, invoke dump_context() from debug.c from isolated code in a2t.c, don't forget to cleanup at final phase
+* use invoke dump_context() from isolated frames to explore deeper, don't forget to cleanup at final phase
 * analyze context dump and fix C code to match pascal and retest to check if diff is none or, at least, reduced.
 
 
