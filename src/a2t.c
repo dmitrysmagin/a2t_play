@@ -2070,8 +2070,11 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
     bool defer_note_row = play_line_note_deferred_by_effect_lo(chan);
     bool tporta_flag_ev = is_tporta_flag_ev(event);
 
-    if (event->note == 0)
+    if (event->note == 0) {
+        if (ch->ftune_table[chan])
+            output_note(0, ch->voice_table[chan], chan, true, true);
         return;
+    }
 
     /*
      * Pascal play_line (a2player.pas): key_off runs when the row carries key-off

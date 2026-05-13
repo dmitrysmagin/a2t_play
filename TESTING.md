@@ -20,7 +20,7 @@ frame_num starts at 0. No INIT dump is emitted.
 * Compare Pascal and C sources, find correspondences and correlations, keep in mind
 
 # Testing and Fixing a2t.c
-* run run_one_test.sh with module filename and MAX_FRAMES=100000
+* run run_one_test.sh with module filename and MAX_FRAMES=200000
 * compare diffs, note the frames region at which diff is found
 * a2m_dump: modify to isolate the frame region at which diff starts
 * a2m_dump: add additional dumping information if needed
