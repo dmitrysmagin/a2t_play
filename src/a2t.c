@@ -1531,7 +1531,9 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
 
             if (nb >= 1 && nb <= 12 * 8 + 1) {
                 if (event->note & keyoff_flag)
-                    ch->porta_table[slot][chan].freq = ch->freq_table[chan] & 0x1fff;
+                    ; /* Pascal: keyoff note is NOT in [1..97] range (has $80 bit),
+                       * so porta.freq is NOT updated — keeps old value from previous
+                       * row's nFreq. Matching this enables the tone_portamento slide. */
                 else
                     ch->porta_table[slot][chan].freq =
                         nFreq((uint8_t)(nb - 1)) +
