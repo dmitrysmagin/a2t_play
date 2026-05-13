@@ -2141,7 +2141,8 @@ static void play_line()
                 ch->effect_table[slot][chan].def = ch->glfsld_table[slot][chan].def;
                 ch->effect_table[slot][chan].val = ch->glfsld_table[slot][chan].val;
             } else {
-                ch->effect_table[slot][chan].val = 0;
+                /* a2player.pas ~1288: effect_table := effect_table AND $0ff00 — clear LO (def), keep HI (val) */
+                ch->effect_table[slot][chan].def = 0;
             }
         }
 
