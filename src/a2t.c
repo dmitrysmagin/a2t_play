@@ -1984,15 +1984,19 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
     if (event->note == 0)
         return;
 
-    // This might delay even note-off
-    // Or put this after key_off?
-    if (notedelay_flag) {
-        ch->event_table[chan].note = event->note;
+    /*
+     * Pascal play_line (a2player.pas): key_off runs when the row carries key-off
+     * BEFORE the branches that defer notes (tone porta / note delay). Otherwise a
+     * cell like Extended2+NoteDelay + key-off never calls key_off and OPL KEY-ON
+     * stays set (fank5 ~IRQ 47232, secondary shadow_regs[1][0xb0]).
+     */
+    if (event->note & keyoff_flag) {
+        key_off(chan);
         return;
     }
 
-    if (event->note & keyoff_flag) {
-        key_off(chan);
+    if (notedelay_flag) {
+        ch->event_table[chan].note = event->note;
         return;
     }
 
