@@ -56,7 +56,14 @@ static bool a2m_dump_context_irq_requested(void)
     return false;
 }
 
-/* Compact trace for top-2act — avoids multi-screen dump_context_f at each IRQ. */
+/* Compact trace for top-2act — avoids multi-screen dump_context_f at each IRQ.
+ *
+ * Semantics (see a2t.c poll_proc / play_line / update_song_position):
+ * - When poll_proc runs with ticks crossing speed, play_line() reads pattern row current_line,
+ *   then update_song_position() increments current_line. stderr "row" is that post-advance index.
+ * - a2t_update() may call frame_hook multiple times per buffer; only ticklooper==0 iterations run
+ *   poll_proc(), so consecutive irq_frame lines often share the same ticks/row/event_table.
+ */
 static void a2m_dump_top2act_ch9_compact(void)
 {
     const int c = 9;
@@ -71,6 +78,10 @@ static void a2m_dump_top2act_ch9_compact(void)
             "\n######## top-2act irq_frame=%d ticks=%d row=%u pattern=%u order=%u ########\n",
             frames_dumped, ticks, (unsigned)current_line, (unsigned)current_pattern,
             (unsigned)current_order);
+    fprintf(stderr,
+            "engine: speed=%u tick0=%d ticks=%d (row=current_line after poll_proc; pattern row last "
+            "played when boundary crossed this poll_proc was one less, modulo pattern)\n",
+            (unsigned)speed, tick0, ticks);
     fprintf(stderr,
             "bank1 pitch slot ch9: shadow[1][a3/b3]=0x%02x/0x%02x  freq_table[9]=0x%04x key_on_hi=%d\n",
             shadow_regs[1][0xa3], shadow_regs[1][0xb3], (unsigned)freq,
@@ -145,6 +156,72 @@ static void a2m_dump_top2act_ch9_compact(void)
             (unsigned)ch->porta_table[0][c].freq, (unsigned)ch->porta_table[0][c].speed,
             (unsigned)ch->porta_table[1][c].freq, (unsigned)ch->porta_table[1][c].speed,
             (int)ch->ftune_table[c]);
+
+    fprintf(stderr,
+            "ch9/ch10 glfsld: s0=%02x/%02x s1=%02x/%02x | ch10 eff: s0=%02x/%02x s1=%02x/%02x\n",
+            ch->glfsld_table[0][9].def, ch->glfsld_table[0][9].val,
+            ch->glfsld_table[1][9].def, ch->glfsld_table[1][9].val,
+            ch->effect_table[0][10].def, ch->effect_table[0][10].val,
+            ch->effect_table[1][10].def, ch->effect_table[1][10].val);
+    fprintf(stderr, "ch9 pattern vibrato vibr_table[0]: pos=%u dir=%u speed=%u depth=%u fine=%d\n",
+            (unsigned)ch->vibr_table[0][9].pos, (unsigned)ch->vibr_table[0][9].dir,
+            (unsigned)ch->vibr_table[0][9].speed, (unsigned)ch->vibr_table[0][9].depth,
+            (int)ch->vibr_table[0][9].fine);
+    fprintf(stderr, "ch9 pattern vibrato vibr_table[1]: pos=%u dir=%u speed=%u depth=%u fine=%d\n",
+            (unsigned)ch->vibr_table[1][9].pos, (unsigned)ch->vibr_table[1][9].dir,
+            (unsigned)ch->vibr_table[1][9].speed, (unsigned)ch->vibr_table[1][9].depth,
+            (int)ch->vibr_table[1][9].fine);
+    fprintf(stderr, "ch10 pattern vibrato vibr_table[0]: pos=%u dir=%u speed=%u depth=%u fine=%d\n",
+            (unsigned)ch->vibr_table[0][10].pos, (unsigned)ch->vibr_table[0][10].dir,
+            (unsigned)ch->vibr_table[0][10].speed, (unsigned)ch->vibr_table[0][10].depth,
+            (int)ch->vibr_table[0][10].fine);
+    fprintf(stderr, "ch10 pattern vibrato vibr_table[1]: pos=%u dir=%u speed=%u depth=%u fine=%d\n",
+            (unsigned)ch->vibr_table[1][10].pos, (unsigned)ch->vibr_table[1][10].dir,
+            (unsigned)ch->vibr_table[1][10].speed, (unsigned)ch->vibr_table[1][10].depth,
+            (int)ch->vibr_table[1][10].fine);
+
+    /* Logical pattern index at divergence is 5 (see stderr header pattern=%u).
+     * Prefer correlating cells with event_table on irq_frame where row just advanced (e.g. 10895);
+     * same-pattern snapshot kept at 10893 for backwards-compatible logs. */
+    if (frames_dumped == 10893 || frames_dumped == 10895) {
+        const unsigned pat = 5;
+
+        fprintf(stderr,
+                "pattern %u rows 0-2: global slide/vibrato/portamento OR ch8-11 OR row>=1 non-empty:\n",
+                pat);
+        for (unsigned row = 0; row <= 2; row++) {
+            for (int cc = 0; cc < songinfo->nm_tracks; cc++) {
+                tADTRACK2_EVENT *ev = get_event_p((int)pat, cc, (int)row);
+                uint8_t d0 = ev->eff[0].def;
+                uint8_t d1 = ev->eff[1].def;
+                bool nz_eff = (ev->eff[0].def | ev->eff[0].val | ev->eff[1].def | ev->eff[1].val) != 0;
+                bool nz_note_ins = (ev->note != 0 || ev->instr_def != 0);
+                bool interesting =
+                    (d0 == ef_GlobalFSlideUp || d0 == ef_GlobalFSlideDown ||
+                     d1 == ef_GlobalFSlideUp || d1 == ef_GlobalFSlideDown ||
+                     d0 == ef_GlobalFreqSlideUpXF || d0 == ef_GlobalFreqSlideDnXF ||
+                     d1 == ef_GlobalFreqSlideUpXF || d1 == ef_GlobalFreqSlideDnXF ||
+                     d0 == ef_Vibrato || d1 == ef_Vibrato ||
+                     d0 == ef_ExtraFineVibrato || d1 == ef_ExtraFineVibrato ||
+                     d0 == ef_VibratoVolSlide || d1 == ef_VibratoVolSlide ||
+                     d0 == ef_VibratoVSlideFine || d1 == ef_VibratoVSlideFine ||
+                     d0 == ef_FSlideDown || d1 == ef_FSlideDown ||
+                     d0 == ef_FSlideUp || d1 == ef_FSlideUp ||
+                     d0 == ef_FSlideDownFine || d1 == ef_FSlideDownFine ||
+                     d0 == ef_FSlideUpFine || d1 == ef_FSlideUpFine ||
+                     d0 == ef_TonePortamento || d1 == ef_TonePortamento ||
+                     (cc >= 8 && cc <= 11) || (row >= 1 && (nz_eff || nz_note_ins)));
+
+                if (!interesting)
+                    continue;
+
+                fprintf(stderr,
+                        "  p%u r%u ch%02d note=%02x ins=%02x eff[0]=%02x/%02x eff[1]=%02x/%02x\n",
+                        pat, row, cc, ev->note, ev->instr_def,
+                        ev->eff[0].def, ev->eff[0].val, ev->eff[1].def, ev->eff[1].val);
+            }
+        }
+    }
 
     {
         uint8_t vb = ch->voice_table[c];
