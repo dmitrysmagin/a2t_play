@@ -3158,7 +3158,7 @@ static void macro_poll_proc()
                     }
 
                     if (((ch->freq_table[chan] | 0x2000) == ch->freq_table[chan]) &&
-                         (vt->keyoff_pos != 0) &
+                         (vt->keyoff_pos != 0) &&
                          (mt->vib_pos >= vt->keyoff_pos)) {
                         mt->vib_pos = IDLE;
                     } else {
