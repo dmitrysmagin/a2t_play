@@ -268,8 +268,10 @@ static void raw_fill_from_fmdata(uint8_t *dst, tFM_INST_DATA *fm)
 
 // Helpers for macro tables =======================================================================
 
-/* If FMREG length byte is 0 but loop/keyoff/arp/vib header fields are non-zero, infer span from
- * macro cells (avoid trusting a lone stale length byte vs Pascal instr_macros[]). */
+/* If FMREG length byte is 0, infer span from macro cells when any cell has duration, freq_slide,
+ * or macro_flags. Also allocate fmreg when header bytes [1..5] are non-zero even if length stays 0
+ * — Pascal still binds arpeggio/vibrato indices from the FMREG header (top-2act instr 19: vibrato
+ * table 1 with empty macro cells). */
 static uint8_t fmreg_infer_length_from_cells(const uint8_t *src)
 {
     uint8_t inferred = 0;
@@ -295,10 +297,17 @@ static void fmreg_table_allocate(size_t n, uint8_t *src)
     for (unsigned int i = 0; i < n; i++, src += tFMREG_TABLE_V9_14_SIZE) {
         uint8_t real_length = src[0];
 
-        if (real_length == 0 && (src[1] | src[2] | src[3] | src[4] | src[5]))
-            real_length = fmreg_infer_length_from_cells(src);
+        if (real_length == 0) {
+            uint8_t inferred = fmreg_infer_length_from_cells(src);
 
-        if (editor_mode || real_length) {
+            if (inferred)
+                real_length = inferred;
+        }
+
+        /* Loop/keyoff/arp/vib header — Pascal keeps instr_macros[] row even when length=0 and no cells */
+        bool header_links = (src[1] | src[2] | src[3] | src[4] | src[5]) != 0;
+
+        if (editor_mode || real_length || header_links) {
             tINSTR_DATA_EXT *instrument = get_instr(i + 1);
             assert(instrument);
             if (!instrument)
