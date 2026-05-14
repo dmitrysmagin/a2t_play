@@ -11,7 +11,3 @@ Original [Adlib Tracker 2](https://web.archive.org/web/20241208054547/http://adl
 [DeadBeef v1.9.6](https://deadbeef.sourceforge.io/) is a good example of a player which includes the latest git adplug, so it does support A2M/A2T v9-14.
 
 Foobar's [AdPlug 1.56](https://www.foobar2000.org/components/view/foo_input_adplug) still has no support for A2M v9-14 (somebody, poke the devs to update it).
-
-## Regression vs Pascal (`adt2_dump`)
-
-Module dumps: **`./run_one_test.sh <file.a2m>`** (see script for **`MAX_FRAMES`**, **`CC`**, **`GMAKE`**). Compared outputs land in **`test/<name>.c.reg`**, **`test/<name>.ref.reg`**, **`test/<name>.diff`**. **`MODULES_TESTED.md`** records PASS / FRAME-DIFF status and notes; **`TESTING.md`** has tool build notes and dump format.

@@ -11,9 +11,9 @@ a2t_play32-linux32
 *.pck
 *.d
 *.reg
+*.map
 *.*trace
 at2
 fpc
 test
 build
-tools

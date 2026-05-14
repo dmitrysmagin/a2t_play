@@ -55,6 +55,34 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | sweetsin (modules/kvee) | 30000 | 218 | FRAME-DIFF | `run_one_test.sh modules/kvee/sweetsin.a2m`: **218** diff lines at IRQ **30–37** bank 0. KSL/TL init artifact (release_sustaining_sound vol=63 vs Pascal 0x00). |
 | whereru | 30719 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/whereru.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **30719** IRQ frames (**61438** dump lines each side); last frame index **30718**. ~25s wall time. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. *(Earlier snapshot: FRAME-DIFF ~44k lines, **ch5** freq ~frame **4653**; current tree matches Pascal.)* |
 
+### modules/diodema
+
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| 1856step | 30000 | 44 | FRAME-DIFF | Init volume artifact (release_sustaining_sound). |
+| acidtrac | 30000 | 0 | PASS | |
+| adr1ft | 30000 | 0 | PASS | Fixed by fmreg_table_allocate src[0] guard. |
+| altair | 30000 | 0 | PASS | |
+| aquarius | 30000 | 4448 | FRAME-DIFF | ±1 nibble offsets + volume artifact. |
+| ca54 | 30000 | 0 | PASS | |
+| catpeopl | 30000 | 0 | PASS | |
+| milinda | 30000 | 0 | PASS | |
+| mmori | 30000 | 0 | PASS | |
+| mp77 | 30000 | 0 | PASS | |
+| no72 | 30000 | 0 | PASS | Fixed by fmreg_table_allocate src[0] guard. |
+| null | 30000 | 1472 | FRAME-DIFF | ±1 nibble offsets. |
+| oddtime | 30000 | 0 | PASS | |
+| phone | 30000 | 0 | PASS | |
+| psg | 30000 | 0 | PASS | |
+| rf62 | 30000 | 0 | PASS | |
+| ru41 | 30000 | 0 | PASS | |
+| samsara | 30000 | 206 | FRAME-DIFF | ±1 nibble offsets. |
+| signs | 30000 | 576 | FRAME-DIFF | ±1 nibble offsets. |
+| sv73 | 30000 | 0 | PASS | |
+| ty58 | 30000 | 0 | PASS | |
+| xmission | 30000 | 0 | PASS | |
+| zaxxon | 30000 | 3548 | FRAME-DIFF | ±1 nibble offsets. |
+
 ### modules/mlf
 
 | Module | Frames | Diff Lines | Status | Notes |
