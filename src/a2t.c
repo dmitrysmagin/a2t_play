@@ -3031,6 +3031,11 @@ static void poll_proc()
         }
     }
 
+    /* Pascal: songend must halt the engine. When order/row advance sets songend,
+     * stop playing immediately so the main loop exits before processing more frames. */
+    if (songend && play_status == isPlaying)
+        a2t_stop();
+
     tickXF++;
     if (tickXF % 4 == 0) {
         update_extra_fine_effects();

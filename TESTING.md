@@ -17,7 +17,7 @@ Both tools output 2 lines per IRQ frame:
 frame_num starts at 0. No INIT dump is emitted.
 
 # Before running
-* Compare Pascal and C sources, find correspondences and correlations, keep in mind
+* Compare Pascal and C sources, find correspondences and correlations, keep them in mind
 
 # Testing and Fixing a2t.c
 * run run_one_test.sh with module filename and MAX_FRAMES=30000
