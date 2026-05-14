@@ -307,7 +307,9 @@ static void fmreg_table_allocate(size_t n, uint8_t *src)
         /* Loop/keyoff/arp/vib header — Pascal keeps instr_macros[] row even when length=0 and no cells */
         bool header_links = (src[1] | src[2] | src[3] | src[4] | src[5]) != 0;
 
-        if (editor_mode || real_length || header_links) {
+        /* Pascal: when src[0]==0, macro_poll_proc immediately terminates (fmreg_pos→finished_flag),
+         * never processing cell data. Only allocate if original length is non-zero or header links exist. */
+        if (editor_mode || src[0] || header_links) {
             tINSTR_DATA_EXT *instrument = get_instr(i + 1);
             assert(instrument);
             if (!instrument)
@@ -316,7 +318,8 @@ static void fmreg_table_allocate(size_t n, uint8_t *src)
             instrument->fmreg = (tFMREG_TABLE *)calloc(1, sizeof(tFMREG_TABLE));
             assert(instrument->fmreg);
 
-            // Copy field by field
+            // Copy field by field — use original src[0] for allocation guard,
+            // but keep real_length in fmreg for macro_poll_proc bounds checks.
             instrument->fmreg->length         = real_length;
             instrument->fmreg->loop_begin     = src[1]; // loop_begin
             instrument->fmreg->loop_length    = src[2]; // loop_length
