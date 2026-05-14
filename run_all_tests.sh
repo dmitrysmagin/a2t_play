@@ -10,7 +10,7 @@ ok=0
 diff=0
 skip=0
 
-for f in "$MODULES_DIR"/*.a2m "$MODULES_DIR"/*.A2M "$MODULES_DIR"/*.a2t "$MODULES_DIR"/*.A2T; do
+for f in $(find "$SCRIPT_DIR/modules" "$SCRIPT_DIR/tunes" -type f -iname '*.a2m' -o -type f -iname '*.a2t' 2>/dev/null | sort); do
   [ -f "$f" ] || continue
   echo ""
   "$SCRIPT_DIR/run_one_test.sh" "$f"
