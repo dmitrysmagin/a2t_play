@@ -2385,7 +2385,7 @@ static void slide_volume_up(int chan, uint8_t slide)
     case 0:
         if (!_4op_vol_valid_chan(chan)) {
             tINSTR_DATA *i = get_instr_data_by_ch(chan);
-            assert(i);
+            if (!i) return;
 
             slide_carrier_volume_up(chan, slide, limit1);
 
@@ -2467,7 +2467,7 @@ static void slide_volume_down(int chan, uint8_t slide)
     case 0:
         if (!_4op_vol_valid_chan(chan)) {
             tINSTR_DATA *i = get_instr_data_by_ch(chan);
-            assert(i);
+            if (!i) return;
 
             slide_carrier_volume_down(chan, slide);
 
