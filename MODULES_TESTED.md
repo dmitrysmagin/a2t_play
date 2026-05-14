@@ -118,6 +118,100 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | hitech2 | 30000 | 0 | PASS | |
 | hitech3 | 30000 | 0 | PASS | |
 | hitech3f | 30000 | 0 | PASS | |
+
+### modules/brendan
+
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| advnture | 30000 | 0 | PASS | |
+| amangels | 30000 | 0 | PASS | |
+| apoclyps | 30000 | 0 | PASS | |
+| banzai | 30000 | 0 | PASS | |
+| battleth | 30000 | 0 | PASS | |
+| bigguns | 30000 | 0 | PASS | |
+| birdston | 30000 | 0 | PASS | |
+| bladeraz | 30000 | 0 | PASS | |
+| blades | 30000 | 0 | PASS | |
+| blades2 | 30000 | 0 | PASS | |
+| blizzard | 30000 | 0 | PASS | |
+| bonusthm | 30000 | 0 | PASS | |
+| callduty | 30000 | 0 | PASS | |
+| chiptune | 30000 | 0 | PASS | |
+| chivalry | 30000 | 2438 | FRAME-DIFF | Small ±1 nibble offsets. ftune/fine_tune interaction. |
+| cloudfrv | 30000 | 0 | PASS | |
+| conspria | 30000 | 0 | PASS | |
+| contrast | 30000 | 0 | PASS | |
+| coolcat | 30000 | 0 | PASS | |
+| cooldown | 30000 | 0 | PASS | |
+| dayhcome | 30000 | 0 | PASS | |
+| dayslive | 30000 | 0 | PASS | |
+| deceptin | 30000 | 0 | PASS | |
+| deepdown | 30000 | 0 | PASS | |
+| depressn | 30000 | 0 | PASS | |
+| difkhero | 30000 | 0 | PASS | |
+| dream7m | 30000 | 0 | PASS | |
+| dream7mx | 30000 | 158 | FRAME-DIFF | Small ±1 nibble offsets. |
+| echorock | 30000 | 0 | PASS | |
+| elskiing | 30000 | 0 | PASS | |
+| enchloop | 30000 | 0 | PASS | |
+| eviloop | 30000 | 0 | PASS | |
+| fiftrial | 30000 | 0 | PASS | |
+| frenzy | 30000 | 0 | PASS | |
+| friendsh | 30000 | 0 | PASS | |
+| frozen | 30000 | 2258 | FRAME-DIFF | Small ±1 nibble offsets. |
+| fullthr | 30000 | 0 | PASS | |
+| funland | 30000 | 83 | FRAME-DIFF | Small ±1 nibble offsets. |
+| goldebel | 30000 | 83 | FRAME-DIFF | Small ±1 nibble offsets. |
+| horizon | 30000 | 0 | PASS | |
+| hovlane | 30000 | 0 | PASS | |
+| hunter | 30000 | 0 | PASS | |
+| inevitbl | 30000 | 128 | FRAME-DIFF | Small ±1 nibble offsets. |
+| invasion | 30000 | - | untested | timed out |
+| kelsey | 30000 | - | untested | timed out |
+| lemmings | 30000 | - | untested | timed out |
+| lostcaus | 30000 | - | untested | timed out |
+| lucky7s | 30000 | - | untested | timed out |
+| manifest | 30000 | - | untested | timed out |
+| marblect | 30000 | - | untested | timed out |
+| mariothm | 30000 | - | untested | timed out |
+| mechage | 30000 | - | untested | timed out |
+| mechwar | 30000 | - | untested | timed out |
+| metro | 30000 | - | untested | timed out |
+| modratly | 30000 | - | untested | timed out |
+| neversay | 30000 | - | untested | timed out |
+| nochoice | 30000 | - | untested | timed out |
+| nogofers | 30000 | - | untested | timed out |
+| oblivion | 30000 | - | untested | timed out |
+| obstacle | 30000 | - | untested | timed out |
+| ohirony | 30000 | - | untested | timed out |
+| omegavir | 30000 | - | untested | timed out |
+| paparazi | 30000 | - | untested | timed out |
+| pfectwld | 30000 | - | untested | timed out |
+| popcorn | 30000 | - | untested | timed out |
+| racecyb | 30000 | - | untested | timed out |
+| racecyb2 | 30000 | - | untested | timed out |
+| robinthm | 30000 | - | untested | timed out |
+| sinister | 30000 | - | untested | timed out |
+| sitcom | 30000 | - | untested | timed out |
+| skylight | 30000 | - | untested | timed out |
+| skysharp | 30000 | - | untested | timed out |
+| sleepwrk | 30000 | - | untested | timed out |
+| spaceple | 30000 | - | untested | timed out |
+| sparkplg | 30000 | - | untested | timed out |
+| stormywe | 30000 | - | untested | timed out |
+| suspicis | 30000 | - | untested | timed out |
+| teamster | 30000 | - | untested | timed out |
+| thinkfst | 30000 | - | untested | timed out |
+| timewtel | 30000 | - | untested | timed out |
+| torpdall | 30000 | - | untested | timed out |
+| treacher | 30000 | - | untested | timed out |
+| tutheme | 30000 | - | untested | timed out |
+| twistdpa | 30000 | - | untested | timed out |
+| ultravio | 30000 | - | untested | timed out |
+| verynice | 30000 | - | untested | timed out |
+| warhouse | 30000 | - | untested | timed out |
+| wavesmar | 30000 | - | untested | timed out |
+| westbeng | 30000 | - | untested | timed out |
 | jdaniels | 30000 | 0 | PASS | |
 | laboite | 30000 | 0 | PASS | |
 | neurophb | 30000 | 0 | PASS | |
