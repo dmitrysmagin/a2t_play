@@ -258,3 +258,18 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | waterfls | 30000 | 0 | PASS | |
 | worldfal | 30000 | 0 | PASS | |
 
+### modules/encore
+
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| 1_cworld | 30000 | 18 | FRAME-DIFF | Init volume artifact at IRQ 11513–11517, bank 1. |
+| 2_prydz | 30000 | 22 | FRAME-DIFF | Init volume artifact at IRQ 1913–1918, bank 1. |
+| ab_julia | 34777 | 0 | PASS | (Already tested in main table; included here for section completeness.) |
+| amegas | 30000 | 0 | PASS | |
+| crazbeat | 30000 | 0 | PASS | |
+| fm_house | 30000 | 0 | PASS | |
+| fm_tekno | 30000 | 10 | FRAME-DIFF | Late song divergence at IRQ 26479–26481, bank 1. |
+| fmhouse2 | 30000 | 0 | PASS | |
+| forest | 30000 | 0 | PASS | |
+| whatslov | 30000 | 0 | PASS | |
+
