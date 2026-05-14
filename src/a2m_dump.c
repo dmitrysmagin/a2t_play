@@ -10,14 +10,24 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 #ifdef clocks
 /* nothing needed, a2t.c's opl_out() has the #ifdef clocks dump */
 #endif
 
 int frames_dumped = 0;
+static volatile int sigint_received = 0;
 
 #include "../src/a2t.c"
+
+static void handle_sigint(int sig)
+{
+    (void)sig;
+    sigint_received = 1;
+    songend = true;
+    play_status = isStopped;
+}
 
 /*
  * Instrumentation: build a2m_dump with -DA2M_DUMP_CONTEXT to emit dump_context_f(stderr)
@@ -473,6 +483,8 @@ static void dump_frame(void)
 
 int main(int argc, char *argv[])
 {
+    signal(SIGINT, handle_sigint);
+
     if (argc < 2) {
         fprintf(stderr, "Usage: a2m_dump <file.a2m> [output.reg] [max_frames]\n");
         return 1;

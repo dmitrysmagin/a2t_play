@@ -6,7 +6,8 @@ uses
   SysUtils,
   A2player,
   A2fileIO,
-  OPL3EMU;
+  OPL3EMU,
+  Windows;
 
 var
   outfd: Longint;
@@ -21,6 +22,21 @@ var
   frames_dumped: Longint;
   trace_init: Boolean;
   i: Integer;
+
+type
+  TConsoleCtrlHandlerFn = function(dwCtrlType: DWORD): BOOL; stdcall;
+
+function CtrlCHandler(dwCtrlType: DWORD): BOOL; stdcall;
+begin
+  if dwCtrlType = CTRL_C_EVENT then
+  begin
+    play_status := isStopped;
+    songend := True;
+    CtrlCHandler := True;
+    Exit;
+  end;
+  CtrlCHandler := False;
+end;
 
 procedure dump_opl2out(reg, data: Word);
 begin
@@ -153,6 +169,7 @@ begin
   end;
 
   FillChar(pcm_buf, SizeOf(pcm_buf), 0);
+  SetConsoleCtrlHandler(TConsoleCtrlHandlerFn(@CtrlCHandler), True);
   WriteLn('Dumping "', filename, '" -> ', outfilename, ' ...');
 
   { INIT trace disabled
