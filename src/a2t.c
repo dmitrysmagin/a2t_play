@@ -318,9 +318,8 @@ static void fmreg_table_allocate(size_t n, uint8_t *src)
             instrument->fmreg = (tFMREG_TABLE *)calloc(1, sizeof(tFMREG_TABLE));
             assert(instrument->fmreg);
 
-            // Copy field by field — use original src[0] for allocation guard,
-            // but keep real_length in fmreg for macro_poll_proc bounds checks.
-            instrument->fmreg->length         = real_length;
+            // Copy field by field — use src[0] (original), not real_length (inferred)
+            instrument->fmreg->length         = src[0];
             instrument->fmreg->loop_begin     = src[1]; // loop_begin
             instrument->fmreg->loop_length    = src[2]; // loop_length
             instrument->fmreg->keyoff_pos     = src[3]; // keyoff_pos
