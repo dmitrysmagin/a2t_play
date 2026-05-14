@@ -3,8 +3,6 @@
 *.exe
 *.dll
 *.diff
-*.a2m
-*.a2t
 a2t_play32-linux32
 .vscode
 .build_tmp
