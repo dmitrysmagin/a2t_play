@@ -15,8 +15,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | 1856step | 73727 | 44 | FRAME-DIFF | `run_one_test.sh modules/1856step.a2m` with `MAX_FRAMES=140000` (2026-05-13): **44** diff lines at IRQ **5032–5043**, bank **1** registers `shadow_regs[1][0x52]` (ch17 mod TL) and `[0x55]` (ch17 car TL). C=0x3F (muted via `release_sustaining_sound` init for all 20 ch), Pascal=0x00. ch17 beyond `nm_tracks`, stays muted in C for 12 frames until frame 5044. Cosmetic init artifact. |
 | adr1ft (modules/diodema) | 15000 | 0 | PASS | `run_one_test.sh modules/diodema/adr1ft.a2m` with default `MAX_FRAMES=30000` (2026-05-13): `diff -u` empty. Fixed by `fmreg_table_allocate` guard change: allocation uses `src[0]` (original length byte) instead of inferred `real_length`. Pascal's `macro_poll_proc` terminates FMREG when `length=0` via `(fmreg_pos < length) else finished_flag`, never processing cells. Previously **40172** diff lines — C was inferring length from non-zero cell data, allocating the table, and running the macro when Pascal would not. |
 | KULJE_V4 | 15000 | 44082 | FRAME-DIFF | `run_one_test.sh modules/KULJE_V4.a2m` with default `MAX_FRAMES=15000` (2026-05-13): **44082** diff lines from frame **0** across all registers — INIT state divergence. Previously blocked by `assert(i)` crash at `src/a2t.c:2470` in `slide_volume_down` (voice_table[chan] out of instr range). Fix: replaced `assert(i)` with `if (!i) return;` in both `slide_volume_up` and `slide_volume_down`. The init diff is pre-existing (waveform registers, ADSR, operator params all differ from frame 0), causing frame-by-frame divergence throughout playback. C uses `regoffs` computed live via `!!percussion_mode` in init, Pascal uses `_chan_n/m/c` arrays set after `stop_playing` — stale during stop. |
-| sweetsin (kvee) | 4307 | 218 | FRAME-DIFF | `run_one_test.sh modules/kvee/sweetsin.a2m` with default `MAX_FRAMES=30000` (2026-05-13): **218** diff lines at IRQ **30–37**, bank **0** only. KSL/TL volume registers differ during init frames — same `release_sustaining_sound` init artifact as `1856step` and `KULJE_V4`. Song has 4307 frames, diff resolves after frame 37. |
-| aquarius (modules/diodema) | 15000 | 122 | FRAME-DIFF | `run_one_test.sh modules/diodema/aquarius.a2m` with default `MAX_FRAMES=15000` (2026-05-13): **122** diff lines at IRQ **10467–10475** and **10476–10478**, bank **0** only. Diff at register `shadow_regs[0][0xC1]` (ch1 FEEDBACK/CONNECTION). C toggles `connect` and `feedb` between cell values via FMREG macro; Pascal stays constant. Same root cause as `adr1ft`: C applies macro cell columns (`dis_fmreg_cols=0` = all enabled) while Pascal doesn't — dis_fmregs logic inversion hypothesis. |
+| aquarius (modules/diodema) | 15000 | 122 | FRAME-DIFF | `run_one_test.sh modules/diodema/aquarius.a2m` with default `MAX_FRAMES=15000` (2026-05-13): **122** diff lines at IRQ **10467–10475** and **10476–10478**, bank **0** only. Reg `shadow_regs[0][0xC1]` (ch1 FEEDBACK/CONNECTION). C applies FMREG macro cell values, Pascal stays constant. Same fmreg issue as `adr1ft` (fixed in commit, but `aquarius` predates the fix — retest after merge). |
 | ALLOYRUN (VOID) | 19199 | 0 | PASS | |
 | HANGOVER (VOID) | 20479 | 0 | PASS | |
 | MINDFLUX (VOID) | 10891 | 0 | PASS | |
@@ -45,6 +44,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | no72 | 15000 | 0 | PASS | `run_one_test.sh modules/no72.a2m` with default `MAX_FRAMES=15000` (2026-05-13): `diff -u` empty. Fix: `fmreg_table_allocate` allocation guard changed from `real_length` (inferred from cell data) to `src[0]` (original length byte). Pascal's `macro_poll_proc` terminates FMREG when `length=0` — `If (fmreg_pos < length) else fmreg_pos := finished_flag` — never processing cell data. C was inferring `length` from non-zero cell data, allocating the table, and running the macro when Pascal would not. Also `instrument->fmreg->length` now uses `src[0]` (original) not `real_length` (inferred) to match Pascal's bounds behavior. |
 | os_intro | 15000 | 0 | PASS | `run_one_test.sh modules/os_intro.a2m` with `MAX_FRAMES=15000` (2026-05-13): `diff -u` empty — **15000** frames (**30000** dump lines each side). Per **TESTING.md**, no diverging frame → no isolated `a2t.c` / `dump_context()` work. |
 | os_sblas | 15000 | 0 | PASS | 2026-05-13: previously **10499** FRAME-DIFF (`tone portamento target includes fine_tune in C but not in Pascal`). Fixed by keyoff+TonePortamento parity fix + ftune+output_note fix — both now match Pascal. |
+| os_wins (madbrain) | 30000 | 3086 | FRAME-DIFF | `run_one_test.sh modules/madbrain/os_wins.a2m` with default `MAX_FRAMES=30000` (2026-05-13): **3086** diff lines at IRQ **22040–26644** (song end), bank **0** only. KSL/TL registers `shadow_regs[0][0x40]` (ch0 mod) and `[0x43]` (ch1 car) differ: C=0x3F (muted via `release_sustaining_sound`), P=0x00. Same init artifact as 1856step/KULJE_V4/sweetsin — persistent through entire song. |
 | paradox3 | 3896 | 0 | PASS | `run_one_test.sh modules/paradox3.a2m` with `MAX_FRAMES=100000` (2026-05-13): `diff -u` empty — **3896** IRQ frames (**7792** dump lines each side). Song ends before frame cap. Per **TESTING.md**, no diverging frame → no isolated `a2t.c` / `dump_context()` work. |
 | pink (PINK.A2T, tunes/MLF) | 15000 | 248 | FRAME-DIFF | `run_one_test.sh tunes/MLF/PINK.A2T` with default `MAX_FRAMES=15000` (2026-05-13): **248** diff lines starting at IRQ **6055** bank **0**. Single persistent -1 offset on `shadow_regs[0][0xA3]` (logical ch0 F-Number Low, `regoffs_n(0)=0x003`). C=`b0` (176), P=`af` (175). Diff repeats in blocks IRQ 6055–6064 (`b0b0`/`afb0`) and 12091–12100 (`b002`/`af02`). Root cause unclear — likely a fine_tune or ftune interaction difference smaller than 1 LSB of the F-Number. ~1.7% of frames affected. |
 | PINK.A2M (tunes/MLF) | 50000 | 371 | FRAME-DIFF | Same pattern as A2T version: small repeating pitch nibbles on bank 0, ch0 F-Number Low (reg `0xA3`). |
@@ -52,77 +52,91 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | remembrance | 38399 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/remembrance.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **38399** IRQ frames (**76798** dump lines each side); last frame index **38398**. ~46s wall time. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. |
 | speed_reset_song103 | 2074 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/speed_reset_song103.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **2074** IRQ frames (**4148** dump lines each side). ~4s wall time. Covers **speed_reset** effect on **`song103`**-style module; song ends before frame cap. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. |
 | square | 19588 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/square.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **19588** IRQ frames (**39176** dump lines each side). ~19s wall time. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. |
+| sweetsin (modules/kvee) | 30000 | 218 | FRAME-DIFF | `run_one_test.sh modules/kvee/sweetsin.a2m`: **218** diff lines at IRQ **30–37** bank 0. KSL/TL init artifact (release_sustaining_sound vol=63 vs Pascal 0x00). |
 | whereru | 30719 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/whereru.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **30719** IRQ frames (**61438** dump lines each side); last frame index **30718**. ~25s wall time. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. *(Earlier snapshot: FRAME-DIFF ~44k lines, **ch5** freq ~frame **4653**; current tree matches Pascal.)* |
 
----
+### modules/mlf
 
-## Init Sequence Comparison
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| analogtr | 30000 | 0 | PASS | |
+| deorbit | 30000 | 128 | FRAME-DIFF | ±1 nibble diffs bank 0. ftune/fine_tune interaction. |
+| fm-troni | 30000 | 122 | FRAME-DIFF | TonePortamento keyoff regression (was 50→170, now 122 with 30k default). |
+| glass | 30000 | 962 | FRAME-DIFF | ±1 nibble offset. ftune/fine_tune interaction. |
+| ishtar | 30000 | 0 | PASS | |
+| khaos | 30000 | 0 | PASS | |
+| khaos2 | 30000 | 0 | PASS | |
+| lbtrance | 30000 | 0 | PASS | |
+| old_001 | 30000 | 0 | PASS | |
+| old_002 | 30000 | 38589 | FRAME-DIFF | ±1 nibble offset most frames. ftune/fine_tune interaction. |
+| opl303 | 30000 | 212 | FRAME-DIFF | Small ±1 nibble diffs. ftune/fine_tune interaction. |
+| pink | 30000 | 371 | FRAME-DIFF | ±1 pitch nibbles bank 0 ch0 F-Number Low. ftune/fine_tune interaction. |
+| spacediv | 30000 | 10873 | FRAME-DIFF | ±1 nibble offset many frames. ftune/fine_tune interaction. |
 
-### Pascal (adt2_dump.pas → a2player.pas)
+### modules/nula
 
-```
-OPL3EMU_init                  ← chip reset, all regs = 0
-init_songdata                 ← clear song info
-init_timer_proc
-load file (a2m_loader etc.)   ← sets songdata.common_flag etc.
-─── start_playing ───
-  stop_playing:
-    release_sustaining_sound(1..20)  ← vol=63, key_on/off for ALL 20
-    opl2out($bd, 0)
-    opl3exp($0004), opl3exp($0005)
-    init_buffers
-  init_player:
-    opl2out($01, 0)
-    keyoff 18 channels via _chan_n
-    clear ADSR $080..$08d, $090..$095
-    ← sets percussion_mode, flag_4op from songdata.common_flag
-    ← **sets _chan_n/_chan_m/_chan_c** based on percussion_mode (stale during stop!)
-    opl2out($01, $20), opl2out($08, $40)
-    opl3exp($0105), opl3exp($04 + flag_4op<<8)
-    key_off(17), key_off(18)
-    opl2out($bd, misc_register)
-    global_volume = 63
-    voice_table[i] = i, arpgg[i].state = 1
-  set_current_order(0)
-  play_status := isPlaying
-set_overall_volume(63)        ← after frame_hook
-```
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| cracker | 30000 | 0 | PASS | |
+| fresh | 30000 | 68 | FRAME-DIFF | Small ±1 nibble diffs bank 0. |
+| gummi | 30000 | 0 | PASS | |
+| imadick | 30000 | 0 | PASS | |
+| kulje | 30000 | 0 | PASS | |
+| loader | 30000 | 0 | PASS | |
+| mario | 30000 | 0 | PASS | |
+| menuload | 30000 | 284 | FRAME-DIFF | Small ±1 nibble diffs bank 0. |
+| mtkamies | 30000 | 0 | PASS | |
+| onward | 30000 | 0 | PASS | |
+| pre | 30000 | 0 | PASS | |
+| psycho3x | 30000 | 23858 | FRAME-DIFF | ±1 nibble offset across most frames. |
+| psycho5 | 30000 | 34088 | FRAME-DIFF | ±1 nibble offset from frame 24+, likely INIT state divergence. |
+| spa | 30000 | 0 | PASS | |
+| unreal | 30000 | 0 | PASS | |
+| unreal2 | 30000 | 0 | PASS | |
+| worms | 30000 | 0 | PASS | |
+| zalza | 30000 | 0 | PASS | |
+| zandax | 30000 | 0 | PASS | |
+| zenbowl | 30000 | 0 | PASS | |
 
-### C (a2t.c)
+### modules/ben
 
-```
-a2t_init(freq)                ← OPL3_Reset → chip reset, all regs = 0
-a2t_load(name)                ← load file into memory
-─── a2t_play ───
-  a2t_stop:
-    release_sustaining_sound(0..19)  ← vol=63, key_on/off for ALL 20
-    opl2out($bd, 0)
-    opl3exp($0004), opl3exp($0005)
-    init_buffers
-  a2_import                         ← sets songdata, common_flag etc.
-  init_player:
-    opl2out($01, 0)
-    keyoff 18 channels via regoffs_n
-    clear ADSR $080..$08d, $090..$095
-    ← percussion_mode, flag_4op etc. already set by a2_import
-    opl2out($01, $20), opl2out($08, $40)
-    opl3exp($0105), opl3exp($04 + flag_4op<<8)
-    key_off(16), key_off(17)
-    opl2out($bd, misc_register)
-    **init_buffers**                  ← SECOND call (Pascal doesn't)
-    global_volume = 63
-    voice_table[i] = i+1, arpgg[i].state = 1
-  set_current_order(0)
-  play_status := isPlaying
-set_overall_volume(63)        ← from a2m_dump.c main()
-```
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| ballad | 30000 | 0 | PASS | |
+| boss8 | 30000 | 0 | PASS | |
+| farhome | 30000 | 0 | PASS | |
+| fdance06 | 30000 | 0 | PASS | |
+| fdance27 | 30000 | 0 | PASS | |
+| fm63b_rv | 30000 | 0 | PASS | |
+| fmaven94 | 30000 | 0 | PASS | |
+| fmaven95 | 30000 | 0 | PASS | |
+| fmaven96 | 30000 | 0 | PASS | |
+| fmaven97 | 30000 | 0 | PASS | |
+| fmaven98 | 30000 | 0 | PASS | |
+| fmavn63b | 30000 | 0 | PASS | |
+| gates | 30000 | 0 | PASS | |
+| hitech2 | 30000 | 0 | PASS | |
+| hitech3 | 30000 | 0 | PASS | |
+| hitech3f | 30000 | 0 | PASS | |
+| jdaniels | 30000 | 0 | PASS | |
+| laboite | 30000 | 0 | PASS | |
+| neurophb | 30000 | 0 | PASS | |
+| nowgone | 30000 | 0 | PASS | |
+| recherch | 30000 | 0 | PASS | |
+| running | 30000 | 0 | PASS | |
+| song100 | 30000 | 302 | FRAME-DIFF | ±1 nibble diffs bank 0, ftune/fine_tune interaction. |
+| song102 | 30000 | 0 | PASS | |
+| song103 | 30000 | 0 | PASS | |
+| song105 | 30000 | 0 | PASS | |
+| song108 | 30000 | 0 | PASS | |
+| sonic | 30000 | 0 | PASS | |
+| stormrid | 30000 | 0 | PASS | |
+| tanmusik | 30000 | 0 | PASS | |
+| trance | 30000 | 0 | PASS | |
+| trance2 | 30000 | 5768 | FRAME-DIFF | ±1 nibble offset across many frames, ftune/fine_tune interaction. |
+| trouble | 30000 | 0 | PASS | |
+| ultra | 30000 | 0 | PASS | |
+| village | 30000 | 0 | PASS | |
+| waterfls | 30000 | 0 | PASS | |
+| worldfal | 30000 | 0 | PASS | |
 
-### Differences Found
-
-| Aspect | Pascal | C | Impact |
-|--------|--------|---|-------|
-| `init_buffers` count | Once in `stop_playing` | **Twice** (stop + init_player) | Re-clears channel state after import — redundant, harmless |
-| `_chan_n/m/c` / `regoffs` timing | Set in `init_player` AFTER `stop_playing` — **stale during stop** | Computed live via `!!percussion_mode` — **always current** | **Potential bug**: Pascal's `stop_playing` → `release_sustaining_sound` writes vol=63 using old `_chan_m` from PREVIOUS song. If prev song had different `percussion_mode`, it writes to wrong regs |
-| `common_flag` parsing | In `init_player` | In `a2_import` (before `init_player`) | Same result, different location |
-| `key_off` indices | 17,18 (1-based → C 16,17) | 16,17 (0-based) | **Same** (just 1-based vs 0-based) |
-| `speed` / `update_timer` in stop | Not done | `speed=4; update_timer(50)` | C resets tempo/speed, Pascal doesn't |
