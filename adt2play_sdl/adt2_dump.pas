@@ -73,25 +73,40 @@ begin
 end;
 
 procedure dump_frame;
+type
+   tEventTable = array[1..20] of tCHUNK;
 var
-  i: Integer;
-  ws: AnsiString;
+   pevt: ^tEventTable;
+   i: Integer;
+   ws: AnsiString;
 begin
-  if frames_dumped >= max_frames then
-    begin
-      play_status := isStopped;
-      Exit;
-    end;
-  ws := IntToStr(frames_dumped) + ' 0 ';
-  for i := 0 to 255 do
-    ws := ws + LowerCase(IntToHex(shadow_regs[0, i], 2));
-  ws := ws + #13#10;
-  ws := ws + IntToStr(frames_dumped) + ' 1 ';
-  for i := 0 to 255 do
-    ws := ws + LowerCase(IntToHex(shadow_regs[1, i], 2));
-  ws := ws + #13#10;
-  FileWrite(outfd, ws[1], Length(ws));
-  Inc(frames_dumped);
+   if frames_dumped >= max_frames then
+     begin
+       play_status := isStopped;
+       Exit;
+     end;
+   ws := IntToStr(frames_dumped) + ' 0 ';
+   for i := 0 to 255 do
+     ws := ws + LowerCase(IntToHex(shadow_regs[0, i], 2));
+   ws := ws + #13#10;
+   ws := ws + IntToStr(frames_dumped) + ' 1 ';
+   for i := 0 to 255 do
+     ws := ws + LowerCase(IntToHex(shadow_regs[1, i], 2));
+   ws := ws + #13#10;
+   ws := ws + IntToStr(frames_dumped) + ' E ';
+   pevt := Pointer(get_event_table);
+   for i := 1 to 20 do
+     begin
+       ws := ws + LowerCase(IntToHex(pevt^[i].note, 2));
+       ws := ws + LowerCase(IntToHex(pevt^[i].instr_def, 2));
+       ws := ws + LowerCase(IntToHex(pevt^[i].effect_def, 2));
+       ws := ws + LowerCase(IntToHex(pevt^[i].effect, 2));
+       ws := ws + LowerCase(IntToHex(pevt^[i].effect_def2, 2));
+       ws := ws + LowerCase(IntToHex(pevt^[i].effect2, 2));
+     end;
+   ws := ws + #13#10;
+   FileWrite(outfd, ws[1], Length(ws));
+   Inc(frames_dumped);
 end;
 
 begin
@@ -171,26 +186,6 @@ begin
   FillChar(pcm_buf, SizeOf(pcm_buf), 0);
   SetConsoleCtrlHandler(TConsoleCtrlHandlerFn(@CtrlCHandler), True);
   WriteLn('Dumping "', filename, '" -> ', outfilename, ' ...');
-
-  { INIT trace disabled
-  s := '';
-  trace_init := True;
-  start_playing;
-  set_overall_volume(63);
-  trace_init := False;
-
-  if Length(s) > 0 then
-    FileWrite(outfd, s[1], Length(s));
-
-  s := 'INIT:';
-  for i := 0 to 255 do
-    s := s + LowerCase(IntToHex(shadow_regs[0, i], 2));
-  s := s + ' ';
-  for i := 0 to 255 do
-    s := s + LowerCase(IntToHex(shadow_regs[1, i], 2));
-  s := s + #13#10;
-  FileWrite(outfd, s[1], Length(s));
-  }
 
   start_playing;
   set_overall_volume(63);

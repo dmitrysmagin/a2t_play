@@ -478,6 +478,16 @@ static void dump_frame(void)
     printf("%d 1 ", frames_dumped);
     for (i = 0; i < 256; i++) printf("%02x", shadow_regs[1][i]);
     printf("\n");
+    printf("%d E ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x%02x%02x%02x%02x%02x",
+             ch->event_table[i].note,
+             ch->event_table[i].instr_def,
+             ch->event_table[i].eff[0].def,
+             ch->event_table[i].eff[0].val,
+             ch->event_table[i].eff[1].def,
+             ch->event_table[i].eff[1].val);
+    printf("\n");
     frames_dumped++;
 }
 

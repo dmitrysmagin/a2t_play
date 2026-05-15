@@ -120,6 +120,7 @@ function  is_4op_chan(chan: Byte): Boolean;
 function  min(value: Longint; minimum: Longint): Longint;
 function  max(value: Longint; maximum: Longint): Longint;
 function  asciiz_string(str: String): String;
+function get_event_table: Pointer;
 
 type
   tOPLOUT_proc = procedure(reg,data: Word);
@@ -264,6 +265,11 @@ var
   a2t_opl_scratch: LongWord;
   a2t_opl_dummy_ch: array[1..18] of PDWord;
   a2t_opl_dummy_ready: Boolean;
+
+function get_event_table: Pointer;
+begin
+  get_event_table := @event_table;
+end;
 
 procedure opl2out_proc(reg,data: Word);
 begin

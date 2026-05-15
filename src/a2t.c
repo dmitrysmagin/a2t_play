@@ -2172,9 +2172,13 @@ static void play_line()
             event->note -= fixed_note_flag;
         }
 
+        /* Pascal play_line (~2638-2650): copy event effect fields to event_table
+         * only when they are non-zero (otherwise carry over from previous row). */
         for (int slot = 0; slot < 2; slot++) {
-            ch->event_table[chan].eff[slot].def = event->eff[slot].def;
-            ch->event_table[chan].eff[slot].val = event->eff[slot].val;
+            if (event->eff[slot].def | event->eff[slot].val) {
+                ch->event_table[chan].eff[slot].def = event->eff[slot].def;
+                ch->event_table[chan].eff[slot].val = event->eff[slot].val;
+            }
         }
 
         // alters ch->event_table[].instr_def
