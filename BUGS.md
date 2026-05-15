@@ -18,6 +18,14 @@
   - **Root insight**: Pascal's `ins_parameter(0, x)` when `ins=0` does `&songdata.instr_data[-INSTRUMENT_SIZE + x]`. With `INSTRUMENT_SIZE=14` (SizeOf(tADTRACK2_INS)), this reads from `instr_names[255]` character ~29+x (offset ~11037–11050 in `tFIXED_SONGDATA`). Those bytes are undefined memory (beyond the Pascal String's actual length) and happen to be 0xFF (all bits set), which when masked `& $3F` yields 0x3F = volume 63. So Pascal's "unconditional" path keeps volume 63 *by accident*. Any fix that resets volume from an actual instrument value, or that changes `voice_table`/`event_table` state early, cascades into many more diffs than the original early-return approach.
 - **Affected modules**: `o2ghosts` (53,516 diffs at 30k), `crackit` (2,128 at 3.3k), `intrcoop` (13,822 at 5.1k), plus encore/hydra/brendan modules showing volume 0x3f artifacts.
 
+### Bug 4: event_table Eff Not Cleared on New Note Without Effect — FIXED
+- **Root cause**: Pascal's `play_line` writes eff fields to `event_table` in **two** passes: (1) unconditionally when `note`, `instr_def`, or any eff field is non-zero (`a2player.pas:1313-1322`) — **clearing previous eff values**; and (2) conditionally when eff is non-zero (`a2player.pas:2638-2650`). C's `play_line` (`src/a2t.c:2175-2182`) only had the conditional pass, so stale eff values persisted in `event_table` when a new note appeared without an effect.
+- **Fix applied**: Added Pascal LOOP1's unconditional eff write at `src/a2t.c:2175-2189` before the existing conditional write. On `1942.a2m`, reduced diff from 47995→678 lines (with Bug 5 fix), then 678→18 lines.
+
+### Bug 5: init_player key_off/init_buffers Order Reversed — FIXED
+- **Root cause**: C's `init_player()` called `key_off(16-17)` BEFORE `init_buffers()`, so the keyoff flags (0x80) on channels 16-17 were cleared by `init_buffers` zeroing the `event_table`. Pascal's `init_player()` (`a2player.pas:4500/4524-4525`) calls `init_buffers` first, then `key_off(17-18)`, so the keyoff flags persist.
+- **Fix applied**: Swapped order in C's `init_player()` (`src/a2t.c:3416-3420`) — `init_buffers()` now runs before `key_off(16-17)`. Matches Pascal's sequencing. On `1942.a2m`, reduced diff from 47995→678 lines (with Bug 4 fix).
+
 ### Bug 3: ±1 Nibble Frequency Offset — UNFIXED
 - **Affected modules**: 14 modules across `brendan/diode/songs100-108` sets: `deorbit`, `glass`, `old_002`, `opl303`, `pink`, `spacediv`, `chivalry`, `song100`, `trance2`, `mechage`, `sparkplg`, `lostcaus`, `lemmings`, `lucky7s`.
 - **Observation**: Divergence between Pascal's `nFreq(note-1) + SHORTINT(ins_parameter(ins,12))` and C's `nFreq(note - 1) + get_instr_fine_tune(ins)` at `output_note()`.
@@ -56,11 +64,14 @@
 - `adt2play_sdl/a2player.pas:925-999` — Pascal's `set_ins_data` (reference)
 - `adt2play_sdl/a2player.pas:1111-1177` — Pascal's `output_note` (reference)
 - `src/a2t.c:2121-2215` — C's `play_line` (ordering reference)
+- `src/a2t.c:2175-2189` — C's `play_line` unconditional eff write (Bug 4 fix)
+- `src/a2t.c:3416-3420` — C's `init_player` key_off/init_buffers order (Bug 5 fix)
+- `adt2play_sdl/a2player.pas:1313-1322` — Pascal's LOOP1 unconditional eff write (reference for Bug 4)
 
 ## Next Steps
 
-1. **Fix Bug 2**: The `if (ins == 0) return;` guard at line 1072 needs restructuring that matches Pascal's unconditional execution of `voice_table[chan] := ins` and `reset_ins_volume(chan)` at `a2player.pas:993-998`. Simple approaches regressed — needs frame-by-frame tracing with `-DA2M_DUMP_CONTEXT` at specific IRQ divergence points (e.g. o2ghosts frame 10 bank 1 volume regs) to determine exactly which register writes differ and design a fix that matches without cascading.
+1. **Fix Bug 2** (unfixed): The `if (ins == 0) return;` guard at line 1072 needs restructuring that matches Pascal's unconditional execution of `voice_table[chan] := ins` and `reset_ins_volume(chan)` at `a2player.pas:993-998`. Simple approaches regressed — needs frame-by-frame tracing with `-DA2M_DUMP_CONTEXT` at specific IRQ divergence points (e.g. o2ghosts frame 10 bank 1 volume regs) to determine exactly which register writes differ and design a fix that matches without cascading.
 2. ~~Fix `e2_vslide_type` initialization~~ — confirmed NOT A BUG.
 3. **Investigate Bug 3**: Build with `-DA2M_DUMP_CONTEXT` and compare `ftune_table`/`SHORTINT(ins_parameter)` values at divergence frames.
 4. **Re-test all FRAME-DIFF modules** after each fix.
-5. **Update MODULES_TESTED.md** with results.
+5. **Update MODULES_TESTED.md** with results. (Updated 2026-05-15: 1942, square, adven now have small end-of-song diffs due to new E-line comparison.)
