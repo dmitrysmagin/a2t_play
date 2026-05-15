@@ -3413,11 +3413,11 @@ static void init_player()
     opl3exp(0x0105);
     opl3exp(0x04 + (songinfo->flag_4op << 8));
 
+    init_buffers();
+
     key_off(16);
     key_off(17);
     opl2out(0xbd, misc_register);
-
-    init_buffers();
 
     current_tremolo_depth = tremolo_depth;
     current_vibrato_depth = vibrato_depth;
