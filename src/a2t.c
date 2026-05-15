@@ -797,6 +797,7 @@ static void key_off(int chan)
     ch->event_table[chan].note |= keyoff_flag;
 }
 
+
 static void release_sustaining_sound(int chan)
 {
     uint16_t m = regoffs_m(chan);
@@ -805,11 +806,17 @@ static void release_sustaining_sound(int chan)
     opl3out(0x40 + m, 63);
     opl3out(0x40 + c, 63);
 
-    // clear adsrw_mod and adsrw_car
-    ch->fmpar_table[chan].decM = 0;
-    ch->fmpar_table[chan].attckM = 0;
-    ch->fmpar_table[chan].decC = 0;
-    ch->fmpar_table[chan].attckC = 0;
+// clear adsrw_mod and adsrw_car (match Pascal's FillChar zeroing all fields)
+     ch->fmpar_table[chan].decM = 0;
+     ch->fmpar_table[chan].attckM = 0;
+     ch->fmpar_table[chan].relM = 0;
+     ch->fmpar_table[chan].sustnM = 0;
+     ch->fmpar_table[chan].wformM = 0;
+     ch->fmpar_table[chan].decC = 0;
+     ch->fmpar_table[chan].attckC = 0;
+     ch->fmpar_table[chan].relC = 0;
+     ch->fmpar_table[chan].sustnC = 0;
+     ch->fmpar_table[chan].wformC = 0;
 
     key_on(chan);
     opl3out(0x60 + m, BYTE_NULL);
