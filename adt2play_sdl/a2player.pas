@@ -4818,7 +4818,16 @@ begin
       LowerCase(IntToHex(macro_table[i].fmreg_pos, 4)) +
       LowerCase(IntToHex(macro_table[i].arpg_pos, 4)) +
       LowerCase(IntToHex(macro_table[i].vib_pos, 4)) +
-      LowerCase(IntToHex(macro_table[i].fmreg_table, 2));
+      LowerCase(IntToHex(macro_table[i].fmreg_duration, 2)) +
+      LowerCase(IntToHex(macro_table[i].arpg_count, 2)) +
+      LowerCase(IntToHex(macro_table[i].vib_count, 2)) +
+      LowerCase(IntToHex(macro_table[i].vib_delay, 2)) +
+      LowerCase(IntToHex(macro_table[i].fmreg_table, 2)) +
+      LowerCase(IntToHex(macro_table[i].arpg_table, 2)) +
+      LowerCase(IntToHex(macro_table[i].vib_table, 2)) +
+      LowerCase(IntToHex(macro_table[i].arpg_note, 2)) +
+      LowerCase(IntToHex(Byte(macro_table[i].vib_paused), 2)) +
+      LowerCase(IntToHex(macro_table[i].vib_freq, 4));
   get_macro_table_dump := tmp;
 end;
 

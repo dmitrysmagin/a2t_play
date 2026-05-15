@@ -514,12 +514,15 @@ static void dump_frame(void)
       printf("%04x", ch->freq_table[i]);
     printf("\n");
     printf("%d MB ", frames_dumped);
-    for (i = 0; i < 20; i++)
-      printf("%04x%04x%04x%02x",
-             ch->macro_table[i].fmreg_pos,
-             ch->macro_table[i].arpg_pos,
-             ch->macro_table[i].vib_pos,
-             ch->macro_table[i].fmreg_ins);
+    for (i = 0; i < 20; i++) {
+        tCH_MACRO_TABLE *mt = &ch->macro_table[i];
+        printf("%04x%04x%04x%02x%02x%02x%02x%02x%02x%02x%02x%02x%04x",
+               mt->fmreg_pos, mt->arpg_pos, mt->vib_pos,
+               mt->fmreg_duration, mt->arpg_count, mt->vib_count, mt->vib_delay,
+               mt->fmreg_ins, mt->arpg_table, mt->vib_table, mt->arpg_note,
+               (unsigned)mt->vib_paused,
+               mt->vib_freq);
+    }
     printf("\n");
     printf("%d PT ", frames_dumped);
     for (i = 0; i < 20; i++)
