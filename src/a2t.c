@@ -1230,7 +1230,7 @@ static void output_note(uint8_t note, uint8_t ins, int chan, bool restart_macro,
     if (ch->ftune_table[chan] == -127)
         ch->ftune_table[chan] = 0;
 
-    freq = freq + ch->ftune_table[chan];
+    freq = (uint16_t)((int32_t)freq + (int32_t)ch->ftune_table[chan]);
     change_frequency(chan, freq);
 
     if (note) {
