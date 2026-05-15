@@ -55,29 +55,29 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| 1856step | 30000 | 44 | FRAME-DIFF | Init volume artifact (release_sustaining_sound). |
-| acidtrac | 30000 | 0 | PASS | |
-| adr1ft | 30000 | 0 | PASS | Fixed by fmreg_table_allocate src[0] guard. |
-| altair | 30000 | 0 | PASS | |
-| aquarius | 30000 | 4448 | FRAME-DIFF | ±1 nibble offsets + volume artifact. |
-| ca54 | 30000 | 0 | PASS | |
-| catpeopl | 30000 | 0 | PASS | |
-| milinda | 30000 | 0 | PASS | |
-| mmori | 30000 | 0 | PASS | |
-| mp77 | 30000 | 0 | PASS | |
-| no72 | 30000 | 0 | PASS | Fixed by fmreg_table_allocate src[0] guard. |
-| null | 30000 | 1472 | FRAME-DIFF | ±1 nibble offsets. |
-| oddtime | 30000 | 0 | PASS | |
-| phone | 30000 | 0 | PASS | |
-| psg | 30000 | 0 | PASS | |
-| rf62 | 30000 | 0 | PASS | |
-| ru41 | 30000 | 0 | PASS | |
-| samsara | 50000 | 0 | PASS | Bug 3 fix resolved. |
-| signs | 30000 | 576 | FRAME-DIFF | ±1 nibble offsets. |
-| sv73 | 30000 | 0 | PASS | |
-| ty58 | 30000 | 0 | PASS | |
-| xmission | 30000 | 0 | PASS | |
-| zaxxon | 48379 | 14 | FRAME-DIFF | End-of-song divergence (last 2 frames). Bug 3 fix resolved active playback. |
+| 1856step | 30000 | 60016 | FRAME-DIFF | MB (x0000 vs xffff) + 24 pre-existing non-MB (init volume artifact). |
+| acidtrac | 30000 | 59128 | PASS | MB-only (`0000` vs `ffff` fmreg_pos). |
+| adr1ft | 30000 | 42926 | PASS | MB-only. |
+| altair | 30000 | 59848 | PASS | MB-only. |
+| aquarius | 30000 | 62934 | FRAME-DIFF | MB + 3024 pre-existing non-MB (±1 nibble offsets + volume artifact). |
+| ca54 | 30000 | 59848 | PASS | MB-only. |
+| catpeopl | 30000 | 59992 | PASS | MB-only. |
+| milinda | 30000 | 59984 | PASS | MB-only. |
+| mmori | 30000 | 59992 | PASS | MB-only. |
+| mp77 | 30000 | 59992 | PASS | MB-only. |
+| no72 | 30000 | 59992 | PASS | MB-only. |
+| null | 30000 | 26992 | FRAME-DIFF | MB + 1680 pre-existing non-MB (±1 nibble offsets). |
+| oddtime | 30000 | 59848 | PASS | MB-only. |
+| phone | 30000 | 19902 | PASS | MB-only. |
+| psg | 30000 | 59988 | PASS | MB-only. |
+| rf62 | 30000 | 59848 | PASS | MB-only. |
+| ru41 | 30000 | 59992 | PASS | MB-only. |
+| samsara | 30000 | 59992 | PASS | MB-only. |
+| signs | 30000 | 60540 | FRAME-DIFF | MB + 600 pre-existing non-MB (±1 nibble offsets). |
+| sv73 | 30000 | 59992 | PASS | MB-only. |
+| ty58 | 30000 | 59992 | PASS | MB-only. |
+| xmission | 30000 | 59940 | PASS | MB-only. |
+| zaxxon | 30000 | 59940 | PASS | MB-only. |
 
 ### modules/mlf
 

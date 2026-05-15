@@ -2940,14 +2940,14 @@ static void set_current_order(uint8_t new_order)
         if (songinfo->pattern_order[current_order] > 0x7f) {
             uint8_t old_order = current_order;
             current_order = songinfo->pattern_order[current_order] - 0x80;
-            if (current_order <= old_order)
+            if (current_order <= old_order) {
                 songend = true;
+            }
         }
         i++;
     } while (i < 128 && songinfo->pattern_order[current_order] > 0x7f);
 
     if (i >= 128) {
-        AdPlug_LogWrite("set_current_order: Circular order jump detected, stopping playback\n");
         songend = true;
         a2t_stop();
     }
@@ -3037,6 +3037,10 @@ static void update_song_position()
 
 static void poll_proc()
 {
+    /* Pascal match: don't call a2t_stop() here. a2t_stop() is only called from
+     * timer_poll_proc, but a2t_update_dump skips that path. If we a2t_stop() here,
+     * subsequent IRQ ticks reprocess from reset state (order=0) and produce zeroed
+     * frames that Pascal doesn't produce. The main loop exits on !songend instead. */
     if (pattern_delay) {
         update_effects();
         ticks++;
@@ -3063,11 +3067,6 @@ static void poll_proc()
             ticks++;
         }
     }
-
-    /* Pascal: songend must halt the engine. When order/row advance sets songend,
-     * stop playing immediately so the main loop exits before processing more frames. */
-    if (songend && play_status == isPlaying)
-        a2t_stop();
 
     tickXF++;
     if (tickXF % 4 == 0) {
