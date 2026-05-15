@@ -17,18 +17,27 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | HANGOVER (VOID) | 20479 | 0 | PASS | |
 | KULJE_V4 | 15000 | 44082 | FRAME-DIFF | INIT state divergence. |
 | MINDFLUX (VOID) | 10891 | 0 | PASS | |
+| Newtune | 30000 | 0 | PASS | |
 | RASTER (VOID) | 31999 | 0 | PASS | |
 | TERRANIA (VOID) | 19199 | 0 | PASS | |
 | adven | 38399 | 38 | FRAME-DIFF | Bug 3 fix resolved active playback (was 30 at 21k — 38 at 50k is end-of-song divergence). |
 | andromeda | 58316 | 0 | PASS | |
 | bxx_nowgone | - | - | PASS | |
-| class05 | 24959 | 0 | PASS | `run_one_test.sh modules/class05.a2m` with `MAX_FRAMES=100000` (2026-05-13): `diff -u` empty — **24959** IRQ frames (**49918** dump lines each side). Song ends before frame cap. Per **TESTING.md**, no diverging frame → no isolated `a2t.c` / `dump_context()` work. |
-| paradox3 | 3896 | 0 | PASS | `run_one_test.sh modules/paradox3.a2m` with `MAX_FRAMES=100000` (2026-05-13): `diff -u` empty — **3896** IRQ frames (**7792** dump lines each side). Song ends before frame cap. Per **TESTING.md**, no diverging frame → no isolated `a2t.c` / `dump_context()` work. |
-| remembrance | 38399 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/remembrance.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **38399** IRQ frames (**76798** dump lines each side); last frame index **38398**. ~46s wall time. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. |
-| speed_reset_song103 | 2074 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/speed_reset_song103.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **2074** IRQ frames (**4148** dump lines each side). ~4s wall time. Covers **speed_reset** effect on **`song103`**-style module; song ends before frame cap. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. |
-| square | 19588 | 48 | FRAME-DIFF | 48 diff lines (last 5 frames, pre-existing end-of-song divergence). E-line added 2026-05-15; event_table now matches Pascal for active playback. |
+| class05 | 24959 | 0 | PASS | |
+| damn-sh | 30000 | 0 | PASS | |
+| ed3lw | 30000 | 0 | PASS | |
+| frustration | 30000 | 0 | PASS | |
+| goa-cma | 30000 | 0 | PASS | |
+| mystcave | 30000 | 0 | PASS | |
+| nightdrv | 30000 | 7718 | FRAME-DIFF | 2880 non-MB — freq/volume divergence (ftune/fine_tune). |
+| paradox3 | 3896 | 0 | PASS | |
+| remembrance | 38399 | 0 | PASS | |
+| schwskel | 30000 | 0 | PASS | |
+| skyh | 30000 | 884 | FRAME-DIFF | 384 non-MB — freq/volume divergence (ftune/fine_tune). |
+| speed_reset_song103 | 2074 | 0 | PASS | |
+| square | 30000 | 0 | PASS | |
 | top-2act | 43802 | 0 | PASS | Re-checked 2026-05-13 (`MAX_FRAMES=100000`, `TIMEOUT_SEC=360`): **`diff -u`** empty. Root cause: instrument **19** had FMREG **`length==0`** and empty cells but **`src[5]`** selected vibrato table **1**; **`fmreg`** was not allocated so **`instrument->vibrato`** never propagated (**`src/a2t.c`** **`fmreg_table_allocate`** now allocates when **`src[1]|…|src[5]`** is non-zero). Cell inference when **`length==0`** retained. Optional **`tools/fmreg_peek.c`** can inspect FMREG blobs. |
-| whereru | 30719 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/whereru.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **30719** IRQ frames (**61438** dump lines each side); last frame index **30718**. ~25s wall time. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. *(Earlier snapshot: FRAME-DIFF ~44k lines, **ch5** freq ~frame **4653**; current tree matches Pascal.)* |
+| whereru | 30719 | 0 | PASS | |
 
 ### modules/ben
 
