@@ -5,7 +5,7 @@
 
 # Goal
 
-Match C tool to have the same reg dump as Pascal tool
+Match C tool to have the same data dump as Pascal tool
 
 # Output format
 
@@ -15,6 +15,8 @@ Both tools output 2 lines per IRQ frame:
   <frame_num> 1 <256 reg bytes as hex>
   <frame_num> E <event_table bytes as hex string>
   <frame_num> F <freq_table bytes as hex string>
+  <frame_num> ET <effect_table/effect_table2 as hex string>
+  <frame_num> PT <porta_table/porta_table2 as hex string>
 
 
 # Before running

@@ -122,6 +122,8 @@ function  max(value: Longint; maximum: Longint): Longint;
 function  asciiz_string(str: String): String;
 function get_event_table: Pointer;
 function get_freq_table: Pointer;
+function get_effect_table_dump: AnsiString;
+function get_porta_table_dump: AnsiString;
 
 type
   tOPLOUT_proc = procedure(reg,data: Word);
@@ -141,6 +143,7 @@ const
 implementation
 
 uses
+  SysUtils,
   A2fileIO,
   OPL3EMU;
 
@@ -267,15 +270,7 @@ var
   a2t_opl_dummy_ch: array[1..18] of PDWord;
   a2t_opl_dummy_ready: Boolean;
 
-function get_event_table: Pointer;
-begin
-  get_event_table := @event_table;
-end;
 
-function get_freq_table: Pointer;
-begin
-  get_freq_table := @freq_table;
-end;
 
 procedure opl2out_proc(reg,data: Word);
 begin
@@ -4769,6 +4764,46 @@ begin
   until (index > $7f);
 
   entries := index;
+end;
+
+function get_event_table: Pointer;
+begin
+  get_event_table := @event_table;
+end;
+
+function get_freq_table: Pointer;
+begin
+  get_freq_table := @freq_table;
+end;
+
+function get_effect_table_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp +
+      LowerCase(IntToHex(HI(effect_table[i]), 2)) +
+      LowerCase(IntToHex(LO(effect_table[i]), 2)) +
+      LowerCase(IntToHex(HI(effect_table2[i]), 2)) +
+      LowerCase(IntToHex(LO(effect_table2[i]), 2));
+  get_effect_table_dump := tmp;
+end;
+
+function get_porta_table_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp +
+      LowerCase(IntToHex(porta_table[i].freq, 4)) +
+      LowerCase(IntToHex(porta_table[i].speed, 2)) +
+      LowerCase(IntToHex(porta_table2[i].freq, 4)) +
+      LowerCase(IntToHex(porta_table2[i].speed, 2));
+  get_porta_table_dump := tmp;
 end;
 
 begin
