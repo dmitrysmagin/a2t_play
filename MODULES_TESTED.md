@@ -284,7 +284,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| 4thcoast | 50000 | 15556 | FRAME-DIFF | Large diffs, multiple frames diverge. |
+| 4thcoast | 50000 | 15556 | FRAME-DIFF | Frame-timing drift: +23 FNUM offset in both channels from frame 29100+. Not Bug 3. |
 | 4xmisste | 50000 | 160 | FRAME-DIFF | |
 | 5ontelev | 50000 | 14 | FRAME-DIFF | Small end-of-song diff. |
 | allfull | 50000 | 6470 | FRAME-DIFF | |
