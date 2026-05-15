@@ -1529,24 +1529,33 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
         break;
 
     case ef_TonePortamento:
-        update_effect_table(slot, chan, EFGR_TONEPORTAMENTO, def, val);
-
-        ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
-        /* Key-off note (e.g. 0xff→note|0x80): target must be current pitch — nFreq(nb)
-         * can disagree in octave encoding with freq after FSlide, so one tone_porta
-         * tick would otherwise slide wrong (fm-troni ~15261 vs adt2_dump). */
+        /* Pascal (a2player.pas ~2141, ~1565): TonePortamento is activated only when
+         * the row carries a note OR when eLo2 (last_effect's type) already matches
+         * ef_TonePortamento (carry-over).  If note=0 and no prior TonePortamento,
+         * the effect is skipped entirely — effect_table stays cleared, no slide. */
         {
             uint8_t nb = event->note & (uint8_t)~keyoff_flag;
+            bool has_note = (nb >= 1 && nb <= 12 * 8 + 1);
+            bool has_carry = (ch->last_effect[slot][chan].def == ef_TonePortamento);
 
-            if (nb >= 1 && nb <= 12 * 8 + 1) {
-                if (event->note & keyoff_flag)
-                    ; /* Pascal: keyoff note is NOT in [1..97] range (has $80 bit),
-                       * so porta.freq is NOT updated — keeps old value from previous
-                       * row's nFreq. Matching this enables the tone_portamento slide. */
-                else
+            if (has_note || has_carry) {
+                update_effect_table(slot, chan, EFGR_TONEPORTAMENTO, def, val);
+
+                ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
+
+                /* Key-off note: target must be current pitch — keep old porta.freq
+                 * so the slide continues toward the previous target (fm-troni ~15261). */
+                if (has_note && !(event->note & keyoff_flag))
                     ch->porta_table[slot][chan].freq =
                         nFreq((uint8_t)(nb - 1)) +
                         get_instr_fine_tune(ch->event_table[chan].instr_def);
+            }
+            else {
+                /* Pascal behavior: skip entirely — effect_table stays cleared, no slide.
+                 * Must also clear def set by process_effects_slot_prepare, otherwise
+                 * update_effects_slot will still call tone_portamento(). */
+                ch->effect_table[slot][chan].def = 0;
+                ch->effect_table[slot][chan].val = 0;
             }
         }
         break;

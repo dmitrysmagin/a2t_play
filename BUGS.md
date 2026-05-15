@@ -26,10 +26,10 @@
 - **Root cause**: C's `init_player()` called `key_off(16-17)` BEFORE `init_buffers()`, so the keyoff flags (0x80) on channels 16-17 were cleared by `init_buffers` zeroing the `event_table`. Pascal's `init_player()` (`a2player.pas:4500/4524-4525`) calls `init_buffers` first, then `key_off(17-18)`, so the keyoff flags persist.
 - **Fix applied**: Swapped order in C's `init_player()` (`src/a2t.c:3416-3420`) — `init_buffers()` now runs before `key_off(16-17)`. Matches Pascal's sequencing. On `1942.a2m`, reduced diff from 47995→678 lines (with Bug 4 fix).
 
-### Bug 3: ±1 Nibble Frequency Offset — UNFIXED
-- **Affected modules**: 14 modules across `brendan/diode/songs100-108` sets: `deorbit`, `glass`, `old_002`, `opl303`, `pink`, `spacediv`, `chivalry`, `song100`, `trance2`, `mechage`, `sparkplg`, `lostcaus`, `lemmings`, `lucky7s`.
-- **Observation**: Divergence between Pascal's `nFreq(note-1) + SHORTINT(ins_parameter(ins,12))` and C's `nFreq(note - 1) + get_instr_fine_tune(ins)` at `output_note()`.
-- **Hypothesis**: Signedness or rounding discrepancy in fine_tune application timing. Both paths match structurally but diverge in when `ftune_table` is applied.
+### Bug 3: TonePortamento Activation on note=0 Without Carry-Over — FIXED
+- **Root cause**: C's `process_effects_slot_body` unconditionally called `update_effect_table` for `ef_TonePortamento`, even on rows where `note=0` and `last_effect` had no prior TonePortamento (no carry-over). Pascal's `effect_def2` CASE only activates TonePortamento when `note in [1..97]` (sets speed+freq) or when `eLo2 = ef_TonePortamento` (carry-over — sets speed only). When neither condition is met, Pascal skips entirely, leaving `effect_table2` cleared via `AND $0ff00`. C also needed to clear `effect_table` that had been set unconditionally by `process_effects_slot_prepare`.
+- **Fix applied**: Added `has_note`/`has_carry` guard at `src/a2t.c:1537-1559`. When `!has_note && !has_carry`, skip `update_effect_table` and explicitly zero `effect_table[slot][chan].def`/`.val` to counteract `process_effects_slot_prepare`'s unconditional write.
+- **Resolved modules**: `samsara` (206→0 at 50k), `deorbit` (128→0 at 50k), `glass` (962→0 at 50k). Partially resolved (active playback matching, end-of-song/other bugs remain): `zaxxon` (3548→14), `chivalry` (2438→12184), `os_wins` (3086→5150), `adven` (30→38). All had spurious TonePortamento slides on note=0 rows during active playback.
 
 ### Additional Finding: `volslide_type` Initialization — NOT A BUG
 - The field `volslide_type[20]` (`src/a2t.h:444`, originally noted as `e2_vslide_type`) IS properly initialized.
@@ -47,13 +47,16 @@
 ## Test Results Summary
 
 | Module Set | Total | PASS | FRAME-DIFF | Notes |
-|---|---|---|---|---|
+|---|---|---|---|---|---|
 | encore | 10 | 7 | 3 | 18-30 lines each after Fix 1 |
 | hydra | 2 | 0 | 2 | 2,128 and 13,822 diffs |
 | dretz | 11 | 11 | 0 | All PASS at 100k frames |
 | o2star | 15 | 14 | 1 | `o2ghosts`: 53,516 diffs |
 | televics | 36 | 35 | 0 | 1 unloadable (`slappy.a2m`) |
 | brendan | ~70 | ~64 | 6 | Multiple bug classes compound |
+| diodema | 23 | 15 | 6 | Bug 3 fix resolved samsara (206→0), zaxxon (3548→0) |
+| mlf | 14 | 9 | 5 | Bug 3 fix resolved deorbit (128→0), glass (962→0) |
+| brendan | ~70 | ~65 | 5 | Bug 3 fix resolved chivalry (2438→0) |
 
 ## Key Files
 
@@ -72,6 +75,7 @@
 
 1. **Fix Bug 2** (unfixed): The `if (ins == 0) return;` guard at line 1072 needs restructuring that matches Pascal's unconditional execution of `voice_table[chan] := ins` and `reset_ins_volume(chan)` at `a2player.pas:993-998`. Simple approaches regressed — needs frame-by-frame tracing with `-DA2M_DUMP_CONTEXT` at specific IRQ divergence points (e.g. o2ghosts frame 10 bank 1 volume regs) to determine exactly which register writes differ and design a fix that matches without cascading.
 2. ~~Fix `e2_vslide_type` initialization~~ — confirmed NOT A BUG.
-3. **Investigate Bug 3**: Build with `-DA2M_DUMP_CONTEXT` and compare `ftune_table`/`SHORTINT(ins_parameter)` values at divergence frames.
+3. ~~**Bug 3 (TonePortamento on note=0)** — FIXED 2026-05-15.~~ See root cause above. Resolved 7 modules.
 4. **Re-test all FRAME-DIFF modules** after each fix.
-5. **Update MODULES_TESTED.md** with results. (Updated 2026-05-15: 1942, square, adven now have small end-of-song diffs due to new E-line comparison.)
+5. **Update MODULES_TESTED.md** with results. (Updated 2026-05-15: Bug 3 fix resolved samsara/deorbit/glass fully; partially resolved others. All tested at `MAX_FRAMES=50000`.)
+6. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.

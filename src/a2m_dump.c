@@ -55,6 +55,9 @@ static bool a2m_dump_context_irq_requested(void)
         5302, 5303, 5304, 5305, 5306, 5307, 5308, 5309, 5310, 5311, 5312, 5313, 5314, 5315,
         /* top-2act: bank1 shadow_regs[1][0xa3] vs Pascal ~10895 (logical chan 9 / track 10, regoffs_n=0x103) */
         10893, 10894, 10895, 10896, 10897, 10898, 10899, 10900, 10901, 10902,
+        /* samsara: ch10 freq_table divergence starting at frame 20854 */
+        20853, 20854, 20855, 20856, 20857, 20858, 20859, 20860,
+        20915, 20916, 20917, 20918, 20919, 20920, 20921,
         -1
     };
     int i;
@@ -434,6 +437,24 @@ static void a2m_dump_context_at_irq_frames(void)
     }
 
     dump_context_f(stderr, ch);
+
+    if (frames_dumped >= 20853 && frames_dumped <= 20860) {
+        int c = 10;
+        fprintf(stderr,
+                "\n#### SAM dump frame=%d ch10: freq_table=0x%04x (keyon=%d block=%d fnum=0x%03x) "
+                "ftune=%d porta_s0={freq=0x%04x speed=%u} porta_s1={freq=0x%04x speed=%u}\n",
+                frames_dumped,
+                (unsigned)ch->freq_table[c],
+                (ch->freq_table[c] >> 13) & 1,
+                ((ch->freq_table[c] >> 10) & 7),
+                (unsigned)(ch->freq_table[c] & 0x3ff),
+                (int)ch->ftune_table[c],
+                (unsigned)ch->porta_table[0][c].freq,
+                (unsigned)ch->porta_table[0][c].speed,
+                (unsigned)ch->porta_table[1][c].freq,
+                (unsigned)ch->porta_table[1][c].speed);
+    }
+
     fflush(stderr);
 }
 #endif
