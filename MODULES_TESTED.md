@@ -321,3 +321,39 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | yellatfl | 50000 | 38 | FRAME-DIFF | |
 | yellowwe | 50000 | 38 | FRAME-DIFF | |
 
+### modules/o2star
+
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| o2bbb | 30000 | 0 | PASS | |
+| o2bigtr | 30000 | 0 | PASS | |
+| o2bring | 30000 | 8640 | FRAME-DIFF | 5760 non-MB — freq table divergence (fine_tune/ftune offset). |
+| o2c3comp | 30000 | 2580 | FRAME-DIFF | 1720 non-MB — freq/pitch ±1 nibble offsets. |
+| o2deaf | 30000 | 768 | FRAME-DIFF | 512 non-MB — freq table divergence (fine_tune/ftune). |
+| o2devas | 30000 | 0 | PASS | |
+| o2enjoy | 30000 | 0 | PASS | |
+| o2ghosts | 30000 | 27340 | FRAME-DIFF | all non-MB — init volume artifact (release_sustaining_sound). |
+| o2grv1 | 30000 | 0 | PASS | |
+| o2grv2 | 30000 | 0 | PASS | |
+| o2invol | 30000 | 0 | PASS | |
+| o2lazyg | 30000 | 0 | PASS | |
+| o2leftou | 30000 | 0 | PASS | |
+| o2lovehr | 30000 | 0 | PASS | |
+| o2uvhsc | 30000 | 0 | PASS | |
+
+### modules/dretz
+
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| badapple | 30000 | 0 | PASS | |
+| badseed | 30000 | 0 | PASS | |
+| chemical | 30000 | 0 | PASS | |
+| corridor | 30000 | 0 | PASS | |
+| meglvnia | 30000 | 0 | PASS | |
+| mystccav | 30000 | 0 | PASS | |
+| oilocean | 30000 | 0 | PASS | |
+| pommy | 30000 | 0 | PASS | |
+| popular | 30000 | 0 | PASS | |
+| rbfactry | 30000 | 582 | FRAME-DIFF | 240 non-MB — freq table divergence (fine_tune/ftune). |
+| undersea | 30000 | 0 | PASS | |
+
