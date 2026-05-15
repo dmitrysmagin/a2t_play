@@ -121,6 +121,7 @@ function  min(value: Longint; minimum: Longint): Longint;
 function  max(value: Longint; maximum: Longint): Longint;
 function  asciiz_string(str: String): String;
 function get_event_table: Pointer;
+function get_freq_table: Pointer;
 
 type
   tOPLOUT_proc = procedure(reg,data: Word);
@@ -269,6 +270,11 @@ var
 function get_event_table: Pointer;
 begin
   get_event_table := @event_table;
+end;
+
+function get_freq_table: Pointer;
+begin
+  get_freq_table := @freq_table;
 end;
 
 procedure opl2out_proc(reg,data: Word);

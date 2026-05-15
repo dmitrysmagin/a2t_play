@@ -14,6 +14,7 @@ Both tools output 2 lines per IRQ frame:
   <frame_num> 0 <256 reg bytes as hex>
   <frame_num> 1 <256 reg bytes as hex>
   <frame_num> E <event_table bytes as hex string>
+  <frame_num> F <freq_table bytes as hex string>
 
 
 # Before running

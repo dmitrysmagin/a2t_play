@@ -75,8 +75,10 @@ end;
 procedure dump_frame;
 type
    tEventTable = array[1..20] of tCHUNK;
+   tFreqTable = array[1..20] of Word;
 var
    pevt: ^tEventTable;
+   pft: ^tFreqTable;
    i: Integer;
    ws: AnsiString;
 begin
@@ -93,18 +95,23 @@ begin
    for i := 0 to 255 do
      ws := ws + LowerCase(IntToHex(shadow_regs[1, i], 2));
    ws := ws + #13#10;
-   ws := ws + IntToStr(frames_dumped) + ' E ';
-   pevt := Pointer(get_event_table);
-   for i := 1 to 20 do
-     begin
-       ws := ws + LowerCase(IntToHex(pevt^[i].note, 2));
-       ws := ws + LowerCase(IntToHex(pevt^[i].instr_def, 2));
-       ws := ws + LowerCase(IntToHex(pevt^[i].effect_def, 2));
-       ws := ws + LowerCase(IntToHex(pevt^[i].effect, 2));
-       ws := ws + LowerCase(IntToHex(pevt^[i].effect_def2, 2));
-       ws := ws + LowerCase(IntToHex(pevt^[i].effect2, 2));
-     end;
-   ws := ws + #13#10;
+    ws := ws + IntToStr(frames_dumped) + ' E ';
+    pevt := Pointer(get_event_table);
+    for i := 1 to 20 do
+      begin
+        ws := ws + LowerCase(IntToHex(pevt^[i].note, 2));
+        ws := ws + LowerCase(IntToHex(pevt^[i].instr_def, 2));
+        ws := ws + LowerCase(IntToHex(pevt^[i].effect_def, 2));
+        ws := ws + LowerCase(IntToHex(pevt^[i].effect, 2));
+        ws := ws + LowerCase(IntToHex(pevt^[i].effect_def2, 2));
+        ws := ws + LowerCase(IntToHex(pevt^[i].effect2, 2));
+      end;
+    ws := ws + #13#10;
+    ws := ws + IntToStr(frames_dumped) + ' F ';
+    pft := Pointer(get_freq_table);
+    for i := 1 to 20 do
+      ws := ws + LowerCase(IntToHex(pft^[i], 4));
+    ws := ws + #13#10;
    FileWrite(outfd, ws[1], Length(ws));
    Inc(frames_dumped);
 end;

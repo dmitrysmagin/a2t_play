@@ -488,6 +488,10 @@ static void dump_frame(void)
              ch->event_table[i].eff[1].def,
              ch->event_table[i].eff[1].val);
     printf("\n");
+    printf("%d F ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%04x", ch->freq_table[i]);
+    printf("\n");
     frames_dumped++;
 }
 
