@@ -280,3 +280,44 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | forest | 30000 | 0 | PASS | |
 | whatslov | 30000 | 0 | PASS | |
 
+### modules/televics
+
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| 4thcoast | 50000 | 15556 | FRAME-DIFF | Large diffs, multiple frames diverge. |
+| 4xmisste | 50000 | 160 | FRAME-DIFF | |
+| 5ontelev | 50000 | 14 | FRAME-DIFF | Small end-of-song diff. |
+| allfull | 50000 | 6470 | FRAME-DIFF | |
+| antilato | 50000 | 0 | PASS | |
+| asynth | 50000 | 0 | PASS | |
+| atrick | 50000 | 30 | FRAME-DIFF | |
+| badlib | 50000 | 62 | FRAME-DIFF | |
+| badtraf | 50000 | 996 | FRAME-DIFF | |
+| boppinb | 50000 | 54 | FRAME-DIFF | |
+| bopptoda | 50000 | 38 | FRAME-DIFF | |
+| build | 50000 | 2588 | FRAME-DIFF | |
+| butterfl | 50000 | 0 | PASS | |
+| composur | 50000 | 0 | PASS | |
+| cwack | 50000 | 1742 | FRAME-DIFF | |
+| d-rumsb | 50000 | 38 | FRAME-DIFF | |
+| damn | 50000 | 14 | FRAME-DIFF | Small end-of-song diff. |
+| discwrld | 50000 | 1958 | FRAME-DIFF | |
+| drumbnba | 50000 | 46 | FRAME-DIFF | |
+| fast | 50000 | 38 | FRAME-DIFF | |
+| fuckyrev | 50000 | 270 | FRAME-DIFF | |
+| funny | 50000 | 0 | PASS | |
+| libretto | 50000 | 30 | FRAME-DIFF | |
+| macroron | 50000 | 38 | FRAME-DIFF | |
+| phaat | 50000 | 38 | FRAME-DIFF | |
+| scary | 50000 | 0 | PASS | |
+| shit | 50000 | 62 | FRAME-DIFF | |
+| slap | 50000 | 30 | FRAME-DIFF | |
+| stuffage | 50000 | 62 | FRAME-DIFF | |
+| sunny | 50000 | 38 | FRAME-DIFF | |
+| teknoh | 50000 | 0 | PASS | |
+| topgear | 50000 | 3998 | FRAME-DIFF | |
+| wip | 50000 | 0 | PASS | |
+| woods | 50000 | 38 | FRAME-DIFF | |
+| yellatfl | 50000 | 38 | FRAME-DIFF | |
+| yellowwe | 50000 | 38 | FRAME-DIFF | |
+

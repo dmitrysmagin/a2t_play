@@ -52,7 +52,7 @@
 | hydra | 2 | 0 | 2 | 2,128 and 13,822 diffs |
 | dretz | 11 | 11 | 0 | All PASS at 100k frames |
 | o2star | 15 | 14 | 1 | `o2ghosts`: 53,516 diffs |
-| televics | 36 | 35 | 0 | 1 unloadable (`slappy.a2m`) |
+| televics | 36 | 8 | 28 | 4thcoast (15556), topgear (3998), build (2588), discwrld (1958), cwack (1742), badtraf (996), allfull (6470), others small/end-of-song. |
 | brendan | ~70 | ~64 | 6 | Multiple bug classes compound |
 | diodema | 23 | 15 | 6 | Bug 3 fix resolved samsara (206→0), zaxxon (3548→0) |
 | mlf | 14 | 9 | 5 | Bug 3 fix resolved deorbit (128→0), glass (962→0) |
