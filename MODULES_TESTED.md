@@ -258,6 +258,13 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | waterfls | 30000 | 0 | PASS | |
 | worldfal | 30000 | 0 | PASS | |
 
+### modules/hydra
+
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| crackit | 3300 | 2128 | FRAME-DIFF | Init volume artifact (`release_sustaining_sound`, 0x3f to vol regs) + volume scaling diffs in playback body. |
+| intrcoop | 5157 | 13802 | FRAME-DIFF | Init volume artifact (`release_sustaining_sound`, 0x3f to vol regs) + extensive volume scaling divergence across song. |
+
 ### modules/encore
 
 | Module | Frames | Diff Lines | Status | Notes |
