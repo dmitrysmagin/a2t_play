@@ -147,9 +147,9 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | bonusthm | 30000 | 0 | PASS | |
 | callduty | 30000 | 0 | PASS | |
 | chiptune | 30000 | 0 | PASS | |
-| chivalry | 38187 | 12184 | FRAME-DIFF | Bug 3 fix resolved first 21k frames; remaining difts beyond are ftune interaction. |
+| chivalry | 30000 | 1620 | FRAME-DIFF | Init artifact bank 1 KSL/TL. |
 | cloudfrv | 30000 | 0 | PASS | |
-| conspria | 30000 | 0 | PASS | |
+| conspira | 30000 | 0 | PASS | |
 | contrast | 30000 | 0 | PASS | |
 | coolcat | 30000 | 0 | PASS | |
 | cooldown | 30000 | 0 | PASS | |
@@ -160,7 +160,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | depressn | 30000 | 0 | PASS | |
 | difkhero | 30000 | 0 | PASS | |
 | dream7m | 30000 | 0 | PASS | |
-| dream7mx | 30000 | 158 | FRAME-DIFF | Small ±1 nibble offsets. |
+| dream7mx | 30000 | 100 | FRAME-DIFF | Small ±1 nibble offsets. |
 | echorock | 30000 | 0 | PASS | |
 | elskiing | 30000 | 0 | PASS | |
 | enchloop | 30000 | 0 | PASS | |
@@ -168,61 +168,61 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | fiftrial | 30000 | 0 | PASS | |
 | frenzy | 30000 | 0 | PASS | |
 | friendsh | 30000 | 0 | PASS | |
-| frozen | 30000 | 2258 | FRAME-DIFF | Small ±1 nibble offsets. |
+| frozen | 30000 | 1500 | FRAME-DIFF | Init artifact bank 1 KSL/TL. |
 | fullthr | 30000 | 0 | PASS | |
-| funland | 30000 | 83 | FRAME-DIFF | Small ±1 nibble offsets. |
-| goldebel | 30000 | 83 | FRAME-DIFF | Small ±1 nibble offsets. |
+| funland | 30000 | 50 | FRAME-DIFF | Init artifact bank 1 KSL/TL. |
+| goldebel | 30000 | 50 | FRAME-DIFF | Init artifact bank 1 KSL/TL. |
 | horizon | 30000 | 0 | PASS | |
 | hovlane | 30000 | 0 | PASS | |
 | hunter | 30000 | 0 | PASS | |
-| inevitbl | 30000 | 128 | FRAME-DIFF | Small ±1 nibble offsets. |
-| invasion | 30000 | - | untested | timed out |
-| kelsey | 30000 | - | untested | timed out |
-| lemmings | 30000 | - | untested | timed out |
-| lostcaus | 30000 | - | untested | timed out |
-| lucky7s | 30000 | - | untested | timed out |
-| manifest | 30000 | - | untested | timed out |
-| marblect | 30000 | - | untested | timed out |
-| mariothm | 30000 | - | untested | timed out |
-| mechage | 30000 | - | untested | timed out |
-| mechwar | 30000 | - | untested | timed out |
-| metro | 30000 | - | untested | timed out |
-| modratly | 30000 | - | untested | timed out |
-| neversay | 30000 | - | untested | timed out |
-| nochoice | 30000 | - | untested | timed out |
-| nogofers | 30000 | - | untested | timed out |
-| oblivion | 30000 | - | untested | timed out |
-| obstacle | 30000 | - | untested | timed out |
-| ohirony | 30000 | - | untested | timed out |
-| omegavir | 30000 | - | untested | timed out |
-| paparazi | 30000 | - | untested | timed out |
-| pfectwld | 30000 | - | untested | timed out |
-| popcorn | 30000 | - | untested | timed out |
-| racecyb | 30000 | - | untested | timed out |
-| racecyb2 | 30000 | - | untested | timed out |
-| robinthm | 30000 | - | untested | timed out |
-| sinister | 30000 | - | untested | timed out |
-| sitcom | 30000 | - | untested | timed out |
-| skylight | 30000 | - | untested | timed out |
-| skysharp | 30000 | - | untested | timed out |
-| sleepwrk | 30000 | - | untested | timed out |
-| spaceple | 30000 | - | untested | timed out |
-| sparkplg | 30000 | - | untested | timed out |
-| stormywe | 30000 | - | untested | timed out |
-| suspicis | 30000 | - | untested | timed out |
-| teamster | 30000 | - | untested | timed out |
-| thinkfst | 30000 | - | untested | timed out |
-| timewtel | 30000 | - | untested | timed out |
-| torpdall | 30000 | - | untested | timed out |
-| treacher | 30000 | - | untested | timed out |
-| tutheme | 30000 | - | untested | timed out |
-| twistdpa | 30000 | - | untested | timed out |
-| ultravio | 30000 | - | untested | timed out |
-| verynice | 30000 | - | untested | timed out |
-| warhouse | 30000 | - | untested | timed out |
-| wavesmar | 30000 | - | untested | timed out |
-| westbeng | 30000 | - | untested | timed out |
-| jdaniels | 30000 | 0 | PASS | |
+| inevitbl | 30000 | 80 | FRAME-DIFF | Small ±1 nibble offsets. |
+| invasion | 30000 | 0 | PASS | |
+| kelsey | 30000 | 0 | PASS | |
+| lemmings | 30000 | 100 | FRAME-DIFF | Small ±1 nibble offsets. |
+| lostcaus | 30000 | 1600 | FRAME-DIFF | Init artifact ±1 nibble offsets. |
+| lucky7s | 30000 | 6500 | FRAME-DIFF | Init artifact ± freq diffs. |
+| manifest | 30000 | 0 | PASS | |
+| marblect | 30000 | 0 | PASS | |
+| mariothm | 30000 | 0 | PASS | |
+| mechage | 30000 | 1100 | FRAME-DIFF | Init artifact bank 1 KSL/TL. |
+| mechwar | 30000 | 25624 | FRAME-DIFF | Init artifact volume scaling. |
+| metro | 30000 | 0 | PASS | |
+| modratly | 30000 | 0 | PASS | |
+| neversay | 30000 | 0 | PASS | |
+| nochoice | 30000 | 0 | PASS | |
+| nogofers | 30000 | 0 | PASS | |
+| oblivion | 30000 | 0 | PASS | |
+| obstacle | 30000 | 0 | PASS | |
+| ohirony | 30000 | 0 | PASS | |
+| omegavir | 30000 | 0 | PASS | |
+| paparazi | 30000 | 0 | PASS | |
+| pfectwld | 30000 | 0 | PASS | |
+| popcorn | 30000 | 0 | PASS | |
+| racecyb | 30000 | 0 | PASS | |
+| racecyb2 | 30000 | 0 | PASS | |
+| robinthm | 30000 | 0 | PASS | |
+| sinister | 30000 | 360 | FRAME-DIFF | Small ±1 nibble offsets. |
+| sitcom | 30000 | 0 | PASS | |
+| skylight | 30000 | 0 | PASS | |
+| skysharp | 30000 | 0 | PASS | |
+| sleepwrk | 30000 | 0 | PASS | |
+| spaceple | 30000 | 3120 | FRAME-DIFF | Init artifact ± freq diffs. |
+| sparkplg | 30000 | 960 | FRAME-DIFF | Init artifact bank 1 KSL/TL. |
+| stormywe | 30000 | 0 | PASS | |
+| suspicis | 30000 | 720 | FRAME-DIFF | Init artifact bank 1 KSL/TL. |
+| teamster | 30000 | 0 | PASS | |
+| thinkfst | 30000 | 0 | PASS | |
+| timewtel | 30000 | 0 | PASS | |
+| torpdall | 30000 | 16380 | FRAME-DIFF | Init artifact ± volume scaling. |
+| treacher | 30000 | 0 | PASS | |
+| tutheme | 30000 | 0 | PASS | |
+| twistdpa | 30000 | 0 | PASS | |
+| ultravio | 30000 | 0 | PASS | |
+| verynice | 30000 | 0 | PASS | |
+| warhouse | 30000 | 0 | PASS | |
+| wavesmar | 30000 | 0 | PASS | |
+| westbeng | 30000 | 0 | PASS | |
+| jdaniels | 30000 | 0 | PASS | (not in modules/brendan/ — kept from earlier run.) |
 | laboite | 30000 | 0 | PASS | |
 | neurophb | 30000 | 0 | PASS | |
 | nowgone | 30000 | 0 | PASS | |
