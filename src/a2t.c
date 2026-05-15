@@ -2172,6 +2172,19 @@ static void play_line()
             event->note -= fixed_note_flag;
         }
 
+        /* Pascal play_line (~1313-1322): unconditional eff copy — when note, instr,
+         * or any eff field is non-zero, write ALL eff fields (including zeros) to
+         * event_table.  This clears previous eff when a new note appears without eff. */
+        if (event->note != 0 || event->instr_def != 0 ||
+            (event->eff[0].def | event->eff[0].val) ||
+            (event->eff[1].def | event->eff[1].val))
+        {
+            ch->event_table[chan].eff[0].def = event->eff[0].def;
+            ch->event_table[chan].eff[0].val = event->eff[0].val;
+            ch->event_table[chan].eff[1].def = event->eff[1].def;
+            ch->event_table[chan].eff[1].val = event->eff[1].val;
+        }
+
         /* Pascal play_line (~2638-2650): copy event effect fields to event_table
          * only when they are non-zero (otherwise carry over from previous row). */
         for (int slot = 0; slot < 2; slot++) {
