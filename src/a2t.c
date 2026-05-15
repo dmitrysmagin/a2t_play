@@ -3090,6 +3090,14 @@ static void macro_poll_proc()
 
         bool force_macro_keyon = false;
 
+        /* Pascal: when an instrument has no fmreg allocated (src[0]==0 and no header
+         * links) or length==0, macro_poll_proc immediately terminates with
+         * fmreg_pos→finished_flag (0xffff), never processing cell data.
+         * C must match so inactive/idle channels show FINISHED instead of 0. */
+        if (mt->fmreg_ins != 0 && (!rt || rt->length == 0)) {
+            mt->fmreg_pos = finished_flag;
+        }
+
         if (rt && rt->length && speed != 0) {
             if (mt->fmreg_duration > 1) {
                 mt->fmreg_duration--;
