@@ -513,6 +513,22 @@ static void dump_frame(void)
     for (i = 0; i < 20; i++)
       printf("%04x", ch->freq_table[i]);
     printf("\n");
+    printf("%d ET ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x%02x%02x%02x",
+             ch->effect_table[0][i].def,
+             ch->effect_table[0][i].val,
+             ch->effect_table[1][i].def,
+             ch->effect_table[1][i].val);
+    printf("\n");
+    printf("%d PT ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%04x%02x%04x%02x",
+             ch->porta_table[0][i].freq,
+             ch->porta_table[0][i].speed,
+             ch->porta_table[1][i].freq,
+             ch->porta_table[1][i].speed);
+    printf("\n");
     frames_dumped++;
 }
 
