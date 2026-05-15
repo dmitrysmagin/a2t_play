@@ -12,7 +12,6 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| 3812funk | - | - | PASS | |
 | 1942 | 35991 | 18 | FRAME-DIFF | 18 diff lines (last 3 frames, pre-existing end-of-song divergence). E-line dump added 2026-05-15 — event_table now matches Pascal for active playback. Bug 4 (unconditional eff write) and Bug 5 (init order) fixed. |
 | ALLOYRUN (VOID) | 19199 | 0 | PASS | |
 | HANGOVER (VOID) | 20479 | 0 | PASS | |
@@ -24,16 +23,10 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | andromeda | 58316 | 0 | PASS | |
 | bxx_nowgone | - | - | PASS | |
 | class05 | 24959 | 0 | PASS | `run_one_test.sh modules/class05.a2m` with `MAX_FRAMES=100000` (2026-05-13): `diff -u` empty — **24959** IRQ frames (**49918** dump lines each side). Song ends before frame cap. Per **TESTING.md**, no diverging frame → no isolated `a2t.c` / `dump_context()` work. |
-| crisis | 55870 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/crisis.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **55870** IRQ frames (**111740** dump lines each side); last frame index **55869**. ~33s wall time. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. *(Earlier snapshot: FRAME-DIFF ~28k lines @ frame **19580**, **`shadow_regs[0][0xA1]`** C=`57` vs Pascal=`58`; current tree matches Pascal — likely helped by **`macro_poll_proc`** looping **`nm_tracks`** vs fixed **20**, plus other parity work.)* |
-| fank5 | 93738 | 0 | PASS | Re-run 2026-05-13 (`MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty. Fixed by keyoff+TonePortamento parity fix: `porta.freq` is no longer overwritten during keyoff (matching Pascal's `event[chan].note in [1..97]` guard), enabling the portamento slide to proceed. Previously **3002** diff lines. |
-| os_intro | 15000 | 0 | PASS | `run_one_test.sh modules/os_intro.a2m` with `MAX_FRAMES=15000` (2026-05-13): `diff -u` empty — **15000** frames (**30000** dump lines each side). Per **TESTING.md**, no diverging frame → no isolated `a2t.c` / `dump_context()` work. |
-| os_sblas | 15000 | 0 | PASS | 2026-05-13: previously **10499** FRAME-DIFF (`tone portamento target includes fine_tune in C but not in Pascal`). Fixed by keyoff+TonePortamento parity fix + ftune+output_note fix — both now match Pascal. |
-| os_wins (madbrain) | 37626 | 5150 | FRAME-DIFF | Bug 3 fix resolved first 21k frames; remaining diffs from frame ~22040 are Bug 2 init artifact. |
 | paradox3 | 3896 | 0 | PASS | `run_one_test.sh modules/paradox3.a2m` with `MAX_FRAMES=100000` (2026-05-13): `diff -u` empty — **3896** IRQ frames (**7792** dump lines each side). Song ends before frame cap. Per **TESTING.md**, no diverging frame → no isolated `a2t.c` / `dump_context()` work. |
 | remembrance | 38399 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/remembrance.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **38399** IRQ frames (**76798** dump lines each side); last frame index **38398**. ~46s wall time. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. |
 | speed_reset_song103 | 2074 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/speed_reset_song103.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **2074** IRQ frames (**4148** dump lines each side). ~4s wall time. Covers **speed_reset** effect on **`song103`**-style module; song ends before frame cap. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. |
 | square | 19588 | 48 | FRAME-DIFF | 48 diff lines (last 5 frames, pre-existing end-of-song divergence). E-line added 2026-05-15; event_table now matches Pascal for active playback. |
-| sweetsin (modules/kvee) | 30000 | 218 | FRAME-DIFF | `run_one_test.sh modules/kvee/sweetsin.a2m`: **218** diff lines at IRQ **30–37** bank 0. KSL/TL init artifact (release_sustaining_sound vol=63 vs Pascal 0x00). |
 | top-2act | 43802 | 0 | PASS | Re-checked 2026-05-13 (`MAX_FRAMES=100000`, `TIMEOUT_SEC=360`): **`diff -u`** empty. Root cause: instrument **19** had FMREG **`length==0`** and empty cells but **`src[5]`** selected vibrato table **1**; **`fmreg`** was not allocated so **`instrument->vibrato`** never propagated (**`src/a2t.c`** **`fmreg_table_allocate`** now allocates when **`src[1]|…|src[5]`** is non-zero). Cell inference when **`length==0`** retained. Optional **`tools/fmreg_peek.c`** can inspect FMREG blobs. |
 | whereru | 30719 | 0 | PASS | Re-run 2026-05-13 (`run_one_test.sh modules/whereru.a2m`, `MAX_FRAMES=100000`, `TIMEOUT_SEC=300`): **`diff -u`** empty — **30719** IRQ frames (**61438** dump lines each side); last frame index **30718**. ~25s wall time. Per **TESTING.md**, no diverging frame → no isolated **`a2t.c`** / **`dump_context()`** work this pass. *(Earlier snapshot: FRAME-DIFF ~44k lines, **ch5** freq ~frame **4653**; current tree matches Pascal.)* |
 
@@ -260,6 +253,30 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | tg_vegas | 30000 | 0 | PASS | |
 | th04wdrm | 30000 | 0 | PASS | |
 | top-2act | 30000 | 0 | PASS | |
+
+### modules/kvee
+
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| 3812funk | 30000 | 0 | PASS | |
+| mm3title | 30000 | 0 | PASS | |
+| sweetsin | 30000 | 140 | FRAME-DIFF | KSL/TL init artifact at IRQ 30–37 bank 0. |
+
+### modules/madbrain
+
+| Module | Frames | Diff Lines | Status | Notes |
+|--------|--------|-----------|--------|-------|
+| crisis | 30000 | 0 | PASS | |
+| fank5 | 30000 | 0 | PASS | |
+| grabbag | 30000 | 0 | PASS | |
+| os_galax | 30000 | 0 | PASS | |
+| os_intro | 30000 | 0 | PASS | |
+| os_sblas | 30000 | 0 | PASS | |
+| os_wins | 30000 | 7174 | FRAME-DIFF | Bug 2 init artifact at frame ~22040. |
+| sinner | 30000 | 0 | PASS | |
+| supmario | 30000 | 0 | PASS | |
+| weirdsnd | 30000 | 0 | PASS | |
+| whak | 30000 | 0 | PASS | |
 
 ### modules/mlf
 
