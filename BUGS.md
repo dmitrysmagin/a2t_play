@@ -45,10 +45,16 @@
 ### Bug 6: NULL Instrument Handling in Volume Functions — FIXED
 - **Root cause**: Three functions (`reset_ins_volume`, `set_ins_volume`, `set_volume`) in `src/a2t.c` returned early when `get_instr_data_by_ch(chan)` returned NULL. This happened when `voice_table[chan]` referenced an instrument index beyond `instrinfo->count` (e.g., pattern event with `instr=8` in a song with only 7 instruments). The early return meant `modulator_vol[chan]` and `carrier_vol[chan]` stayed at 0 instead of being computed, causing `set_global_volume` to skip those channels while Pascal processed them.
 - **Fix applied** (committed `246681f`):
-  - `reset_ins_volume`: Instead of logging and returning, calls `set_ins_volume(0, 0, chan)` (matches Pascal's `ins_parameter(0, *)` returning all-zero instrument data).
+  - `reset_ins_volume`: Instead of logging and returning, calls `set_ins_volume(0, 0, chan)`.
   - `set_ins_volume`: Replaced early-return with NULL-safe reads: `uint8_t volM = instr ? instr->fm.volM : 0` (same for `volC`, `conn`).
   - `set_volume` (4op helper): Same NULL-safe pattern.
 - **Resolved module**: `mechwar` — 25,624 diff lines → **0** (verified at 5,000 frames).
+
+### Bug 7: Instrument Data Loading Truncated at `count` — UNFIXED
+- **Root cause**: Pascal's file loader reads ALL 255 instrument slots from the file into `songdata.instr_data[1..255]` as a fixed-size block. When a pattern event references an instrument index beyond the actual number of defined instruments (e.g., `instr=0xFF = 255` in o2ghosts, `instr=8` when `count=7` in mechwar before the Bug 6 fix), Pascal reads whatever data the file has at that slot index (may be non-zero from old saved data). C's loader only reads `count` instrument entries, so indices beyond count remain zero (`calloc`'ed memory).
+- **How it manifests**: `set_global_volume` calls `set_ins_volume` with the instrument's `volC` from the file. Pascal gets a non-zero `volC` (e.g., `0x2d` = 45 for instrument 255 in o2ghosts), producing `carrier_vol = 63 - 45 = 18 = 0x12`. C gets `volC = 0` (NULL instrument → fallback to 0), producing `carrier_vol = 63 - 0 = 63 = 0x3f`. The shadow_regs OPL volume register writes then cascade into many diffs.
+- **Fix direction**: Change C's loader to read all 255 instrument slots from the file (matching Pascal's fixed-size block read), not just `count` entries. This requires modifying the format-specific loader functions.
+- **Affected modules**: `o2ghosts` (MV matches, CV differs), `sparkplg` (MV matches, CV differs), `sweetsin` (both MV and CV differ).
 
 ### Additional Finding: `volslide_type` Initialization — NOT A BUG
 - The field `volslide_type[20]` (`src/a2t.h:444`, originally noted as `e2_vslide_type`) IS properly initialized.
@@ -92,7 +98,7 @@
 
 ## Next Steps
 
-1. **Bug 2 (Pascal UB)** — unlikely to fix in C. Pascal's `ins_parameter(0, *)` reads garbage from `instr_names[255]`. Workaround would require knowing what `instr_names[255]` contains for each song, or accepting the ±1 nibble offset in `carrier_vol` for uninitialized channels (affects `o2ghosts`, `sparkplg`, `sweetsin`).
+1. **Bug 7 (instrument data truncated)** — fix C's loader to read all 255 instrument slots from the file instead of only `count` entries. This would resolve the remaining MV/CV diffs in `o2ghosts`, `sparkplg`, `sweetsin`.
 2. ~~Fix `e2_vslide_type` initialization~~ — confirmed NOT A BUG.
 3. ~~**Bug 3 (TonePortamento on note=0)** — FIXED 2026-05-15.~~ Resolved 7 modules.
 4. ~~**Bug 6 (NULL instrument in volume functions)** — FIXED 2026-05-16.~~ Resolved `mechwar` (25,624 → 0).
