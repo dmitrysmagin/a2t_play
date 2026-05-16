@@ -126,6 +126,8 @@ function get_effect_table_dump: AnsiString;
 function get_porta_table_dump: AnsiString;
 function get_macro_table_dump: AnsiString;
 function get_ftune_table_dump: AnsiString;
+function get_modulator_vol_dump: AnsiString;
+function get_carrier_vol_dump: AnsiString;
 
 type
   tOPLOUT_proc = procedure(reg,data: Word);
@@ -4841,6 +4843,28 @@ begin
   for i := 1 to 20 do
     tmp := tmp + LowerCase(IntToHex(Byte(ftune_table[i]), 2));
   get_ftune_table_dump := tmp;
+end;
+
+function get_modulator_vol_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp + LowerCase(IntToHex(modulator_vol[i], 2));
+  get_modulator_vol_dump := tmp;
+end;
+
+function get_carrier_vol_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp + LowerCase(IntToHex(carrier_vol[i], 2));
+  get_carrier_vol_dump := tmp;
 end;
 
 begin

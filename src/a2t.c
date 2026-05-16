@@ -880,10 +880,10 @@ static bool _4op_vol_valid_chan(int chan)
 static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
-    if (!instr) {
-        AdPlug_LogWrite("set_ins_volume: instr not set for channel %d\n", chan);
-        return;
-    }
+
+    uint8_t volM = instr ? instr->fm.volM : 0;
+    uint8_t volC = instr ? instr->fm.volC : 0;
+    uint8_t conn = instr ? instr->fm.connect : 0;
 
     uint16_t m = regoffs_m(chan);
     uint16_t c = regoffs_c(chan);
@@ -892,14 +892,14 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
     // modulator_vol/carrier_vol have scaled but without overall_volume
     if (modulator != BYTE_NULL) {
         uint8_t regm;
-        bool is_perc_chan = instr->fm.connect ||
+        bool is_perc_chan = conn ||
                             (percussion_mode && chan >= 16); // in [17..20]
 
         ch->fmpar_table[chan].volM = modulator;
 
         if (is_perc_chan) { // in [17..20]
             if (volume_scaling)
-                modulator = scale_volume(instr->fm.volM, modulator);
+                modulator = scale_volume(volM, modulator);
 
             modulator = scale_volume(modulator, scale_volume(63 - global_volume, 63 - fade_out_volume));
             regm = scale_volume(modulator, 63 - overall_volume) + (ch->fmpar_table[chan].kslM << 6);
@@ -917,7 +917,7 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
         ch->fmpar_table[chan].volC = carrier;
 
         if (volume_scaling)
-            carrier = scale_volume(instr->fm.volC, carrier);
+            carrier = scale_volume(volC, carrier);
 
         carrier = scale_volume(carrier, scale_volume(63 - global_volume, 63 - fade_out_volume));
         regc = scale_volume(carrier, 63 - overall_volume) + (ch->fmpar_table[chan].kslC << 6);
@@ -931,10 +931,9 @@ static void set_ins_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
 {
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
-    if (!instr) {
-        AdPlug_LogWrite("set_volume: instr not set for channel %d\n", chan);
-        return;
-    }
+
+    uint8_t volM = instr ? instr->fm.volM : 0;
+    uint8_t volC = instr ? instr->fm.volC : 0;
 
     uint16_t m = regoffs_m(chan);
     uint16_t c = regoffs_c(chan);
@@ -943,7 +942,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
         uint8_t regm;
         ch->fmpar_table[chan].volM = modulator;
 
-        modulator = scale_volume(instr->fm.volM, modulator);
+        modulator = scale_volume(volM, modulator);
         modulator = scale_volume(modulator, scale_volume(63 - global_volume, 63 - fade_out_volume));
 
         regm = scale_volume(modulator, 63 - overall_volume) + (ch->fmpar_table[chan].kslM << 6);
@@ -956,7 +955,7 @@ static void set_volume(uint8_t modulator, uint8_t carrier, uint8_t chan)
         uint8_t regc;
         ch->fmpar_table[chan].volC = carrier;
 
-        carrier = scale_volume(instr->fm.volC, carrier);
+        carrier = scale_volume(volC, carrier);
         carrier = scale_volume(carrier, scale_volume(63 - global_volume, 63 - fade_out_volume));
 
         regc = scale_volume(carrier, 63 - overall_volume) + (ch->fmpar_table[chan].kslC << 6);
@@ -1003,7 +1002,7 @@ static void reset_ins_volume(int chan)
 {
     tINSTR_DATA *instr = get_instr_data_by_ch(chan);
     if (!instr) {
-        AdPlug_LogWrite("reset_ins_volume: instr not set for channel %d\n", chan);
+        set_ins_volume(0, 0, chan);
         return;
     }
 

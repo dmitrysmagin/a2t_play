@@ -536,6 +536,14 @@ static void dump_frame(void)
     for (i = 0; i < 20; i++)
       printf("%02x", (unsigned)(uint8_t)ch->ftune_table[i]);
     printf("\n");
+    printf("%d MV ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x", ch->modulator_vol[i]);
+    printf("\n");
+    printf("%d CV ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x", ch->carrier_vol[i]);
+    printf("\n");
 
     frames_dumped++;
 }

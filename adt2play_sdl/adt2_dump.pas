@@ -119,6 +119,10 @@ begin
 
     ws := ws + IntToStr(frames_dumped) + ' FT ' + get_ftune_table_dump + #13#10;
 
+    ws := ws + IntToStr(frames_dumped) + ' MV ' + get_modulator_vol_dump + #13#10;
+
+    ws := ws + IntToStr(frames_dumped) + ' CV ' + get_carrier_vol_dump + #13#10;
+
    FileWrite(outfd, ws[1], Length(ws));
    Inc(frames_dumped);
 end;
