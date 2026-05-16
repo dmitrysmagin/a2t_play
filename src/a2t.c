@@ -1440,7 +1440,7 @@ static void process_effects_slot_prepare(tADTRACK2_EVENT *event, int slot, int c
      * (non-zero), we can now distinguish arpeggio carry-over (def=50, val=0) from
      * "no effect" (def=0, val=0). The normalization above ensures carry-over rows
      * have def=ef_Arpeggio, so this condition correctly preserves effect_table. */
-    if ((def != ef_Arpeggio) || (val != 0)) {
+    if ((def != 0) || (val != 0)) {
         ch->effect_table[slot][chan].def = def;
         ch->effect_table[slot][chan].val = val;
     }
