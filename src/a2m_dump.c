@@ -532,6 +532,11 @@ static void dump_frame(void)
              ch->porta_table[1][i].freq,
              ch->porta_table[1][i].speed);
     printf("\n");
+    printf("%d FT ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x", (unsigned)(uint8_t)ch->ftune_table[i]);
+    printf("\n");
+
     frames_dumped++;
 }
 

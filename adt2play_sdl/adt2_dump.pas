@@ -117,6 +117,7 @@ begin
 
     ws := ws + IntToStr(frames_dumped) + ' PT ' + get_porta_table_dump + #13#10;
 
+    ws := ws + IntToStr(frames_dumped) + ' FT ' + get_ftune_table_dump + #13#10;
 
    FileWrite(outfd, ws[1], Length(ws));
    Inc(frames_dumped);

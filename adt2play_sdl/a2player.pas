@@ -125,6 +125,7 @@ function get_freq_table: Pointer;
 function get_effect_table_dump: AnsiString;
 function get_porta_table_dump: AnsiString;
 function get_macro_table_dump: AnsiString;
+function get_ftune_table_dump: AnsiString;
 
 type
   tOPLOUT_proc = procedure(reg,data: Word);
@@ -4829,6 +4830,17 @@ begin
       LowerCase(IntToHex(Byte(macro_table[i].vib_paused), 2)) +
       LowerCase(IntToHex(macro_table[i].vib_freq, 4));
   get_macro_table_dump := tmp;
+end;
+
+function get_ftune_table_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp + LowerCase(IntToHex(Byte(ftune_table[i]), 2));
+  get_ftune_table_dump := tmp;
 end;
 
 begin
