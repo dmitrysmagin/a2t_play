@@ -1656,7 +1656,7 @@ begin
         set_ins_volume(63-event[chan].effect,BYTE_NULL,chan);
 
       ef_SetInsVolume:
-        If (voice_table[chan] <> 0) then
+        If (voice_table[chan] <> 0) and not is_data_empty(songdata.instr_data[voice_table[chan]],INSTRUMENT_SIZE) then
           If _4op_vol_valid_chan(chan) then
             set_ins_volume_4op(63-event[chan].effect,chan)
           else If percussion_mode and (chan in [17..20]) then
@@ -1666,7 +1666,7 @@ begin
                     else set_ins_volume(63-event[chan].effect,63-event[chan].effect,chan);
 
       ef_ForceInsVolume:
-        If (voice_table[chan] <> 0) then
+        If (voice_table[chan] <> 0) and not is_data_empty(songdata.instr_data[voice_table[chan]],INSTRUMENT_SIZE) then
           If percussion_mode and (chan in [17..20]) then
             set_ins_volume(63-event[chan].effect,BYTE_NULL,chan)
           else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
@@ -2234,7 +2234,7 @@ begin
         set_ins_volume(63-event[chan].effect2,BYTE_NULL,chan);
 
       ef_SetInsVolume:
-        If (voice_table[chan] <> 0) then
+        If (voice_table[chan] <> 0) and not is_data_empty(songdata.instr_data[voice_table[chan]],INSTRUMENT_SIZE) then
           If _4op_vol_valid_chan(chan) then
             set_ins_volume_4op(63-event[chan].effect2,chan)
           else If percussion_mode and (chan in [17..20]) then
@@ -2244,7 +2244,7 @@ begin
                     else set_ins_volume(63-event[chan].effect2,63-event[chan].effect2,chan);
 
       ef_ForceInsVolume:
-        If (voice_table[chan] <> 0) then
+        If (voice_table[chan] <> 0) and not is_data_empty(songdata.instr_data[voice_table[chan]],INSTRUMENT_SIZE) then
           If percussion_mode and (chan in [17..20]) then
             set_ins_volume(63-event[chan].effect2,BYTE_NULL,chan)
           else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
