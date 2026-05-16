@@ -503,14 +503,19 @@ static void dump_frame(void)
     for (i = 0; i < 256; i++) printf("%02x", shadow_regs[1][i]);
     printf("\n");
     printf("%d E ", frames_dumped);
-    for (i = 0; i < 20; i++)
-      printf("%02x%02x%02x%02x%02x%02x",
-             ch->event_table[i].note,
-             ch->event_table[i].instr_def,
-             ch->event_table[i].eff[0].def,
-             ch->event_table[i].eff[0].val,
-             ch->event_table[i].eff[1].def,
-             ch->event_table[i].eff[1].val);
+    for (i = 0; i < 20; i++) {
+        uint8_t d0 = ch->event_table[i].eff[0].def;
+        uint8_t d1 = ch->event_table[i].eff[1].def;
+        if (d0 == ef_Arpeggio) d0 = 0;
+        if (d1 == ef_Arpeggio) d1 = 0;
+        printf("%02x%02x%02x%02x%02x%02x",
+               ch->event_table[i].note,
+               ch->event_table[i].instr_def,
+               d0,
+               ch->event_table[i].eff[0].val,
+               d1,
+               ch->event_table[i].eff[1].val);
+    }
     printf("\n");
     printf("%d F ", frames_dumped);
     for (i = 0; i < 20; i++)

@@ -1435,10 +1435,15 @@ static void process_effects_slot_prepare(tADTRACK2_EVENT *event, int slot, int c
     uint8_t def = event->eff[slot].def;
     uint8_t val = event->eff[slot].val;
 
-    // Note: this might be dropped because effect_table stores effects
-    // that might be continued with x00
-    ch->effect_table[slot][chan].def = def;
-    ch->effect_table[slot][chan].val = val;
+    /* Pascal (a2player.pas ~1494): "If (effect_def <> ef_Arpeggio) or (effect <> 0)"
+     * — only overwrite effect_table when this condition holds. With ef_Arpeggio=50
+     * (non-zero), we can now distinguish arpeggio carry-over (def=50, val=0) from
+     * "no effect" (def=0, val=0). The normalization above ensures carry-over rows
+     * have def=ef_Arpeggio, so this condition correctly preserves effect_table. */
+    if ((def != ef_Arpeggio) || (val != 0)) {
+        ch->effect_table[slot][chan].def = def;
+        ch->effect_table[slot][chan].val = val;
+    }
 
     if ((def != ef_Vibrato) &&
         (def != ef_ExtraFineVibrato) &&
@@ -1462,9 +1467,6 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
 
     switch (def) {
     case ef_Arpeggio:
-        if (!val)
-            break;
-        /* fall through */
     case ef_ExtraFineArpeggio:
     case ef_ArpggVSlide:
     case ef_ArpggVSlideFine:
@@ -2186,6 +2188,13 @@ static void play_line()
             event->note = ch->event_table[chan].note | keyoff_flag;
         } else if ((event->note >= fixed_note_flag + 1) /*&& (event->note <= fixed_note_flag + 12*8+1)*/) {
             event->note -= fixed_note_flag;
+        }
+
+        /* Normalize arpeggio: raw file uses def=0 for arpeggio. Convert to
+         * ef_Arpeggio (50) so it's distinguishable from "no effect". */
+        for (int slot = 0; slot < 2; slot++) {
+            if (event->eff[slot].def == 0 && event->eff[slot].val != 0)
+                event->eff[slot].def = ef_Arpeggio;
         }
 
         /* Pascal play_line (~1313-1322): unconditional eff copy — when note, instr,
