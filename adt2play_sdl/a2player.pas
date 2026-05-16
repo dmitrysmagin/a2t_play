@@ -1653,20 +1653,22 @@ begin
         set_ins_volume(63-event[chan].effect,BYTE_NULL,chan);
 
       ef_SetInsVolume:
-        If _4op_vol_valid_chan(chan) then
-          set_ins_volume_4op(63-event[chan].effect,chan)
-        else If percussion_mode and (chan in [17..20]) then
-               set_ins_volume(63-event[chan].effect,BYTE_NULL,chan)
-             else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
-                    set_ins_volume(BYTE_NULL,63-event[chan].effect,chan)
-                  else set_ins_volume(63-event[chan].effect,63-event[chan].effect,chan);
+        If (voice_table[chan] <> 0) then
+          If _4op_vol_valid_chan(chan) then
+            set_ins_volume_4op(63-event[chan].effect,chan)
+          else If percussion_mode and (chan in [17..20]) then
+                 set_ins_volume(63-event[chan].effect,BYTE_NULL,chan)
+               else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
+                      set_ins_volume(BYTE_NULL,63-event[chan].effect,chan)
+                    else set_ins_volume(63-event[chan].effect,63-event[chan].effect,chan);
 
       ef_ForceInsVolume:
-        If percussion_mode and (chan in [17..20]) then
-          set_ins_volume(63-event[chan].effect,BYTE_NULL,chan)
-        else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
-               set_ins_volume(scale_volume(ins_parameter(voice_table[chan],2) AND $3f,63-event[chan].effect),63-event[chan].effect,chan)
-             else set_ins_volume(63-event[chan].effect,63-event[chan].effect,chan);
+        If (voice_table[chan] <> 0) then
+          If percussion_mode and (chan in [17..20]) then
+            set_ins_volume(63-event[chan].effect,BYTE_NULL,chan)
+          else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
+                 set_ins_volume(scale_volume(ins_parameter(voice_table[chan],2) AND $3f,63-event[chan].effect),63-event[chan].effect,chan)
+               else set_ins_volume(63-event[chan].effect,63-event[chan].effect,chan);
 
       ef_PositionJump:
         If no_loop(chan,current_line) then
@@ -2229,20 +2231,22 @@ begin
         set_ins_volume(63-event[chan].effect2,BYTE_NULL,chan);
 
       ef_SetInsVolume:
-        If _4op_vol_valid_chan(chan) then
-          set_ins_volume_4op(63-event[chan].effect2,chan)
-        else If percussion_mode and (chan in [17..20]) then
-               set_ins_volume(63-event[chan].effect2,BYTE_NULL,chan)
-             else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
-                    set_ins_volume(BYTE_NULL,63-event[chan].effect2,chan)
-                  else set_ins_volume(63-event[chan].effect2,63-event[chan].effect2,chan);
+        If (voice_table[chan] <> 0) then
+          If _4op_vol_valid_chan(chan) then
+            set_ins_volume_4op(63-event[chan].effect2,chan)
+          else If percussion_mode and (chan in [17..20]) then
+                 set_ins_volume(63-event[chan].effect2,BYTE_NULL,chan)
+               else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
+                      set_ins_volume(BYTE_NULL,63-event[chan].effect2,chan)
+                    else set_ins_volume(63-event[chan].effect2,63-event[chan].effect2,chan);
 
       ef_ForceInsVolume:
-        If percussion_mode and (chan in [17..20]) then
-          set_ins_volume(63-event[chan].effect2,BYTE_NULL,chan)
-        else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
-               set_ins_volume(scale_volume(ins_parameter(voice_table[chan],2) AND $3f,63-event[chan].effect2),63-event[chan].effect2,chan)
-             else set_ins_volume(63-event[chan].effect2,63-event[chan].effect2,chan);
+        If (voice_table[chan] <> 0) then
+          If percussion_mode and (chan in [17..20]) then
+            set_ins_volume(63-event[chan].effect2,BYTE_NULL,chan)
+          else If (ins_parameter(voice_table[chan],10) AND 1 = 0) then
+                 set_ins_volume(scale_volume(ins_parameter(voice_table[chan],2) AND $3f,63-event[chan].effect2),63-event[chan].effect2,chan)
+               else set_ins_volume(63-event[chan].effect2,63-event[chan].effect2,chan);
 
       ef_PositionJump:
         If no_loop(chan,current_line) then

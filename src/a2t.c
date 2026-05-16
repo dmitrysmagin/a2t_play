@@ -1617,9 +1617,14 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
 
     case ef_SetInsVolume:
         {
+            /* NOTE: Intentional fix of Pascal UB. Pascal's ef_SetInsVolume handler
+             * (a2player.pas:1655-1662) calls ins_parameter(voice_table[chan],10)
+             * without checking voice_table[chan] first. When voice_table==0, the
+             * ins_parameter asm does dec ebx which underflows to 0xFFFFFFFF, reading
+             * garbage from instr_names[255]. We guard with the !instr check below
+             * to match the INTENDED Pascal behavior (no-op when no instrument). */
             tINSTR_DATA *instr = get_instr_data_by_ch(chan);
             if (!instr) {
-                AdPlug_LogWrite("ef_SetInsVolume: instr not set for channel %d\n", chan);
                 break;
             }
 
@@ -1637,9 +1642,12 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
 
     case ef_ForceInsVolume:
         {
+            /* NOTE: Intentional fix of Pascal UB. Pascal's ef_ForceInsVolume handler
+             * (a2player.pas:1664-1669) calls ins_parameter(voice_table[chan],10)
+             * without checking voice_table[chan] first — same UB as ef_SetInsVolume.
+             * We guard here to match the INTENDED behavior. */
             tINSTR_DATA *instr = get_instr_data_by_ch(chan);
             if (!instr) {
-                AdPlug_LogWrite("ef_ForceInsVolume: instr not set for channel %d\n", chan);
                 break;
             }
 
