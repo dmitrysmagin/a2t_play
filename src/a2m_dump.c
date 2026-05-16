@@ -473,16 +473,19 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
 }
 
 static int max_frames = 500;
-/* INIT trace disabled
-static char trace_buf[131072];
-static size_t trace_len = 0;
+#define WR_TRACE_SIZE 64
+static uint16_t wr_trace_reg[WR_TRACE_SIZE];
+static uint8_t wr_trace_val[WR_TRACE_SIZE];
+static int wr_trace_idx = 0;
+static int wr_trace_count = 0;
 
-static void init_trace(uint16_t reg, uint8_t val)
+static void wr_trace(uint16_t full_reg, uint8_t val)
 {
-    if (trace_len < sizeof(trace_buf) - 8)
-        trace_len += (size_t)sprintf(trace_buf + trace_len, "%03x %02x\n", reg & 0x1ff, val & 0xff);
+    wr_trace_reg[wr_trace_idx] = full_reg;
+    wr_trace_val[wr_trace_idx] = val;
+    wr_trace_idx = (wr_trace_idx + 1) % WR_TRACE_SIZE;
+    if (wr_trace_count < WR_TRACE_SIZE) wr_trace_count++;
 }
-*/
 static void dump_frame(void)
 {
     int i;
@@ -545,6 +548,42 @@ static void dump_frame(void)
       printf("%02x", ch->carrier_vol[i]);
     printf("\n");
 
+    printf("%d VS ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x", ch->voice_table[i]);
+    printf("\n");
+
+    printf("%d FP ", frames_dumped);
+    for (i = 0; i < 20; i++) {
+        tFM_INST_DATA *fp = &ch->fmpar_table[i];
+        printf("%02x%02x%01x%01x%01x",
+               (unsigned)fp->volM, (unsigned)fp->volC,
+               (unsigned)fp->kslM, (unsigned)fp->kslC,
+               (unsigned)fp->connect);
+    }
+    printf("\n");
+
+    printf("%d GV ", frames_dumped);
+    printf("%02x%02x%02x%01x%01x",
+           (unsigned)global_volume, (unsigned)fade_out_volume,
+           (unsigned)overall_volume,
+           (unsigned)(volume_scaling ? 1 : 0),
+           (unsigned)(percussion_mode ? 1 : 0));
+    printf("\n");
+
+    printf("%d WR ", frames_dumped);
+    for (i = 0; i < WR_TRACE_SIZE; i++) {
+        int idx;
+        if (i < wr_trace_count) {
+            idx = (wr_trace_idx - wr_trace_count + i + WR_TRACE_SIZE) % WR_TRACE_SIZE;
+            printf("%03x%02x", (unsigned)(wr_trace_reg[idx] & 0x1ff),
+                   (unsigned)wr_trace_val[idx]);
+        } else {
+            printf("00000");
+        }
+    }
+    printf("\n");
+
     frames_dumped++;
 }
 
@@ -584,9 +623,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    /* INIT trace disabled
-    write_trace_hook = init_trace;
-    */
+    write_trace_hook = wr_trace;
 
     if (!a2t_play(data)) {
         fprintf(stderr, "Failed to play %s\n", argv[1]);
@@ -595,21 +632,7 @@ int main(int argc, char *argv[])
 
     set_overall_volume(63);
 
-    /* INIT trace disabled
-    if (trace_len > 0)
-        fwrite(trace_buf, 1, trace_len, stdout);
 
-    {
-        int i;
-        printf("INIT:");
-        for (i = 0; i < 256; i++) printf("%02x", shadow_regs[0][i]);
-        printf(" ");
-        for (i = 0; i < 256; i++) printf("%02x", shadow_regs[1][i]);
-        printf("\n");
-    }
-
-    write_trace_hook = NULL;
-    */
 
     frame_hook = dump_frame;
 

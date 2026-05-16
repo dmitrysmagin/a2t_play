@@ -128,6 +128,9 @@ function get_macro_table_dump: AnsiString;
 function get_ftune_table_dump: AnsiString;
 function get_modulator_vol_dump: AnsiString;
 function get_carrier_vol_dump: AnsiString;
+function get_voice_table_dump: AnsiString;
+function get_fmpar_dump: AnsiString;
+function get_global_vol_dump: AnsiString;
 
 type
   tOPLOUT_proc = procedure(reg,data: Word);
@@ -4869,6 +4872,43 @@ begin
   for i := 1 to 20 do
     tmp := tmp + LowerCase(IntToHex(carrier_vol[i], 2));
   get_carrier_vol_dump := tmp;
+end;
+
+function get_voice_table_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp + LowerCase(IntToHex(voice_table[i], 2));
+  get_voice_table_dump := tmp;
+end;
+
+function get_fmpar_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp +
+      LowerCase(IntToHex(LO(volume_table[i]), 2)) +
+      LowerCase(IntToHex(HI(volume_table[i]), 2)) +
+      LowerCase(IntToHex(fmpar_table[i].kslM, 1)) +
+      LowerCase(IntToHex(fmpar_table[i].kslC, 1)) +
+      LowerCase(IntToHex(fmpar_table[i].connect, 1));
+  get_fmpar_dump := tmp;
+end;
+
+function get_global_vol_dump: AnsiString;
+begin
+  get_global_vol_dump :=
+    LowerCase(IntToHex(global_volume, 2)) +
+    LowerCase(IntToHex(fade_out_volume, 2)) +
+    LowerCase(IntToHex(overall_volume, 2)) +
+    LowerCase(IntToHex(Byte(volume_scaling), 1)) +
+    LowerCase(IntToHex(Byte(percussion_mode), 1));
 end;
 
 begin

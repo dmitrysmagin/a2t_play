@@ -9,6 +9,9 @@ uses
   OPL3EMU,
   Windows;
 
+const
+  WR_TRACE_SIZE = 64;
+
 var
   outfd: Longint;
   filename, outfilename: String;
@@ -22,6 +25,11 @@ var
   frames_dumped: Longint;
   trace_init: Boolean;
   i: Integer;
+
+  wr_trace_reg: array[0..WR_TRACE_SIZE-1] of Word;
+  wr_trace_val: array[0..WR_TRACE_SIZE-1] of Byte;
+  wr_trace_idx: Integer;
+  wr_trace_count: Integer;
 
 type
   TConsoleCtrlHandlerFn = function(dwCtrlType: DWORD): BOOL; stdcall;
@@ -38,8 +46,18 @@ begin
   CtrlCHandler := False;
 end;
 
+procedure wr_trace_add(reg, data: Word);
+begin
+  wr_trace_reg[wr_trace_idx] := reg;
+  wr_trace_val[wr_trace_idx] := Byte(data);
+  wr_trace_idx := (wr_trace_idx + 1) mod WR_TRACE_SIZE;
+  if wr_trace_count < WR_TRACE_SIZE then
+    Inc(wr_trace_count);
+end;
+
 procedure dump_opl2out(reg, data: Word);
 begin
+  wr_trace_add(reg, data);
   if trace_init then
     begin
       s := s + LowerCase(IntToHex(reg AND $1ff, 3)) + ' ' + LowerCase(IntToHex(data AND $ff, 2)) + #13#10;
@@ -50,6 +68,7 @@ end;
 
 procedure dump_opl3out(reg, data: Word);
 begin
+  wr_trace_add(reg, data);
   if trace_init then
     begin
       s := s + LowerCase(IntToHex(reg AND $1ff, 3)) + ' ' + LowerCase(IntToHex(data AND $ff, 2)) + #13#10;
@@ -60,6 +79,7 @@ end;
 
 procedure dump_opl3exp(data: Word);
 begin
+  wr_trace_add((data AND $ff) OR $100, data SHR 8);
   if trace_init then
     begin
       s := s + LowerCase(IntToHex((data AND $ff) OR $100, 3)) + ' ' + LowerCase(IntToHex(data SHR 8, 2)) + #13#10;
@@ -123,11 +143,31 @@ begin
 
     ws := ws + IntToStr(frames_dumped) + ' CV ' + get_carrier_vol_dump + #13#10;
 
+    ws := ws + IntToStr(frames_dumped) + ' VS ' + get_voice_table_dump + #13#10;
+
+    ws := ws + IntToStr(frames_dumped) + ' FP ' + get_fmpar_dump + #13#10;
+
+    ws := ws + IntToStr(frames_dumped) + ' GV ' + get_global_vol_dump + #13#10;
+
+    ws := ws + IntToStr(frames_dumped) + ' WR ';
+    for i := 0 to WR_TRACE_SIZE - 1 do
+      if i < wr_trace_count then
+        begin
+          ws := ws + LowerCase(IntToHex(wr_trace_reg[(wr_trace_idx - wr_trace_count + i + WR_TRACE_SIZE) mod WR_TRACE_SIZE], 3)) +
+                    LowerCase(IntToHex(wr_trace_val[(wr_trace_idx - wr_trace_count + i + WR_TRACE_SIZE) mod WR_TRACE_SIZE], 2));
+        end
+      else
+        ws := ws + '00000';
+    ws := ws + #13#10;
+
    FileWrite(outfd, ws[1], Length(ws));
    Inc(frames_dumped);
 end;
 
 begin
+  wr_trace_idx := 0;
+  wr_trace_count := 0;
+
   if ParamCount < 1 then
   begin
     WriteLn('Usage: adt2_dump <module_file> [output.reg] [max_frames]');
