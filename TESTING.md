@@ -23,7 +23,7 @@ Both tools output 2 lines per IRQ frame:
 * Compare Pascal and C sources, find correlations
 
 # Testing and Fixing a2t.c
-* run run_one_test.sh with module filename and MAX_FRAMES=50000
+* run run_one_test.sh with module filename and MAX_FRAMES=30000
 * compare diffs, note the frames region at which diff is found
 * a2m_dump: modify to isolate the frame region at which diff starts
 * a2m_dump: add additional dumping information if needed

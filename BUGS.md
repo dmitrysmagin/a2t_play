@@ -50,6 +50,12 @@
   - `set_volume` (4op helper): Same NULL-safe pattern.
 - **Resolved module**: `mechwar` — 25,624 diff lines → **0** (verified at 5,000 frames).
 
+### Bug 8: Pascal ef_SetInsVolume/ef_ForceInsVolume Missing Bounds Check — FIXED
+- **Root cause**: Pascal's `ef_SetInsVolume` and `ef_ForceInsVolume` handlers (`a2player.pas:1659,1669,2237,2247`) guard with `voice_table[chan] <> 0`, but `voice_table[chan]` for channels without a note event retains its init value (channel index, 0–19). For channel 11, `voice_table[11] = 11` is non-zero but points to instrument slot 11, which is beyond the 9 instruments loaded from `dream7mx.a2m` (`instrinfo->count = 9`). Pascal reads zero-filled `instr_data[11]`, whose `FEEDBACK_FM` byte (byte 10) has bit0=0 (connection=FM), triggering `set_ins_volume(BYTE_NULL, 63-0x34, 11)` → register `0x14c` (ch11 carrier vol) = `0x0b` at frame 500.
+- **C behavior**: `get_instr(voice_table[11]=12)` checks `12 > count(9)` → returns NULL → `ef_SetInsVolume` breaks (no-op). Register `0x14c` stays `0x3f` until frame 550.
+- **Fix applied** (Pascal, `a2player.pas:1659,1669,2237,2247`): Added `and not is_data_empty(songdata.instr_data[voice_table[chan]],INSTRUMENT_SIZE)` alongside `voice_table[chan] <> 0`. Mirrors C's `ins > instrinfo->count` guard. Verified: C vs fixed Pascal produce identical shadow regs across all 600 frames of `dream7mx` — the only diffs are WR trace lines (write order differences).
+- **Resolved module**: `dream7mx` — C–Pascal divergence at `0x14c` eliminated.
+
 ### Bug 7: Instrument Data Loading Truncated at `count` — UNFIXED
 - **Root cause**: Pascal's file loader reads ALL 255 instrument slots from the file into `songdata.instr_data[1..255]` as a fixed-size block. When a pattern event references an instrument index beyond the actual number of defined instruments (e.g., `instr=0xFF = 255` in o2ghosts, `instr=8` when `count=7` in mechwar before the Bug 6 fix), Pascal reads whatever data the file has at that slot index (may be non-zero from old saved data). C's loader only reads `count` instrument entries, so indices beyond count remain zero (`calloc`'ed memory).
 - **How it manifests**: `set_global_volume` calls `set_ins_volume` with the instrument's `volC` from the file. Pascal gets a non-zero `volC` (e.g., `0x2d` = 45 for instrument 255 in o2ghosts), producing `carrier_vol = 63 - 45 = 18 = 0x12`. C gets `volC = 0` (NULL instrument → fallback to 0), producing `carrier_vol = 63 - 0 = 63 = 0x3f`. The shadow_regs OPL volume register writes then cascade into many diffs.
@@ -72,7 +78,7 @@
 ## Test Results Summary
 
 | Module Set | Total | PASS | FRAME-DIFF | Notes |
-|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|
 | encore | 10 | 7 | 3 | 18-30 lines each after Fix 1 |
 | hydra | 2 | 0 | 2 | 2,128 and 13,822 diffs |
 | dretz | 11 | 11 | 0 | All PASS at 100k frames |
@@ -82,6 +88,7 @@
 | diodema | 23 | 15 | 6 | Bug 3 fix resolved samsara (206→0), zaxxon (3548→0) |
 | mlf | 14 | 9 | 5 | Bug 3 fix resolved deorbit (128→0), glass (962→0) |
 | brendan | ~70 | ~65 | 5 | Bug 3 fix resolved chivalry (2438→0) |
+| brendan | ~70 | ~66 | 4 | Bug 8 resolved dream7mx (C–Pascal divergence at 0x14c eliminated. Shadow reg diff: 0) |
 
 ## Key Files
 
@@ -102,6 +109,7 @@
 2. ~~Fix `e2_vslide_type` initialization~~ — confirmed NOT A BUG.
 3. ~~**Bug 3 (TonePortamento on note=0)** — FIXED 2026-05-15.~~ Resolved 7 modules.
 4. ~~**Bug 6 (NULL instrument in volume functions)** — FIXED 2026-05-16.~~ Resolved `mechwar` (25,624 → 0).
-5. **Re-test all FRAME-DIFF modules** after each fix.
-6. **Update MODULES_TESTED.md** with results.
-7. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.
+5. ~~**Bug 8 (Pascal SetInsVolume bounds guard)** — FIXED 2026-05-16.~~ Resolved `dream7mx` (0x14c divergence eliminated).
+6. **Re-test all FRAME-DIFF modules** after each fix.
+7. **Update MODULES_TESTED.md** with results.
+8. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.

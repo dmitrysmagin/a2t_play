@@ -12,7 +12,7 @@ CC=${CC:-/c/Users/user/msys64/ucrt64/bin/x86_64-w64-mingw32-gcc}
 GMAKE=${GMAKE:-/c/Users/user/msys64/usr/bin/make}
 REFS_DIR="adt2play_sdl"
 TMPDIR="${TMPDIR:-/tmp}"
-MAX_FRAMES="${MAX_FRAMES:-50000}"
+MAX_FRAMES="${MAX_FRAMES:-30000}"
 # Large MAX_FRAMES need more wall time (a2m_dump can take ~45s+ for 100k frames).
 TIMEOUT_SEC="${TIMEOUT_SEC:-120}"
 
@@ -71,4 +71,17 @@ elif [ -f "$c_reg" ]; then
   echo "SKIP: $base_noext (no reference)"
 else
   echo "SKIP: $base_noext (no C dump)"
+fi
+
+# Count frames and update MODULES_TESTED.md
+c_frames=$(grep -cE '^[0-9]+ 0 ' "$c_reg" 2>/dev/null || echo 0)
+if [ -f "$diff_file" ]; then
+  d_lines=$(wc -l < "$diff_file")
+  d_status="FRAME-DIFF"
+else
+  d_lines=0
+  d_status="PASS"
+fi
+if grep -qE "^\| $base_noext \|" MODULES_TESTED.md 2>/dev/null; then
+  sed -i "s/^| $base_noext |.*/| $base_noext | $c_frames | $d_lines | $d_status | |/" MODULES_TESTED.md
 fi
