@@ -118,7 +118,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | marblect | 30000 | 0 | PASS | |
 | mariothm | 30000 | 0 | PASS | |
 | mechage | 30000 | 1100 | FRAME-DIFF | Init artifact bank 1 KSL/TL. |
-| mechwar | 30000 | 25624 | FRAME-DIFF | Init artifact volume scaling. |
+| mechwar | 30000 | 0 | PASS | Fixed 2026-05-16: `reset_ins_volume`/`set_ins_volume` now handle NULL instrument gracefully (pattern instr index > song's instrument count). Bug 6. |
 | metro | 30000 | 0 | PASS | |
 | modratly | 30000 | 0 | PASS | |
 | neversay | 30000 | 0 | PASS | |
