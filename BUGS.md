@@ -6,16 +6,27 @@
 - **Root cause**: C's `release_sustaining_sound()` (`src/a2t.c:801`) only zeroed 4 of 10 ADSR fields (`decM`, `attckM`, `decC`, `attckC`), while Pascal's `FillChar` zeros all 10 fields per ADSR record (including `sustn`, `rel`, `wform`).
 - **Fix applied**: Added 6 missing zeroing lines at `src/a2t.c:810-819`. Encore module diffs dropped from hundreds to 18-30 lines each.
 
-### Bug 2: Post-RSS Volume 0x3f Artifact — UNFIXED
+### Bug 2: Post-RSS Volume 0x3f Artifact — UNFIXED (Pascal UB)
 - **Root cause**: C's `set_ins_data()` has `if (ins == 0) return;` at line 1072. After RSS calls `release_sustaining_sound()` (which sets `event_table[chan].instr_def = 0` and `reset_chan[chan] = true`), the next row with `ins=0` returns early — skipping `voice_table[chan] = ins` (line 1125) and `reset_ins_volume(chan)` (line 1130).
 - **Pascal behavior**: No early return. Lines 993-998 execute unconditionally — `voice_table[chan] := ins` and `reset_ins_volume(chan)` always run.
 - **Failed Fix 2a**: Adding `reset_ins_volume(chan)` after RSS made `o2ghosts` much worse (53K → 400K diffs) because `voice_table[chan]` was 0, causing `get_instr_data_by_ch(chan)` to bail out.
-- **Attempt 2026-05-15 — three variations, all regressed**:
-  - **Attempt A** (ins==0: set `voice_table=0`, call `reset_ins_volume` via old voice_table, clear `reset_chan`):
-    o2ghosts 30k: 53,516→89,595, crackit 3.3k: 2,128→3,938
-  - **Attempt B** (same but don't clear `reset_chan`): still regressed
-  - **Attempt C** (only set `voice_table=0`, `event_table=0`, clear `reset_chan`, no volume change): still regressed
-  - **Root insight**: Pascal's `ins_parameter(0, x)` when `ins=0` does `&songdata.instr_data[-INSTRUMENT_SIZE + x]`. With `INSTRUMENT_SIZE=14` (SizeOf(tADTRACK2_INS)), this reads from `instr_names[255]` character ~29+x (offset ~11037–11050 in `tFIXED_SONGDATA`). Those bytes are undefined memory (beyond the Pascal String's actual length) and happen to be 0xFF (all bits set), which when masked `& $3F` yields 0x3F = volume 63. So Pascal's "unconditional" path keeps volume 63 *by accident*. Any fix that resets volume from an actual instrument value, or that changes `voice_table`/`event_table` state early, cascades into many more diffs than the original early-return approach.
+- **Pascal undefined behavior in `ins_parameter(0, *)`** (`a2player.pas:481-501`):
+  ```
+  asm
+    xor     ebx,ebx
+    lea     esi,[songdata.instr_data]
+    mov     bl,ins           // bl = 0
+    dec     ebx              // UB: 0 → 0xFFFFFFFF (underflow to -1)
+    mov     eax,INSTRUMENT_SIZE
+    mul     ebx              // -1 * INSTRUMENT_SIZE
+    add     esi,eax          // reads BEFORE instr_data
+    mov     bl,param
+    add     esi,ebx
+    lodsb                    // byte from instr_names[255]
+  ```
+  When `ins=0`, `dec ebx` underflows to `0xFFFFFFFF` (-1), computing address `&songdata.instr_data - INSTRUMENT_SIZE + param`. This lands in `instr_names[255]` (the last instrument name, which precedes `instr_data` in `tFIXED_SONGDATA` at `typconst.inc:147`). The byte read is whatever the instrument name string at that position happens to contain — completely arbitrary and non-deterministic.
+  - Observed effect: `o2ghosts` reads `0x2d` (volC=45), producing `carrier_vol = 12`. C correctly returns volC=0 from NULL instrument, giving `carrier_vol = 63`.
+  - Any fix that replaces Pascal's garbage volC with the correct value 0 changes `carrier_vol` from `12` to `63`, which cascades through `set_global_volume` into many OPL register write diffs.
 - **Affected modules**: `o2ghosts` (53,516 diffs at 30k), `crackit` (2,128 at 3.3k), `intrcoop` (13,822 at 5.1k), plus encore/hydra/brendan modules showing volume 0x3f artifacts.
 
 ### Bug 4: event_table Eff Not Cleared on New Note Without Effect — FIXED
@@ -30,6 +41,14 @@
 - **Root cause**: C's `process_effects_slot_body` unconditionally called `update_effect_table` for `ef_TonePortamento`, even on rows where `note=0` and `last_effect` had no prior TonePortamento (no carry-over). Pascal's `effect_def2` CASE only activates TonePortamento when `note in [1..97]` (sets speed+freq) or when `eLo2 = ef_TonePortamento` (carry-over — sets speed only). When neither condition is met, Pascal skips entirely, leaving `effect_table2` cleared via `AND $0ff00`. C also needed to clear `effect_table` that had been set unconditionally by `process_effects_slot_prepare`.
 - **Fix applied**: Added `has_note`/`has_carry` guard at `src/a2t.c:1537-1559`. When `!has_note && !has_carry`, skip `update_effect_table` and explicitly zero `effect_table[slot][chan].def`/`.val` to counteract `process_effects_slot_prepare`'s unconditional write.
 - **Resolved modules**: `samsara` (206→0 at 50k), `deorbit` (128→0 at 50k), `glass` (962→0 at 50k). Partially resolved (active playback matching, end-of-song/other bugs remain): `zaxxon` (3548→14), `chivalry` (2438→12184), `os_wins` (3086→5150), `adven` (30→38). All had spurious TonePortamento slides on note=0 rows during active playback.
+
+### Bug 6: NULL Instrument Handling in Volume Functions — FIXED
+- **Root cause**: Three functions (`reset_ins_volume`, `set_ins_volume`, `set_volume`) in `src/a2t.c` returned early when `get_instr_data_by_ch(chan)` returned NULL. This happened when `voice_table[chan]` referenced an instrument index beyond `instrinfo->count` (e.g., pattern event with `instr=8` in a song with only 7 instruments). The early return meant `modulator_vol[chan]` and `carrier_vol[chan]` stayed at 0 instead of being computed, causing `set_global_volume` to skip those channels while Pascal processed them.
+- **Fix applied** (committed `246681f`):
+  - `reset_ins_volume`: Instead of logging and returning, calls `set_ins_volume(0, 0, chan)` (matches Pascal's `ins_parameter(0, *)` returning all-zero instrument data).
+  - `set_ins_volume`: Replaced early-return with NULL-safe reads: `uint8_t volM = instr ? instr->fm.volM : 0` (same for `volC`, `conn`).
+  - `set_volume` (4op helper): Same NULL-safe pattern.
+- **Resolved module**: `mechwar` — 25,624 diff lines → **0** (verified at 5,000 frames).
 
 ### Additional Finding: `volslide_type` Initialization — NOT A BUG
 - The field `volslide_type[20]` (`src/a2t.h:444`, originally noted as `e2_vslide_type`) IS properly initialized.
@@ -73,9 +92,10 @@
 
 ## Next Steps
 
-1. **Fix Bug 2** (unfixed): The `if (ins == 0) return;` guard at line 1072 needs restructuring that matches Pascal's unconditional execution of `voice_table[chan] := ins` and `reset_ins_volume(chan)` at `a2player.pas:993-998`. Simple approaches regressed — needs frame-by-frame tracing with `-DA2M_DUMP_CONTEXT` at specific IRQ divergence points (e.g. o2ghosts frame 10 bank 1 volume regs) to determine exactly which register writes differ and design a fix that matches without cascading.
+1. **Bug 2 (Pascal UB)** — unlikely to fix in C. Pascal's `ins_parameter(0, *)` reads garbage from `instr_names[255]`. Workaround would require knowing what `instr_names[255]` contains for each song, or accepting the ±1 nibble offset in `carrier_vol` for uninitialized channels (affects `o2ghosts`, `sparkplg`, `sweetsin`).
 2. ~~Fix `e2_vslide_type` initialization~~ — confirmed NOT A BUG.
-3. ~~**Bug 3 (TonePortamento on note=0)** — FIXED 2026-05-15.~~ See root cause above. Resolved 7 modules.
-4. **Re-test all FRAME-DIFF modules** after each fix.
-5. **Update MODULES_TESTED.md** with results. (Updated 2026-05-15: Bug 3 fix resolved samsara/deorbit/glass fully; partially resolved others. All tested at `MAX_FRAMES=50000`.)
-6. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.
+3. ~~**Bug 3 (TonePortamento on note=0)** — FIXED 2026-05-15.~~ Resolved 7 modules.
+4. ~~**Bug 6 (NULL instrument in volume functions)** — FIXED 2026-05-16.~~ Resolved `mechwar` (25,624 → 0).
+5. **Re-test all FRAME-DIFF modules** after each fix.
+6. **Update MODULES_TESTED.md** with results.
+7. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.
