@@ -83,5 +83,5 @@ else
   d_status="PASS"
 fi
 if grep -qE "^\| $base_noext \|" MODULES_TESTED.md 2>/dev/null; then
-  sed -i "s/^| $base_noext |.*/| $base_noext | $c_frames | $d_lines | $d_status | |/" MODULES_TESTED.md
+  sed -i "s/^| \($base_noext\) |[^|]*|[^|]*|[^|]*|/| \1 | $c_frames | $d_lines | $d_status |/" MODULES_TESTED.md
 fi
