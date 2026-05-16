@@ -17,25 +17,25 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | HANGOVER (VOID) | 20479 | 0 | PASS | |
 | KULJE_V4 | 15000 | 44082 | FRAME-DIFF | INIT state divergence. |
 | MINDFLUX (VOID) | 10891 | 0 | PASS | |
-| Newtune | 30000 | 0 | PASS | |
+| Newtune | 17279 | 0 | PASS | |
 | RASTER (VOID) | 31999 | 0 | PASS | |
 | TERRANIA (VOID) | 19199 | 0 | PASS | |
-| adven | 38399 | 38 | FRAME-DIFF | Bug 3 fix resolved active playback (was 30 at 21k — 38 at 50k is end-of-song divergence). |
-| andromeda | 58316 | 0 | PASS | |
+| adven | 30000 | 0 | PASS | Bug 3 fix resolved active playback (was 30 at 21k — 38 at 50k is end-of-song divergence). |
+| andromeda | 30000 | 0 | PASS | |
 | bxx_nowgone | - | - | PASS | |
-| class05 | 24959 | 0 | PASS | |
+| class05 | 24959 | 57512 | FRAME-DIFF | 6390 E-line diffs (event_table eff fields). |
 | damn-sh | 30000 | 0 | PASS | |
-| ed3lw | 30000 | 0 | PASS | |
-| frustration | 30000 | 0 | PASS | |
+| ed3lw | 23043 | 0 | PASS | |
+| frustration | 23517 | 0 | PASS | |
 | goa-cma | 30000 | 0 | PASS | |
-| mystcave | 30000 | 0 | PASS | |
-| nightdrv | 30000 | 7718 | FRAME-DIFF | 2880 non-MB — freq/volume divergence (ftune/fine_tune). |
+| mystcave | 29947 | 0 | PASS | |
+| nightdrv | 30000 | 28984 | FRAME-DIFF | 2430 PT, 570 MB, 540 F, 396 1, 144 0 — freq/volume/PT divergence. |
 | paradox3 | 3896 | 0 | PASS | |
-| remembrance | 38399 | 0 | PASS | |
+| remembrance | 30000 | 0 | PASS | |
 | schwskel | 30000 | 0 | PASS | |
-| skyh | 30000 | 57614 | FRAME-DIFF | 384 non-MB — freq/volume divergence (ftune/fine_tune). |
+| skyh | 30000 | 57614 | FRAME-DIFF | 3840 0, 3744 FP, 3744 CV, 96 MB, 96 F — channel volume/FP/0-line divergence. |
 | speed_reset_song103 | 2074 | 0 | PASS | |
-| square | 30000 | 0 | PASS | |
+| square | 19588 | 0 | PASS | |
 | top-2act | 43802 | 0 | PASS | Re-checked 2026-05-13 (`MAX_FRAMES=100000`, `TIMEOUT_SEC=360`): **`diff -u`** empty. Root cause: instrument **19** had FMREG **`length==0`** and empty cells but **`src[5]`** selected vibrato table **1**; **`fmreg`** was not allocated so **`instrument->vibrato`** never propagated (**`src/a2t.c`** **`fmreg_table_allocate`** now allocates when **`src[1]|…|src[5]`** is non-zero). Cell inference when **`length==0`** retained. Optional **`tools/fmreg_peek.c`** can inspect FMREG blobs. |
 | whereru | 30719 | 0 | PASS | |
 
@@ -44,38 +44,38 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
 | ballad | 30000 | 0 | PASS | |
-| boss8 | 30000 | 0 | PASS | |
-| farhome | 30000 | 0 | PASS | |
-| fdance06 | 30000 | 0 | PASS | |
-| fdance27 | 30000 | 0 | PASS | |
-| fm63b_rv | 30000 | 0 | PASS | |
-| fmaven94 | 30000 | 0 | PASS | |
-| fmaven95 | 30000 | 0 | PASS | |
+| boss8 | 7679 | 0 | PASS | |
+| farhome | 21119 | 0 | PASS | |
+| fdance06 | 23036 | 0 | PASS | |
+| fdance27 | 23036 | 0 | PASS | |
+| fm63b_rv | 17759 | 0 | PASS | |
+| fmaven94 | 5998 | 0 | PASS | |
+| fmaven95 | 5761 | 0 | PASS | |
 | fmaven96 | 30000 | 0 | PASS | |
-| fmaven97 | 30000 | 0 | PASS | |
-| fmaven98 | 30000 | 0 | PASS | |
-| fmavn63b | 30000 | 0 | PASS | |
-| gates | 30000 | 0 | PASS | |
-| hitech2 | 30000 | 0 | PASS | |
-| hitech3 | 30000 | 0 | PASS | |
-| hitech3f | 30000 | 0 | PASS | |
+| fmaven97 | 11397 | 0 | PASS | |
+| fmaven98 | 2556 | 0 | PASS | |
+| fmavn63b | 14205 | 0 | PASS | |
+| gates | 19199 | 0 | PASS | |
+| hitech2 | 28802 | 0 | PASS | |
+| hitech3 | 27361 | 0 | PASS | |
+| hitech3f | 18268 | 0 | PASS | |
 
 ### modules/brendan
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| advnture | 30000 | 0 | PASS | |
-| amangels | 30000 | 0 | PASS | |
-| apoclyps | 30000 | 0 | PASS | |
-| banzai | 30000 | 0 | PASS | |
-| battleth | 30000 | 0 | PASS | |
-| bigguns | 30000 | 0 | PASS | |
-| birdston | 30000 | 0 | PASS | |
-| bladeraz | 30000 | 0 | PASS | |
-| blades | 30000 | 0 | PASS | |
-| blades2 | 30000 | 0 | PASS | |
-| blizzard | 30000 | 0 | PASS | |
-| bonusthm | 30000 | 0 | PASS | |
+| advnture | 14606 | 0 | PASS | |
+| amangels | 9215 | 0 | PASS | |
+| apoclyps | 19965 | 0 | PASS | |
+| banzai | 20181 | 0 | PASS | |
+| battleth | 893 | 0 | PASS | |
+| bigguns | 12287 | 0 | PASS | |
+| birdston | 23036 | 0 | PASS | |
+| bladeraz | 11519 | 0 | PASS | |
+| blades | 15262 | 0 | PASS | |
+| blades2 | 15290 | 0 | PASS | |
+| blizzard | 27463 | 0 | PASS | |
+| bonusthm | 6401 | 0 | PASS | |
 | callduty | 30000 | 0 | PASS | |
 | chiptune | 30000 | 0 | PASS | |
 | chivalry | 30000 | 1620 | FRAME-DIFF | Init artifact bank 1 KSL/TL. |
@@ -108,9 +108,9 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | hunter | 30000 | 0 | PASS | |
 | inevitbl | 30000 | 80 | FRAME-DIFF | Small ±1 nibble offsets. |
 | invasion | 30000 | 0 | PASS | |
-| jdaniels | 30000 | 0 | PASS | (not in modules/brendan/ — kept from earlier run.) |
+| jdaniels | 25599 | 0 | PASS | (not in modules/brendan/ — kept from earlier run.) |
 | kelsey | 30000 | 0 | PASS | |
-| laboite | 30000 | 0 | PASS | |
+| laboite | 23036 | 0 | PASS | |
 | lemmings | 30000 | 100 | FRAME-DIFF | Small ±1 nibble offsets. |
 | lostcaus | 30000 | 1600 | FRAME-DIFF | Init artifact ±1 nibble offsets. |
 | lucky7s | 30000 | 6500 | FRAME-DIFF | Init artifact ± freq diffs. |
@@ -122,7 +122,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | metro | 30000 | 0 | PASS | |
 | modratly | 30000 | 0 | PASS | |
 | neversay | 30000 | 0 | PASS | |
-| neurophb | 30000 | 0 | PASS | |
+| neurophb | 30000 | 47522 | FRAME-DIFF | |
 | nochoice | 30000 | 0 | PASS | |
 | nogofers | 30000 | 0 | PASS | |
 | nowgone | 30000 | 0 | PASS | |
@@ -135,7 +135,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | popcorn | 30000 | 0 | PASS | |
 | racecyb | 30000 | 0 | PASS | |
 | racecyb2 | 30000 | 0 | PASS | |
-| recherch | 30000 | 0 | PASS | |
+| recherch | 13827 | 0 | PASS | |
 | robinthm | 30000 | 0 | PASS | |
 | running | 30000 | 0 | PASS | |
 | sinister | 30000 | 360 | FRAME-DIFF | Small ±1 nibble offsets. |
@@ -143,43 +143,43 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | skylight | 30000 | 0 | PASS | |
 | skysharp | 30000 | 0 | PASS | |
 | sleepwrk | 30000 | 0 | PASS | |
-| song100 | 30000 | 302 | FRAME-DIFF | ±1 nibble diffs bank 0, ftune/fine_tune interaction. |
-| song102 | 30000 | 0 | PASS | |
-| song103 | 30000 | 0 | PASS | |
-| song105 | 30000 | 0 | PASS | |
-| song108 | 30000 | 0 | PASS | |
-| sonic | 30000 | 0 | PASS | |
+| song100 | 5374 | 3266 | FRAME-DIFF | ±1 nibble diffs bank 0, ftune/fine_tune interaction. |
+| song102 | 6913 | 55197 | FRAME-DIFF | |
+| song103 | 1917 | 0 | PASS | |
+| song105 | 4796 | 0 | PASS | |
+| song108 | 8642 | 0 | PASS | |
+| sonic | 27356 | 36722 | FRAME-DIFF | |
 | spaceple | 30000 | 3120 | FRAME-DIFF | Init artifact ± freq diffs. |
 | sparkplg | 30000 | 960 | FRAME-DIFF | Init artifact bank 1 KSL/TL. |
-| stormrid | 30000 | 0 | PASS | |
+| stormrid | 15999 | 0 | PASS | |
 | stormywe | 30000 | 0 | PASS | |
 | suspicis | 30000 | 720 | FRAME-DIFF | Init artifact bank 1 KSL/TL. |
-| tanmusik | 30000 | 0 | PASS | |
+| tanmusik | 19199 | 0 | PASS | |
 | teamster | 30000 | 0 | PASS | |
 | thinkfst | 30000 | 0 | PASS | |
 | timewtel | 30000 | 0 | PASS | |
 | torpdall | 30000 | 16380 | FRAME-DIFF | Init artifact ± volume scaling. |
-| trance | 30000 | 0 | PASS | |
-| trance2 | 30000 | 5768 | FRAME-DIFF | ±1 nibble offset across many frames, ftune/fine_tune interaction. |
+| trance | 19201 | 0 | PASS | |
+| trance2 | 24960 | 0 | PASS | ±1 nibble offset across many frames, ftune/fine_tune interaction. |
 | treacher | 30000 | 0 | PASS | |
-| trouble | 30000 | 0 | PASS | |
+| trouble | 30000 | 87482 | FRAME-DIFF | |
 | tutheme | 30000 | 0 | PASS | |
 | twistdpa | 30000 | 0 | PASS | |
-| ultra | 30000 | 0 | PASS | |
+| ultra | 9600 | 0 | PASS | |
 | ultravio | 30000 | 0 | PASS | |
 | verynice | 30000 | 0 | PASS | |
 | village | 30000 | 0 | PASS | |
 | warhouse | 30000 | 0 | PASS | |
-| waterfls | 30000 | 0 | PASS | |
+| waterfls | 19201 | 0 | PASS | |
 | wavesmar | 30000 | 0 | PASS | |
 | westbeng | 30000 | 0 | PASS | |
-| worldfal | 30000 | 0 | PASS | |
+| worldfal | 27840 | 0 | PASS | |
 
 ### modules/diodema
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| 1856step | 30000 | 60016 | FRAME-DIFF | MB + 24 pre-existing non-MB (init volume artifact). |
+| 1856step | 30000 | 0 | PASS | MB + 24 pre-existing non-MB (init volume artifact). |
 | acidtrac | 30000 | 0 | PASS | |
 | adr1ft | 30000 | 2952 | FRAME-DIFF | MB-only: `FINISHED` vs `IDLE` (keyoff_loop flag mismatch). |
 | altair | 30000 | 0 | PASS | |
@@ -212,18 +212,18 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | chemical | 30000 | 0 | PASS | |
 | corridor | 30000 | 0 | PASS | |
 | meglvnia | 30000 | 0 | PASS | |
-| mystccav | 30000 | 0 | PASS | |
+| mystccav | 29021 | 0 | PASS | |
 | oilocean | 30000 | 0 | PASS | |
 | pommy | 30000 | 0 | PASS | |
 | popular | 30000 | 0 | PASS | |
-| rbfactry | 30000 | 842 | FRAME-DIFF | 240 non-MB — freq table divergence (fine_tune/ftune). |
+| rbfactry | 30000 | 842 | FRAME-DIFF | 60 MB, 60 F, 60 1 — freq table + macro state divergence. |
 | undersea | 30000 | 0 | PASS | |
 
 ### modules/encore
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| 1_cworld | 30000 | 0 | PASS | |
+| 1_cworld | 11518 | 0 | PASS | |
 | 2_prydz | 30000 | 0 | PASS | |
 | ab_julia | 30000 | 0 | PASS | |
 | amegas | 30000 | 0 | PASS | |
@@ -238,22 +238,22 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| crackit | 3300 | 2128 | FRAME-DIFF | Init volume artifact (`release_sustaining_sound`, 0x3f to vol regs) + volume scaling diffs in playback body. |
-| intrcoop | 5157 | 13802 | FRAME-DIFF | Init volume artifact (`release_sustaining_sound`, 0x3f to vol regs) + extensive volume scaling divergence across song. |
+| crackit | 19199 | 39602 | FRAME-DIFF | 2760 MB, 1200 E, 840 F, 840 0 — macro state + event_table + freq divergence. |
+| intrcoop | 30000 | 95372 | FRAME-DIFF | Init volume artifact (`release_sustaining_sound`, 0x3f to vol regs) + extensive volume scaling divergence across song. |
 
 ### modules/kkonaa
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| drgwrrtt | 30000 | 245 | FRAME-DIFF | 100 non-MB — freq table divergence (fine_tune/ftune). |
-| dwrrcslo | 30000 | 0 | PASS | |
-| dwrrfild | 30000 | 0 | PASS | |
+| drgwrrtt | 20897 | 377 | FRAME-DIFF | 25 MB, 25 F, 25 0 — freq table + macro state divergence. |
+| dwrrcslo | 15359 | 0 | PASS | |
+| dwrrfild | 23036 | 0 | PASS | |
 | eastdsrt | 30000 | 0 | PASS | |
 | etwarawk | 30000 | 0 | PASS | |
 | ff2rebel | 30000 | 0 | PASS | |
-| kenseidn | 30000 | 0 | PASS | |
+| kenseidn | 15840 | 0 | PASS | |
 | konahome | 30000 | 0 | PASS | |
-| limitbrk | 30000 | 207091 | FRAME-DIFF | 102900 non-MB — freq/volume divergence (fine_tune/ftune). |
+| limitbrk | 30000 | 323426 | FRAME-DIFF | 102900 non-MB — freq/volume divergence (fine_tune/ftune). |
 | lostspc | 30000 | 0 | PASS | |
 | mutecity | 30000 | 0 | PASS | |
 | reflects | 30000 | 0 | PASS | |
@@ -291,7 +291,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| analogtr | 30000 | 0 | PASS | |
+| analogtr | 24959 | 0 | PASS | |
 | deorbit | 50000 | 0 | PASS | Bug 3 fix resolved. |
 | fm-troni | 30000 | 122 | FRAME-DIFF | TonePortamento keyoff regression (was 50→170, now 122 with 30k default). |
 | glass | 50000 | 0 | PASS | Bug 3 fix resolved. |
@@ -354,7 +354,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| 4thcoast | 50000 | 15556 | FRAME-DIFF | Frame-timing drift: +23 FNUM offset in both channels from frame 29100+. Not Bug 3. |
+| 4thcoast | 30000 | 8322 | FRAME-DIFF | 520 MB, 520 F, 520 1, 520 0 — macro state + freq + channel 1/0 divergence. |
 | 4xmisste | 50000 | 160 | FRAME-DIFF | |
 | 5ontelev | 50000 | 14 | FRAME-DIFF | Small end-of-song diff. |
 | allfull | 50000 | 6470 | FRAME-DIFF | |
