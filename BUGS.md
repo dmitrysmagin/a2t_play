@@ -62,6 +62,38 @@
 - **Fix direction**: Change C's loader to read all 255 instrument slots from the file (matching Pascal's fixed-size block read), not just `count` entries. This requires modifying the format-specific loader functions.
 - **Affected modules**: `o2ghosts` (MV matches, CV differs), `sparkplg` (MV matches, CV differs), `sweetsin` (both MV and CV differ).
 
+### Bug 9: Arpeggio State Machine Divergence on Effect Carry-Over (x00 rows) — UNFIXED
+- **Root cause**: C's `arpgg_table[slot][chan].state` reaches a different state than Pascal's `arpgg_table[chan].state` during arpeggio effect carry-over (rows where `ef_Arpeggio` persists with `val=0x00`). The state machine cycles `0→1→2→0`, and at frame 1378 for `rbfactry` channel 10, C reaches state 2 (uses `add2=15`) while Pascal reaches state 1 (uses `add1=0`).
+- **How it manifests**: `arpeggio()` computes `freq = nFreq(note-1+add)` based on current state. C: `nFreq(49-1+15) = nFreq(63) = 0x1598`. Pascal: `nFreq(49-1+0) = nFreq(48) = 0x1157`. Frequency delta = `0x441` (1089). This propagates to `freq_table`, `macro_table.vib_freq` (MB line), and OPL F-number registers (shadow_regs bank 1).
+- **Key locations**:
+  - C: `src/a2t.c:2584-2600` (`arpeggio()` function — state transition + freq computation)
+  - C: `src/a2t.c:1486-1507` (`process_effects_slot_body` — arpeggio effect handling, `reset_state` logic)
+  - C: `src/a2t.c:1322-1345` (`play_line_arpgg_cleanup_pascal` — pre-Case cleanup)
+  - C: `src/a2t.c:1433-1456` (`process_effects_slot_prepare` — unconditional `effect_table` overwrite)
+  - Pascal: `a2player.pas:3063-3081` (`arpeggio()` — state transition + freq computation)
+  - Pascal: `a2player.pas:1490-1535` (LOOP1 arpeggio effect handling — note/state reset logic)
+  - Pascal: `a2player.pas:1361-1374` (LOOP1 arpgg cleanup — `NOT (effect_def = ef_Arpeggio) and (effect <> 0)` guard)
+- **Debug findings** (2026-05-16):
+  - `poll_proc()` is called every 3 frames (frames 1375, 1378, 1381) — same timing in both C and Pascal.
+  - `play_line()` is called at frames 1375 and 1381, but NOT at 1378 (speed condition `1 >= speed` is false).
+  - At frame 1378, `effect_table` has `def=0, val=15` (carried over from frame 1375's `play_line()`).
+  - `arpeggio()` is called at frames 1375, 1378, 1381 with states 1, 2, 0 respectively.
+  - C's state at frame 1378: 2 (before `arpeggio()` advances to 0). Pascal's state at frame 1378: 1.
+  - The divergence is NOT about `effect_table` being cleared on x00 rows (the debug shows `val=15`, not 0).
+  - The divergence is about the state machine cycling at different rates between C and Pascal.
+- **Failed fix attempts** (all caused 479K-line regressions):
+  1. Guard in `process_effects_slot_prepare`: `if ((def != ef_Arpeggio) || (val != 0))` — too broad, affects all `def=0, val=0` rows.
+  2. Restore from `event_table` in `process_effects_slot_body` — `event_table` has wrong values for many rows.
+  3. Check previous `effect_table.def` before preserving — `ef_Arpeggio=0` makes it impossible to distinguish "no effect" from "arpeggio carry-over".
+  4. Check `event_table[chan].eff[slot]` for arpeggio — `event_table` carries over values, causing false positives.
+- **Core problem**: `ef_Arpeggio = 0`, so `def=0, val=0` rows are indistinguishable from "no effect" rows. Any fix that preserves `effect_table` for `def=0, val=0` also preserves it for "no effect" rows, causing massive regressions.
+- **Investigation needed**:
+  1. Why does Pascal's state machine cycle at a different rate than C's? Both call `poll_proc` at the same frames.
+  2. Is there a difference in how `effect_table` is stored? Pascal uses `ef_Arpeggio+ef_fix1` ($80) in low byte; C uses `ef_Arpeggio` (0) in `def` field.
+  3. Does Pascal's `update_effects` check a different condition than C's `update_effects_slot`?
+  4. Consider adding `ef_fix1` ($80) to C's `effect_table.def` for arpeggio effects, to match Pascal's encoding and enable proper carry-over detection.
+- **Affected modules**: `rbfactry` (842 diff lines at 30k, 240 non-MB). Likely affects other modules with arpeggio carry-over patterns.
+
 ### Additional Finding: `volslide_type` Initialization — NOT A BUG
 - The field `volslide_type[20]` (`src/a2t.h:444`, originally noted as `e2_vslide_type`) IS properly initialized.
 - `ch` is a static global (`.bss`, zero-initialized), and `init_buffers()` explicitly sets each `volslide_type[i]` from `songinfo->lock_flags`.
@@ -105,11 +137,12 @@
 
 ## Next Steps
 
-1. **Bug 7 (instrument data truncated)** — fix C's loader to read all 255 instrument slots from the file instead of only `count` entries. This would resolve the remaining MV/CV diffs in `o2ghosts`, `sparkplg`, `sweetsin`.
-2. ~~Fix `e2_vslide_type` initialization~~ — confirmed NOT A BUG.
-3. ~~**Bug 3 (TonePortamento on note=0)** — FIXED 2026-05-15.~~ Resolved 7 modules.
-4. ~~**Bug 6 (NULL instrument in volume functions)** — FIXED 2026-05-16.~~ Resolved `mechwar` (25,624 → 0).
-5. ~~**Bug 8 (Pascal SetInsVolume bounds guard)** — FIXED 2026-05-16.~~ Resolved `dream7mx` (0x14c divergence eliminated).
-6. **Re-test all FRAME-DIFF modules** after each fix.
-7. **Update MODULES_TESTED.md** with results.
-8. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.
+1. **Bug 9 (arpeggio state divergence)** — investigate exact state transition sequence between C and Pascal for `rbfactry` frames 1377→1378. Compare Pascal's `arpgg_cleanup` (`a2player.pas:1361-1374`) and effect carry-over logic (`a2player.pas:1494-1535`) against C's `play_line_arpgg_cleanup_pascal` and `process_effects_slot_body`.
+2. **Bug 7 (instrument data truncated)** — fix C's loader to read all 255 instrument slots from the file instead of only `count` entries. This would resolve the remaining MV/CV diffs in `o2ghosts`, `sparkplg`, `sweetsin`.
+3. ~~Fix `e2_vslide_type` initialization~~ — confirmed NOT A BUG.
+4. ~~**Bug 3 (TonePortamento on note=0)** — FIXED 2026-05-15.~~ Resolved 7 modules.
+5. ~~**Bug 6 (NULL instrument in volume functions)** — FIXED 2026-05-16.~~ Resolved `mechwar` (25,624 → 0).
+6. ~~**Bug 8 (Pascal SetInsVolume bounds guard)** — FIXED 2026-05-16.~~ Resolved `dream7mx` (0x14c divergence eliminated).
+7. **Re-test all FRAME-DIFF modules** after each fix.
+8. **Update MODULES_TESTED.md** with results.
+9. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.

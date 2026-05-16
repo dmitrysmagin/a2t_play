@@ -12,7 +12,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| 1942 | 11997 | 95975 | FRAME-DIFF | 18 diff lines (last 3 frames, pre-existing end-of-song divergence). E-line dump added 2026-05-15 — event_table now matches Pascal for active playback. Bug 4 (unconditional eff write) and Bug 5 (init order) fixed. |
+| 1942 | 11997 | 0 | PASS | 18 diff lines (last 3 frames, pre-existing end-of-song divergence). E-line dump added 2026-05-15 — event_table now matches Pascal for active playback. Bug 4 (unconditional eff write) and Bug 5 (init order) fixed. |
 | ALLOYRUN (VOID) | 19199 | 0 | PASS | |
 | HANGOVER (VOID) | 20479 | 0 | PASS | |
 | KULJE_V4 | 15000 | 44082 | FRAME-DIFF | INIT state divergence. |
@@ -33,7 +33,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | paradox3 | 3896 | 0 | PASS | |
 | remembrance | 38399 | 0 | PASS | |
 | schwskel | 30000 | 0 | PASS | |
-| skyh | 30000 | 884 | FRAME-DIFF | 384 non-MB — freq/volume divergence (ftune/fine_tune). |
+| skyh | 30000 | 57614 | FRAME-DIFF | 384 non-MB — freq/volume divergence (ftune/fine_tune). |
 | speed_reset_song103 | 2074 | 0 | PASS | |
 | square | 30000 | 0 | PASS | |
 | top-2act | 43802 | 0 | PASS | Re-checked 2026-05-13 (`MAX_FRAMES=100000`, `TIMEOUT_SEC=360`): **`diff -u`** empty. Root cause: instrument **19** had FMREG **`length==0`** and empty cells but **`src[5]`** selected vibrato table **1**; **`fmreg`** was not allocated so **`instrument->vibrato`** never propagated (**`src/a2t.c`** **`fmreg_table_allocate`** now allocates when **`src[1]|…|src[5]`** is non-zero). Cell inference when **`length==0`** retained. Optional **`tools/fmreg_peek.c`** can inspect FMREG blobs. |
@@ -91,7 +91,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | depressn | 30000 | 0 | PASS | |
 | difkhero | 30000 | 0 | PASS | |
 | dream7m | 30000 | 0 | PASS | |
-| dream7mx | 3 | 23 | FRAME-DIFF | Small ±1 nibble offsets. |
+| dream7mx | 3 | 0 | PASS | Small ±1 nibble offsets. |
 | echorock | 30000 | 0 | PASS | |
 | elskiing | 30000 | 0 | PASS | |
 | enchloop | 30000 | 0 | PASS | |
@@ -216,7 +216,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | oilocean | 30000 | 0 | PASS | |
 | pommy | 30000 | 0 | PASS | |
 | popular | 30000 | 0 | PASS | |
-| rbfactry | 30000 | 582 | FRAME-DIFF | 240 non-MB — freq table divergence (fine_tune/ftune). |
+| rbfactry | 30000 | 842 | FRAME-DIFF | 240 non-MB — freq table divergence (fine_tune/ftune). |
 | undersea | 30000 | 0 | PASS | |
 
 ### modules/encore
