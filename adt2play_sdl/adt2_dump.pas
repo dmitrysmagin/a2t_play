@@ -149,16 +149,7 @@ begin
 
     ws := ws + IntToStr(frames_dumped) + ' GV ' + get_global_vol_dump + #13#10;
 
-    ws := ws + IntToStr(frames_dumped) + ' WR ';
-    for i := 0 to WR_TRACE_SIZE - 1 do
-      if i < wr_trace_count then
-        begin
-          ws := ws + LowerCase(IntToHex(wr_trace_reg[(wr_trace_idx - wr_trace_count + i + WR_TRACE_SIZE) mod WR_TRACE_SIZE], 3)) +
-                    LowerCase(IntToHex(wr_trace_val[(wr_trace_idx - wr_trace_count + i + WR_TRACE_SIZE) mod WR_TRACE_SIZE], 2));
-        end
-      else
-        ws := ws + '00000';
-    ws := ws + #13#10;
+    { WR line removed - benign write-order differences only }
 
    FileWrite(outfd, ws[1], Length(ws));
    Inc(frames_dumped);

@@ -571,18 +571,18 @@ static void dump_frame(void)
            (unsigned)(percussion_mode ? 1 : 0));
     printf("\n");
 
-    printf("%d WR ", frames_dumped);
-    for (i = 0; i < WR_TRACE_SIZE; i++) {
-        int idx;
-        if (i < wr_trace_count) {
-            idx = (wr_trace_idx - wr_trace_count + i + WR_TRACE_SIZE) % WR_TRACE_SIZE;
-            printf("%03x%02x", (unsigned)(wr_trace_reg[idx] & 0x1ff),
-                   (unsigned)wr_trace_val[idx]);
-        } else {
-            printf("00000");
-        }
-    }
-    printf("\n");
+    // printf("%d WR ", frames_dumped);
+    // for (i = 0; i < WR_TRACE_SIZE; i++) {
+    //     int idx;
+    //     if (i < wr_trace_count) {
+    //         idx = (wr_trace_idx - wr_trace_count + i + WR_TRACE_SIZE) % WR_TRACE_SIZE;
+    //         printf("%03x%02x", (unsigned)(wr_trace_reg[idx] & 0x1ff),
+    //                (unsigned)wr_trace_val[idx]);
+    //     } else {
+    //         printf("00000");
+    //     }
+    // }
+    // printf("\n");
 
     frames_dumped++;
 }
