@@ -62,6 +62,12 @@
 - **Fix direction**: Change C's loader to read all 255 instrument slots from the file (matching Pascal's fixed-size block read), not just `count` entries. This requires modifying the format-specific loader functions.
 - **Affected modules**: `o2ghosts` (MV matches, CV differs), `sparkplg` (MV matches, CV differs), `sweetsin` (both MV and CV differ).
 
+### Bug 10: C ef_SetInsVolume/ef_ForceInsVolume Missing is_data_empty Guard — FIXED
+- **Root cause**: Pascal's `ef_SetInsVolume` and `ef_ForceInsVolume` handlers (`a2player.pas:1662-1670, 1672-1678`) use a two-part guard: `voice_table[chan] <> 0` **and** `not is_data_empty(songdata.instr_data[voice_table[chan]], INSTRUMENT_SIZE)`. C only checked if the instrument index was valid (`get_instr_data_by_ch` returns non-NULL), but did not check if the instrument data was all zeros (empty). When an instrument slot exists at a valid index but contains zeroed data, C processed the volume effect (writing `volC = 63 - val` to the carrier volume register) while Pascal skipped it entirely.
+- **How it manifests**: For `amegas.a2m`, channels 2/5/6/7 use instrument 0x12 which exists but has all-zero FM data. At frame 3865, `ef_SetInsVolume` with `val=0x00` triggers: C calls `set_ins_volume(BYTE_NULL, 0x3f, chan)` → `fmpar_table[chan].volC = 0x3f`, carrier vol register = silence. Pascal skips the effect → `fmpar_table[chan].volC` stays at 0x00 from prior `reset_ins_volume` call.
+- **Fix applied** (`src/a2t.c`): Added `is_data_empty(instr, sizeof(tINSTR_DATA))` check to both `ef_SetInsVolume` and `ef_ForceInsVolume` handlers, matching Pascal's guard.
+- **Resolved module**: `amegas` — 437,366 diff lines → **0** (verified at 30k frames).
+
 ### Bug 9: Arpeggio State Machine Divergence on Effect Carry-Over (x00 rows) — UNFIXED
 - **Root cause**: C's `arpgg_table[slot][chan].state` reaches a different state than Pascal's `arpgg_table[chan].state` during arpeggio effect carry-over (rows where `ef_Arpeggio` persists with `val=0x00`). The state machine cycles `0→1→2→0`, and at frame 1378 for `rbfactry` channel 10, C reaches state 2 (uses `add2=15`) while Pascal reaches state 1 (uses `add1=0`).
 - **How it manifests**: `arpeggio()` computes `freq = nFreq(note-1+add)` based on current state. C: `nFreq(49-1+15) = nFreq(63) = 0x1598`. Pascal: `nFreq(49-1+0) = nFreq(48) = 0x1157`. Frequency delta = `0x441` (1089). This propagates to `freq_table`, `macro_table.vib_freq` (MB line), and OPL F-number registers (shadow_regs bank 1).
@@ -111,7 +117,7 @@
 
 | Module Set | Total | PASS | FRAME-DIFF | Notes |
 |---|---|---|---|---|---|---|
-| encore | 10 | 7 | 3 | 18-30 lines each after Fix 1 |
+| encore | 10 | 8 | 2 | Bug 10 resolved amegas (437K→0). 18-30 lines each after Fix 1 for others. |
 | hydra | 2 | 0 | 2 | 2,128 and 13,822 diffs |
 | dretz | 11 | 11 | 0 | All PASS at 100k frames |
 | o2star | 15 | 14 | 1 | `o2ghosts`: 53,516 diffs |
@@ -131,6 +137,8 @@
 - `adt2play_sdl/a2player.pas:925-999` — Pascal's `set_ins_data` (reference)
 - `adt2play_sdl/a2player.pas:1111-1177` — Pascal's `output_note` (reference)
 - `src/a2t.c:2121-2215` — C's `play_line` (ordering reference)
+- `src/a2t.c:1648-1691` — C's `ef_SetInsVolume`/`ef_ForceInsVolume` handlers (Bug 10 fix: added `is_data_empty` guard)
+- `adt2play_sdl/a2player.pas:1662-1678` — Pascal's `ef_SetInsVolume`/`ef_ForceInsVolume` handlers (reference for Bug 10)
 - `src/a2t.c:2175-2189` — C's `play_line` unconditional eff write (Bug 4 fix)
 - `src/a2t.c:3416-3420` — C's `init_player` key_off/init_buffers order (Bug 5 fix)
 - `adt2play_sdl/a2player.pas:1313-1322` — Pascal's LOOP1 unconditional eff write (reference for Bug 4)
@@ -141,8 +149,9 @@
 2. **Bug 7 (instrument data truncated)** — fix C's loader to read all 255 instrument slots from the file instead of only `count` entries. This would resolve the remaining MV/CV diffs in `o2ghosts`, `sparkplg`, `sweetsin`.
 3. ~~Fix `e2_vslide_type` initialization~~ — confirmed NOT A BUG.
 4. ~~**Bug 3 (TonePortamento on note=0)** — FIXED 2026-05-15.~~ Resolved 7 modules.
-5. ~~**Bug 6 (NULL instrument in volume functions)** — FIXED 2026-05-16.~~ Resolved `mechwar` (25,624 → 0).
-6. ~~**Bug 8 (Pascal SetInsVolume bounds guard)** — FIXED 2026-05-16.~~ Resolved `dream7mx` (0x14c divergence eliminated).
-7. **Re-test all FRAME-DIFF modules** after each fix.
+ 5. ~~**Bug 6 (NULL instrument in volume functions)** — FIXED 2026-05-16.~~ Resolved `mechwar` (25,624 → 0).
+ 6. ~~**Bug 8 (Pascal SetInsVolume bounds guard)** — FIXED 2026-05-16.~~ Resolved `dream7mx` (0x14c divergence eliminated).
+ 7. ~~**Bug 10 (C ef_SetInsVolume/ef_ForceInsVolume is_data_empty guard)** — FIXED 2026-05-17.~~ Resolved `amegas` (437,366 → 0).
+ 8. **Re-test all FRAME-DIFF modules** after each fix.
 8. **Update MODULES_TESTED.md** with results.
 9. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.

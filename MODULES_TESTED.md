@@ -33,7 +33,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | paradox3 | 25091 | 0 | PASS | |
 | remembrance | 30000 | 0 | PASS | |
 | schwskel | 30000 | 0 | PASS | |
-| skyh | 30000 | 56174 | FRAME-DIFF | 3840 0, 3744 FP, 3744 CV, 96 MB, 96 F — channel volume/FP/0-line divergence. |
+| skyh | 30000 | 0 | PASS | 3840 0, 3744 FP, 3744 CV, 96 MB, 96 F — channel volume/FP/0-line divergence. |
 | speed_reset_song103 | 2074 | 0 | PASS | |
 | square | 19588 | 0 | PASS | |
 | top-2act | 30000 | 0 | PASS | Re-checked 2026-05-13 (`MAX_FRAMES=100000`, `TIMEOUT_SEC=360`): **`diff -u`** empty. Root cause: instrument **19** had FMREG **`length==0`** and empty cells but **`src[5]`** selected vibrato table **1**; **`fmreg`** was not allocated so **`instrument->vibrato`** never propagated (**`src/a2t.c`** **`fmreg_table_allocate`** now allocates when **`src[1]|…|src[5]`** is non-zero). Cell inference when **`length==0`** retained. Optional **`tools/fmreg_peek.c`** can inspect FMREG blobs. |
@@ -114,7 +114,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | lemmings | 15999 | 48008 | FRAME-DIFF | Small ±1 nibble offsets. |
 | lostcaus | 22399 | 26007 | FRAME-DIFF | Init artifact ±1 nibble offsets. |
 | lucky7s | 8396 | 0 | PASS | Init artifact ± freq diffs. |
-| manifest | 17599 | 21283 | FRAME-DIFF | |
+| manifest | 17599 | 0 | PASS | |
 | marblect | 30000 | 0 | PASS | |
 | mariothm | 893 | 0 | PASS | |
 | mechage | 12575 | 0 | PASS | Init artifact bank 1 KSL/TL. |
@@ -122,7 +122,6 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | metro | 24575 | 0 | PASS | |
 | modratly | 22031 | 0 | PASS | |
 | neversay | 15648 | 0 | PASS | |
-| neurophb | 30000 | 47522 | FRAME-DIFF | |
 | nochoice | 15999 | 0 | PASS | |
 | nogofers | 12799 | 0 | PASS | |
 | nowgone | 30000 | 0 | PASS | |
@@ -143,12 +142,12 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | skylight | 17576 | 0 | PASS | |
 | skysharp | 9597 | 0 | PASS | |
 | sleepwrk | 17856 | 0 | PASS | |
-| song100 | 5374 | 866 | FRAME-DIFF | ±1 nibble diffs bank 0, ftune/fine_tune interaction. |
-| song102 | 6913 | 55197 | FRAME-DIFF | |
+| song100 | 5374 | 0 | PASS | ±1 nibble diffs bank 0, ftune/fine_tune interaction. |
+| song102 | 6913 | 0 | PASS | |
 | song103 | 1917 | 0 | PASS | |
 | song105 | 4796 | 0 | PASS | |
 | song108 | 8642 | 0 | PASS | |
-| sonic | 27356 | 36722 | FRAME-DIFF | |
+| sonic | 27356 | 0 | PASS | |
 | spaceple | 23227 | 24967 | FRAME-DIFF | Init artifact ± freq diffs. |
 | sparkplg | 26881 | 0 | PASS | Init artifact bank 1 KSL/TL. |
 | stormrid | 15999 | 0 | PASS | |
@@ -162,7 +161,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | trance | 19201 | 0 | PASS | |
 | trance2 | 24960 | 0 | PASS | ±1 nibble offset across many frames, ftune/fine_tune interaction. |
 | treacher | 19199 | 0 | PASS | |
-| trouble | 30000 | 87482 | FRAME-DIFF | |
+| trouble | 30000 | 0 | PASS | |
 | tutheme | 12601 | 0 | PASS | |
 | twistdpa | 21120 | 0 | PASS | |
 | ultra | 9600 | 0 | PASS | |
