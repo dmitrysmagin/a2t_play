@@ -564,6 +564,36 @@ static void dump_frame(void)
     for (i = 0; i < 20; i++)
       printf("%02x", (unsigned)(uint8_t)ch->ftune_table[i]);
     printf("\n");
+    printf("%d AT ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x%02x%02x%02x",
+             ch->arpgg_table[0][i].state,
+             ch->arpgg_table[0][i].note,
+             ch->arpgg_table[0][i].add1,
+             ch->arpgg_table[0][i].add2);
+    printf("\n");
+    printf("%d VT ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x%02x%02x%02x%01x",
+             ch->vibr_table[0][i].pos,
+             ch->vibr_table[0][i].dir,
+             ch->vibr_table[0][i].speed,
+             ch->vibr_table[0][i].depth,
+             ch->vibr_table[0][i].fine ? 1 : 0);
+    printf("\n");
+    printf("%d TT ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x%02x%02x%02x%01x",
+             ch->trem_table[0][i].pos,
+             ch->trem_table[0][i].dir,
+             ch->trem_table[0][i].speed,
+             ch->trem_table[0][i].depth,
+             ch->trem_table[0][i].fine ? 1 : 0);
+    printf("\n");
+    printf("%d RT ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x", ch->retrig_table[0][i]);
+    printf("\n");
     printf("%d MV ", frames_dumped);
     for (i = 0; i < 20; i++)
       printf("%02x", ch->modulator_vol[i]);

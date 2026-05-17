@@ -126,6 +126,10 @@ function get_effect_table_dump: AnsiString;
 function get_porta_table_dump: AnsiString;
 function get_macro_table_dump: AnsiString;
 function get_ftune_table_dump: AnsiString;
+function get_arpgg_table_dump: AnsiString;
+function get_vibr_table_dump: AnsiString;
+function get_trem_table_dump: AnsiString;
+function get_retrig_table_dump: AnsiString;
 function get_modulator_vol_dump: AnsiString;
 function get_carrier_vol_dump: AnsiString;
 function get_voice_table_dump: AnsiString;
@@ -4850,6 +4854,64 @@ begin
   for i := 1 to 20 do
     tmp := tmp + LowerCase(IntToHex(Byte(ftune_table[i]), 2));
   get_ftune_table_dump := tmp;
+end;
+
+function get_arpgg_table_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp +
+      LowerCase(IntToHex(arpgg_table[i].state, 2)) +
+      LowerCase(IntToHex(arpgg_table[i].note, 2)) +
+      LowerCase(IntToHex(arpgg_table[i].add1, 2)) +
+      LowerCase(IntToHex(arpgg_table[i].add2, 2));
+  get_arpgg_table_dump := tmp;
+end;
+
+function get_vibr_table_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp +
+      LowerCase(IntToHex(vibr_table[i].pos, 2)) +
+      LowerCase(IntToHex(vibr_table[i].dir, 2)) +
+      LowerCase(IntToHex(vibr_table[i].speed, 2)) +
+      LowerCase(IntToHex(vibr_table[i].depth, 2)) +
+      LowerCase(IntToHex(Byte(vibr_table[i].fine), 1));
+  get_vibr_table_dump := tmp;
+end;
+
+function get_trem_table_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp +
+      LowerCase(IntToHex(trem_table[i].pos, 2)) +
+      LowerCase(IntToHex(trem_table[i].dir, 2)) +
+      LowerCase(IntToHex(trem_table[i].speed, 2)) +
+      LowerCase(IntToHex(trem_table[i].depth, 2)) +
+      LowerCase(IntToHex(Byte(trem_table[i].fine), 1));
+  get_trem_table_dump := tmp;
+end;
+
+function get_retrig_table_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp + LowerCase(IntToHex(retrig_table[i], 2));
+  get_retrig_table_dump := tmp;
 end;
 
 function get_modulator_vol_dump: AnsiString;

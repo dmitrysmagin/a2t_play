@@ -139,9 +139,17 @@ begin
 
     ws := ws + IntToStr(frames_dumped) + ' PT ' + get_porta_table_dump + #13#10;
 
-    ws := ws + IntToStr(frames_dumped) + ' FT ' + get_ftune_table_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' FT ' + get_ftune_table_dump + #13#10;
 
-    ws := ws + IntToStr(frames_dumped) + ' MV ' + get_modulator_vol_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' AT ' + get_arpgg_table_dump + #13#10;
+
+     ws := ws + IntToStr(frames_dumped) + ' VT ' + get_vibr_table_dump + #13#10;
+
+     ws := ws + IntToStr(frames_dumped) + ' TT ' + get_trem_table_dump + #13#10;
+
+     ws := ws + IntToStr(frames_dumped) + ' RT ' + get_retrig_table_dump + #13#10;
+
+     ws := ws + IntToStr(frames_dumped) + ' MV ' + get_modulator_vol_dump + #13#10;
 
     ws := ws + IntToStr(frames_dumped) + ' CV ' + get_carrier_vol_dump + #13#10;
 
