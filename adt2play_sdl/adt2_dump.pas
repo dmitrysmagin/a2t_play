@@ -114,7 +114,6 @@ var
 begin
   for p := 0 to 255 do
     effects[p] := '_';
-  effects[255] := #0;
 
   for block := 0 to 15 do
     for slot := 0 to 7 do

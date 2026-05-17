@@ -493,11 +493,11 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
 static void detect_all_effects(void)
 {
     static char echars[256] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><`";
-    char effects[256];
+    char effects[257];
     int p, c, r;
 
     memset(effects, '_', sizeof(effects));
-    effects[255] = '\0';
+    effects[256] = '\0';
 
     for (p = 0; p < eventsinfo->patterns; p++) {
         for (c = 0; c < songinfo->nm_tracks; c++) {
