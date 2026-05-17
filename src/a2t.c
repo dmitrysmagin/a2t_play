@@ -1439,10 +1439,15 @@ static void process_effects_slot_prepare(tADTRACK2_EVENT *event, int slot, int c
      * — only overwrite effect_table when this condition holds. With ef_Arpeggio=50
      * (non-zero), we can now distinguish arpeggio carry-over (def=50, val=0) from
      * "no effect" (def=0, val=0). The normalization above ensures carry-over rows
-     * have def=ef_Arpeggio, so this condition correctly preserves effect_table. */
+     * have def=ef_Arpeggio, so this condition correctly preserves effect_table.
+     * When def=0 and val=0, Pascal explicitly zeros effect_table (else branch at
+     * line 1542), so we must do the same here. */
     if ((def != 0) || (val != 0)) {
         ch->effect_table[slot][chan].def = def;
         ch->effect_table[slot][chan].val = val;
+    } else {
+        ch->effect_table[slot][chan].def = 0;
+        ch->effect_table[slot][chan].val = 0;
     }
 
     if ((def != ef_Vibrato) &&

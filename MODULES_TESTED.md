@@ -216,7 +216,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | oilocean | 30000 | 0 | PASS | |
 | pommy | 30000 | 0 | PASS | |
 | popular | 30000 | 0 | PASS | |
-| rbfactry | 30000 | 1 | FRAME-DIFF | 60 MB, 60 F, 60 1 — freq table + macro state divergence. |
+| rbfactry | 30000 | 0 | PASS | 60 MB, 60 F, 60 1 — freq table + macro state divergence. |
 | undersea | 30000 | 0 | PASS | |
 
 ### modules/encore
