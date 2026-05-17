@@ -290,19 +290,19 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| analogtr | 24959 | 0 | PASS | |
-| deorbit | 30000 | 0 | PASS | Bug 3 fix resolved. |
-| fm-troni | 30000 | 542 | FRAME-DIFF | TonePortamento keyoff regression (was 50→170, now 122 with 30k default). 36 each: 0, F, MB; 18 PT. |
-| glass | 30000 | 193103 | FRAME-DIFF | Bug 3 fix resolved. 12240 MB, 9216 FP. |
-| ishtar | 30000 | 286046 | FRAME-DIFF | 25212 FP, 8448 each: 1, CV. |
-| khaos | 30000 | 0 | PASS | |
-| khaos2 | 30000 | 0 | PASS | |
-| lbtrance | 30000 | 0 | PASS | |
-| old_001 | 24959 | 0 | PASS | |
-| old_002 | 25599 | 185144 | FRAME-DIFF | ±1 nibble offset most frames. ftune/fine_tune interaction. 10254 each: F, MB; 8954 0; 8779 1; 5900 each: FT, TT. |
-| opl303 | 30000 | 1058 | FRAME-DIFF | Small ±1 nibble diffs. ftune/fine_tune interaction. 66 each: 0, F, MB, PT. |
-| pink | 24360 | 2297 | FRAME-DIFF | ±1 pitch nibbles bank 0 ch0 F-Number Low. ftune/fine_tune interaction. 150 VT, 105 each: 0, MB. |
-| spacediv | 30000 | 50287 | FRAME-DIFF | ±1 nibble offset many frames. ftune/fine_tune interaction. 3580 each: F, MB; 3460 0; 180 1; 60 PT. |
+| analogtr | 3705 | 0 | PASS | |
+| deorbit | 1934 | 0 | PASS | Bug 3 fix resolved. |
+| fm-troni | 3985 | 542 | FRAME-DIFF | TonePortamento keyoff regression. 36 each: 0, F, MB; 18 PT. |
+| glass | 3633 | 110162 | FRAME-DIFF | 12240 MB. |
+| ishtar | 1963 | 0 | PASS | |
+| khaos | 3399 | 0 | PASS | |
+| khaos2 | 3399 | 0 | PASS | |
+| lbtrance | 5157 | 0 | PASS | |
+| old_001 | 4290 | 0 | PASS | |
+| old_002 | 4400 | 185144 | FRAME-DIFF | ±1 nibble offset most frames. ftune/fine_tune interaction. 10254 each: F, MB; 8954 0; 8779 1; 5900 each: FT, TT. |
+| opl303 | 1963 | 1058 | FRAME-DIFF | Small ±1 nibble diffs. ftune/fine_tune interaction. 66 each: 0, F, MB, PT. |
+| pink | 4187 | 2297 | FRAME-DIFF | ±1 pitch nibbles bank 0 ch0 F-Number Low. ftune/fine_tune interaction. 150 VT, 105 each: 0, MB. |
+| spacediv | 4600 | 50287 | FRAME-DIFF | ±1 nibble offset many frames. ftune/fine_tune interaction. 3580 each: F, MB; 3460 0; 180 1; 60 PT. |
 
 ### modules/nula
 
