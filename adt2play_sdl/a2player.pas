@@ -917,7 +917,7 @@ end;
 
 procedure set_overall_volume(level: Byte);
 begin
-  overall_volume := max(level,63);
+  overall_volume := min(level,63);
   set_global_volume;
 end;
 
