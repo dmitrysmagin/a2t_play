@@ -2689,9 +2689,6 @@ static void update_effects_slot(int slot, int chan)
 
     switch (def) {
     case ef_Arpeggio:
-        if (!val)
-            break;
-
         arpeggio(slot, chan);
         break;
 
@@ -3881,7 +3878,7 @@ void convert_v1234_effects(tADTRACK2_EVENT *ev, int chan)
     };
 
     switch (ev->eff[0].def) {
-    case fx_Arpeggio:           ev->eff[0].def = ef_Arpeggio;        break;
+    case fx_Arpeggio:           ev->eff[0].def = 0/*ef_Arpeggio is 50 now*/;        break;
     case fx_FSlideUp:           ev->eff[0].def = ef_FSlideUp;        break;
     case fx_FSlideDown:         ev->eff[0].def = ef_FSlideDown;      break;
     case fx_FSlideUpFine:       ev->eff[0].def = ef_FSlideUpFine;    break;
