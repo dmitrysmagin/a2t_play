@@ -45,7 +45,7 @@ typedef enum {
 #define MIN_IRQ_FREQ        50
 #define MAX_IRQ_FREQ        1000
 
-#define ef_Arpeggio            50 // ef_fix2 replacement to distinguish from "no effect" (was 0)
+#define ef_Arpeggio            50 // ef_fix1 replacement to distinguish from "no effect" (was 0)
 #define ef_FSlideUp            1
 #define ef_FSlideDown          2
 #define ef_TonePortamento      3

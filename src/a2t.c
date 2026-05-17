@@ -1486,18 +1486,33 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
         }
 
         {
-            bool reset_state = note_in_range(event->note & ~keyoff_flag);
-            uint8_t new_note = note_in_range(event->note & ~keyoff_flag)
-                ? event->note & ~keyoff_flag
+            uint8_t raw_note = event->note & ~keyoff_flag;
+            bool has_new_note = note_in_range(raw_note);
+            uint8_t resolved_note = has_new_note
+                ? raw_note
                 : (note_in_range(ch->event_table[chan].note & ~keyoff_flag)
                     ? ch->event_table[chan].note & ~keyoff_flag
                     : 0);
 
-            if (new_note) {
-                if (reset_state)
-                    ch->arpgg_table[slot][chan].state = 0;
+            /* Pascal (a2player.pas ~1527-1529): check last_effect (saved at
+             * start of play_line before effect_table was cleared) to decide
+             * whether to reset arpeggio state on carry-over rows. */
+            uint8_t prev_def = ch->last_effect[slot][chan].def;
+            bool prev_was_arp = (prev_def == ef_Arpeggio) ||
+                                (prev_def == ef_ExtraFineArpeggio) ||
+                                (prev_def == ef_ArpggVSlide) ||
+                                (prev_def == ef_ArpggVSlideFine);
 
-                ch->arpgg_table[slot][chan].note = new_note;
+            if (resolved_note) {
+                if (has_new_note) {
+                    /* Pascal: event[chan].note is in range — always reset */
+                    ch->arpgg_table[slot][chan].state = 0;
+                } else if (!prev_was_arp) {
+                    /* Pascal: carry-over from event_table — check last_effect */
+                    ch->arpgg_table[slot][chan].state = 0;
+                }
+
+                ch->arpgg_table[slot][chan].note = resolved_note;
                 if ((def == ef_Arpeggio) || (def == ef_ExtraFineArpeggio)) {
                     ch->arpgg_table[slot][chan].add1 = (val >> 4) & 0x0f;
                     ch->arpgg_table[slot][chan].add2 = val & 0x0f;
