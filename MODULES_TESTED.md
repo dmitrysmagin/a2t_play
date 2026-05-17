@@ -15,7 +15,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | 1942 | 11997 | 0 | PASS | 18 diff lines (last 3 frames, pre-existing end-of-song divergence). E-line dump added 2026-05-15 — event_table now matches Pascal for active playback. Bug 4 (unconditional eff write) and Bug 5 (init order) fixed. |
 | ALLOYRUN (VOID) | 19199 | 0 | PASS | |
 | HANGOVER (VOID) | 20479 | 0 | PASS | |
-| KULJE_V4 | 15000 | 44082 | FRAME-DIFF | INIT state divergence. |
+| KULJE_V4 | 30000 | 462164 | FRAME-DIFF | INIT state divergence. |
 | MINDFLUX (VOID) | 10891 | 0 | PASS | |
 | Newtune | 17279 | 0 | PASS | |
 | RASTER (VOID) | 31999 | 0 | PASS | |
@@ -29,7 +29,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | frustration | 23517 | 0 | PASS | |
 | goa-cma | 30000 | 0 | PASS | |
 | mystcave | 29947 | 0 | PASS | |
-| nightdrv | 30000 | 28984 | FRAME-DIFF | 2430 PT, 570 MB, 540 F, 396 1, 144 0 — freq/volume/PT divergence. |
+| nightdrv | 30000 | 23440 | FRAME-DIFF | 2430 PT, 570 MB, 540 F, 396 1, 144 0 — freq/volume/PT divergence. |
 | paradox3 | 3896 | 0 | PASS | |
 | remembrance | 30000 | 0 | PASS | |
 | schwskel | 30000 | 0 | PASS | |

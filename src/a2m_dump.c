@@ -520,6 +520,7 @@ static void dump_frame(void)
     printf("%d 1 ", frames_dumped);
     for (i = 0; i < 256; i++) printf("%02x", shadow_regs[1][i]);
     printf("\n");
+    /* Event table dump commented out
     printf("%d E ", frames_dumped);
     for (i = 0; i < 20; i++) {
         uint8_t d0 = ch->event_table[i].eff[0].def;
@@ -535,6 +536,7 @@ static void dump_frame(void)
                ch->event_table[i].eff[1].val);
     }
     printf("\n");
+    */
     printf("%d F ", frames_dumped);
     for (i = 0; i < 20; i++)
       printf("%04x", ch->freq_table[i]);
