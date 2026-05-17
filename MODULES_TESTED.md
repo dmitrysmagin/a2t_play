@@ -226,7 +226,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | 1_cworld | 11518 | 0 | PASS | |
 | 2_prydz | 1919 | 0 | PASS | |
 | ab_julia | 30000 | 0 | PASS | |
-| amegas | 30000 | 437366 | FRAME-DIFF | |
+| amegas | 30000 | 0 | PASS | Fixed 2026-05-17: `ef_SetInsVolume`/`ef_ForceInsVolume` now check `is_data_empty()` on instrument data (matching Pascal's guard). Previously C processed volume effects for empty instrument slots while Pascal skipped them. |
 | crazbeat | 30000 | 0 | PASS | |
 | fm_house | 30000 | 0 | PASS | |
 | fm_tekno | 26482 | 0 | PASS | |

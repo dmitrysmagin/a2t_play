@@ -1639,20 +1639,14 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
 
     case ef_SetInsVolume:
         {
-            /* NOTE: Intentional fix of Pascal UB. Pascal's ef_SetInsVolume handler
-             * (a2player.pas:1655-1662) calls ins_parameter(voice_table[chan],10)
-             * without checking voice_table[chan] first. When voice_table==0, the
-             * ins_parameter asm does dec ebx which underflows to 0xFFFFFFFF, reading
-             * garbage from instr_names[255]. We guard with the !instr check below
-             * to match the INTENDED Pascal behavior (no-op when no instrument). */
             tINSTR_DATA *instr = get_instr_data_by_ch(chan);
-            if (!instr) {
+            if (!instr || is_data_empty(instr, sizeof(tINSTR_DATA))) {
                 break;
             }
 
             if (_4op_vol_valid_chan(chan)) {
                 set_ins_volume_4op(63 - val, chan);
-            } else if (percussion_mode && ((chan >= 16) && (chan <= 19))) { //  in [17..20]
+            } else if (percussion_mode && ((chan >= 16) && (chan <= 19))) {
                 set_ins_volume(63 - val, BYTE_NULL, chan);
             } else if (instr->fm.connect == 0) {
                 set_ins_volume(BYTE_NULL, 63 - val, chan);
@@ -1664,16 +1658,12 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
 
     case ef_ForceInsVolume:
         {
-            /* NOTE: Intentional fix of Pascal UB. Pascal's ef_ForceInsVolume handler
-             * (a2player.pas:1664-1669) calls ins_parameter(voice_table[chan],10)
-             * without checking voice_table[chan] first — same UB as ef_SetInsVolume.
-             * We guard here to match the INTENDED behavior. */
             tINSTR_DATA *instr = get_instr_data_by_ch(chan);
-            if (!instr) {
+            if (!instr || is_data_empty(instr, sizeof(tINSTR_DATA))) {
                 break;
             }
 
-            if (percussion_mode && ((chan >= 16) && (chan <= 19))) { //  in [17..20]
+            if (percussion_mode && ((chan >= 16) && (chan <= 19))) {
                 set_ins_volume(63 - val, BYTE_NULL, chan);
             } else if (instr->fm.connect == 0) {
                 set_ins_volume(scale_volume(instr->fm.volM, 63 - val), 63 - val, chan);
