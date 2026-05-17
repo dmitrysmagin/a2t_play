@@ -92,6 +92,49 @@ procedure dump_snd_settimer(freq: Longint);
 begin
 end;
 
+procedure detect_all_effects;
+const
+  echars: array[0..255] of Char = (
+    '0','1','2','3','4','5','6','7','8','9',
+    'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z',
+    '&','%','!','@','=','#','$','~','^','`','>','<',
+    '`','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_',
+    '_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_',
+    '_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_',
+    '_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_',
+    '_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_',
+    '_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_',
+    '_','_','_','_','_','_','_','_','_','_','_','_','_','_','_','_'
+  );
+var
+  effects: array[0..255] of Char;
+  p, c, r, block, slot: Integer;
+  ev: tCHUNK;
+  ws: AnsiString;
+begin
+  for p := 0 to 255 do
+    effects[p] := '_';
+  effects[255] := #0;
+
+  for block := 0 to 15 do
+    for slot := 0 to 7 do
+      for c := 1 to songdata.nm_tracks do
+        for r := 0 to songdata.patt_len - 1 do
+        begin
+          ev := pattdata^[block][slot][c][r];
+          if (ev.effect_def <> 0) or (ev.effect <> 0) then
+            effects[ev.effect_def] := echars[ev.effect_def];
+          if (ev.effect_def2 <> 0) or (ev.effect2 <> 0) then
+            effects[ev.effect_def2] := echars[ev.effect_def2];
+        end;
+
+  ws := 'EF ';
+  for p := 0 to 255 do
+    ws := ws + effects[p];
+  ws := ws + #13#10;
+  FileWrite(outfd, ws[1], Length(ws));
+end;
+
 procedure dump_frame;
 type
    tEventTable = array[1..20] of tCHUNK;
@@ -245,6 +288,8 @@ begin
   FillChar(pcm_buf, SizeOf(pcm_buf), 0);
   SetConsoleCtrlHandler(TConsoleCtrlHandlerFn(@CtrlCHandler), True);
   WriteLn('Dumping "', filename, '" -> ', outfilename, ' ...');
+
+  detect_all_effects;
 
   start_playing;
   set_overall_volume(63);
