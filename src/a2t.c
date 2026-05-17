@@ -2632,7 +2632,8 @@ static void vibrato(int slot, int chan)
 
     ch->vibr_table[slot][chan].pos += ch->vibr_table[slot][chan].speed * vibtrem_speed_factor;
     slide = calc_vibrato_shift(ch->vibr_table[slot][chan].depth, ch->vibr_table[slot][chan].pos);
-    direction = ch->vibr_table[slot][chan].pos & vibtrem_table_size; // 32, 64. 128 or 256
+    direction = ch->vibr_table[slot][chan].pos & vibtrem_table_size;
+    ch->vibr_table[slot][chan].dir = (direction != 0) ? 1 : 0;
 
     if (direction == 0)
         portamento_down(chan, slide, nFreq(0));
@@ -2652,6 +2653,8 @@ static void tremolo(int slot, int chan)
 
     ch->trem_table[slot][chan].pos += ch->trem_table[slot][chan].speed * vibtrem_speed_factor;
     slide = calc_vibrato_shift(ch->trem_table[slot][chan].depth, ch->trem_table[slot][chan].pos);
+    direction = ch->trem_table[slot][chan].pos & vibtrem_table_size;
+    ch->trem_table[slot][chan].dir = (direction != 0) ? 1 : 0;
 
     /* a2player.pas: tremolo uses calc_vibtrem_shift dir; tremolo2 uses (pos = 0) after Inc. */
     if (slot == 1) {
