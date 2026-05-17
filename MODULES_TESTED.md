@@ -216,7 +216,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | oilocean | 30000 | 0 | PASS | |
 | pommy | 30000 | 0 | PASS | |
 | popular | 30000 | 0 | PASS | |
-| rbfactry | 30000 | 842 | FRAME-DIFF | 60 MB, 60 F, 60 1 — freq table + macro state divergence. |
+| rbfactry | 30000 | 2914 | FRAME-DIFF | 60 MB, 60 F, 60 1 — freq table + macro state divergence. |
 | undersea | 30000 | 0 | PASS | |
 
 ### modules/encore
@@ -354,7 +354,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| 4thcoast | 30000 | 8322 | FRAME-DIFF | 520 MB, 520 F, 520 1, 520 0 — macro state + freq + channel 1/0 divergence. |
+| 4thcoast | 30000 | 0 | PASS | 520 MB, 520 F, 520 1, 520 0 — macro state + freq + channel 1/0 divergence. |
 | 4xmisste | 50000 | 160 | FRAME-DIFF | |
 | 5ontelev | 50000 | 14 | FRAME-DIFF | Small end-of-song diff. |
 | allfull | 50000 | 6470 | FRAME-DIFF | |

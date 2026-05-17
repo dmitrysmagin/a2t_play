@@ -58,6 +58,8 @@ static bool a2m_dump_context_irq_requested(void)
         /* samsara: ch10 freq_table divergence starting at frame 20854 */
         20853, 20854, 20855, 20856, 20857, 20858, 20859, 20860,
         20915, 20916, 20917, 20918, 20919, 20920, 20921,
+        /* 4thcoast: vib_freq divergence around frame 29100 */
+        29095, 29096, 29097, 29098, 29099, 29100, 29101, 29102, 29103, 29104, 29105,
         -1
     };
     int i;
@@ -437,6 +439,22 @@ static void a2m_dump_context_at_irq_frames(void)
     }
 
     dump_context_f(stderr, ch);
+
+    /* 4thcoast: trace vib_freq divergence around frame 29100 */
+    if (frames_dumped >= 29095 && frames_dumped <= 29105) {
+        for (int c = 8; c <= 10; c++) {
+            fprintf(stderr, "  [dump_frame] ch%d: vib_freq=0x%04x vib_pos=%u vib_count=%u vib_paused=%d arpgg_s0_state=%u arpgg_s0_note=%u arpgg_s1_state=%u arpgg_s1_note=%u\n",
+                    c,
+                    (unsigned)ch->macro_table[c].vib_freq,
+                    (unsigned)ch->macro_table[c].vib_pos,
+                    (unsigned)ch->macro_table[c].vib_count,
+                    ch->macro_table[c].vib_paused ? 1 : 0,
+                    (unsigned)ch->arpgg_table[0][c].state,
+                    (unsigned)ch->arpgg_table[0][c].note,
+                    (unsigned)ch->arpgg_table[1][c].state,
+                    (unsigned)ch->arpgg_table[1][c].note);
+        }
+    }
 
     if (frames_dumped >= 20853 && frames_dumped <= 20860) {
         int c = 10;
