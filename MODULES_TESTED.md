@@ -388,4 +388,4 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | wip | 30000 | 0 | PASS | |
 | woods | 15359 | 0 | PASS | |
 | yellatfl | 26879 | 0 | PASS | |
-| yellowwe | 30000 | 272 | FRAME-DIFF | 30 RT. |
+| yellowwe | 30000 | 0 | PASS | Previously 272 diffs (30 RT). Resolved by cumulative bug fixes. Effects: Arpeggio, SetTremoloDepth, SetModulatorVol, VolSlideFine, Extended. |
