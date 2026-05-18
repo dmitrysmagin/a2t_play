@@ -1310,9 +1310,7 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
     } else if (get_effect_group(ch->last_effect[slot][chan].def) == eff_group && lval) {
         ch->effect_table[slot][chan].val = lval;
     } else {
-        // x00 without any previous compatible command, should never happen
-        AdPlug_LogWrite("x00 without any previous compatible command (%02x)\n", def);
-        ch->effect_table[slot][chan].def = 0;
+        // x00 without any previous compatible command — Pascal: effect_table := effect_def (val=0, def kept)
         ch->effect_table[slot][chan].val = 0;
     }
 }
