@@ -110,6 +110,12 @@
   4. Consider adding `ef_fix1` ($80) to C's `effect_table.def` for arpeggio effects, to match Pascal's encoding and enable proper carry-over detection.
 - **Affected modules**: `rbfactry` (842 diff lines at 30k, 240 non-MB). Likely affects other modules with arpeggio carry-over patterns.
 
+### Bug 14: Arpeggio val=0 Skip Guard Missing — FIXED
+- **Root cause**: Pascal (`a2player.pas:1498-1499`) skips the entire arpeggio block when `effect_def = ef_Arpeggio` AND `effect = 0`, preserving the previous arpeggio state/add1/add2. C had no such guard and always processed the arpeggio block, overwriting `add1`/`add2` with 0 and resetting state on carry-over rows.
+- **How it manifests**: On rows where `ef_Arpeggio` persists with `val=0x00` (pattern data contains raw 0, normalized to 0x80 in player state), C zeroes the arpeggio parameters while Pascal preserves them. This causes the arpeggio state machine to cycle at different rates, producing frequency table, arpeggio table, and shadow register diffs.
+- **Fix applied** (`src/a2t.c:1478-1480`): Added guard before the arpeggio switch block: `if ((def == ef_Arpeggio) && (val == 0)) break;`
+- **Resolved module**: `4xmisste` — 228,524 diff lines → 25,362 (88.9% reduction). All AT/F/0 diffs eliminated (72→0, 48→0, 48→0). Remaining 25,362 are benign MB-only keyoff_loop state diffs (same as Bug 11).
+
 ### Additional Finding: `volslide_type` Initialization — NOT A BUG
 - The field `volslide_type[20]` (`src/a2t.h:444`, originally noted as `e2_vslide_type`) IS properly initialized.
 - `ch` is a static global (`.bss`, zero-initialized), and `init_buffers()` explicitly sets each `volslide_type[i]` from `songinfo->lock_flags`.
@@ -167,6 +173,7 @@
   7. ~~**Bug 10 (C ef_SetInsVolume/ef_ForceInsVolume is_data_empty guard)** — FIXED 2026-05-17.~~ Resolved `amegas` (437,366 → 0).
   8. ~~**Bug 12 (TonePortamento effect_table cleared on new note with val=0)** — FIXED 2026-05-18.~~ Resolved `limitbrk` (310,177 → 0).
   9. ~~**Bug 13 (v5-8 loader missing ManualFSlide→FineTune conversion)** — FIXED 2026-05-18.~~ Resolved `old_002` (185,144 → 2,942, 98.4% reduction).
-  10. **Re-test all FRAME-DIFF modules** after each fix.
+  10. ~~**Bug 14 (Arpeggio val=0 skip guard missing)** — FIXED 2026-05-18.~~ Resolved `4xmisste` (228,524 → 25,362, 88.9% reduction).
+  11. **Re-test all FRAME-DIFF modules** after each fix.
 8. **Update MODULES_TESTED.md** with results.
 9. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.
