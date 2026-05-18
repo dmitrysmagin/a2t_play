@@ -7,19 +7,6 @@
 
 Match C tool to have the same data dump as Pascal tool
 
-# Output format
-
-Both tools output 7 lines per IRQ frame:
-
-  <frame_num> 0  <256 reg bytes as hex>        — shadow_regs[0] (OPL register file 0)
-  <frame_num> 1  <256 reg bytes as hex>        — shadow_regs[1] (OPL register file 1)
-  <frame_num> E  <120 bytes as hex>            — event_table[0..19] (6 bytes/channel: note, instr_def, eff0_def, eff0_val, eff1_def, eff1_val)
-  <frame_num> VS <40 bytes as hex>             — voice_table[0..19] (current instrument per channel)
-  <frame_num> FP <140 bytes as hex>            — fmpar dump per channel (volM, volC, kslM, kslC, connect)
-  <frame_num> GV <8 bytes as hex>              — global volume state (global_volume, fade_out_volume, overall_volume, volume_scaling, percussion_mode)
-  <frame_num> WR <320 bytes as hex>            — OPL write ring buffer (64 entries × 5 chars: 2 reg + 2 val + 1 separator)
-
-
 # Before running
 * Compare Pascal and C sources, find correlations
 
