@@ -293,7 +293,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | analogtr | 24959 | 0 | PASS | |
 | deorbit | 30000 | 0 | PASS | Bug 3 fix resolved. |
 | fm-troni | 30000 | 542 | FRAME-DIFF | TonePortamento keyoff regression. 36 each: 0, F, MB; 18 PT. |
-| glass | 30000 | 110162 | FRAME-DIFF | 12240 MB. |
+| glass | 30000 | 110162 | FRAME-DIFF | 12240 MB-only frames (ch4 fmreg_pos: C=0xffff/FINISHED vs P=0x0fff/IDLE). Same benign keyoff_loop state divergence as Bug 11 (adr1ft). No X1 effects in pattern data for ch4. Zero shadow register/audio diffs. Effects: FSlideDown, TonePortamento, SetModulatorVol, VolSlide, SetInsVolume, Extended, VolSlideFine, Extended2. |
 | ishtar | 1963 | 0 | PASS | Effects: FSlideUp, FSlideDown, TonePortamento, SetModulatorVol, VolSlide, SetInsVolume, VolSlideFine, Extended, Extended2, SetGlobalVolume. |
 | khaos | 30000 | 0 | PASS | |
 | khaos2 | 30000 | 0 | PASS | |
