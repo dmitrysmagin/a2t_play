@@ -549,16 +549,12 @@ static void dump_frame(void)
     /* Event table dump commented out
     printf("%d E ", frames_dumped);
     for (i = 0; i < 20; i++) {
-        uint8_t d0 = ch->event_table[i].eff[0].def;
-        uint8_t d1 = ch->event_table[i].eff[1].def;
-        if (d0 == ef_Arpeggio) d0 = 0;
-        if (d1 == ef_Arpeggio) d1 = 0;
         printf("%02x%02x%02x%02x%02x%02x",
                ch->event_table[i].note,
                ch->event_table[i].instr_def,
-               d0,
+               ch->event_table[i].eff[0].def,
                ch->event_table[i].eff[0].val,
-               d1,
+               ch->event_table[i].eff[1].def,
                ch->event_table[i].eff[1].val);
     }
     printf("\n");
@@ -589,6 +585,18 @@ static void dump_frame(void)
     printf("%d FT ", frames_dumped);
     for (i = 0; i < 20; i++)
       printf("%02x", (unsigned)(uint8_t)ch->ftune_table[i]);
+    printf("\n");
+    printf("%d FK ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%01x", ch->portaFK_table[i] ? 1 : 0);
+    printf("\n");
+    printf("%d LB ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x", (unsigned)(uint8_t)ch->loopbck_table[i]);
+    printf("\n");
+    printf("%d FS ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x%02x", ch->fslide_table[0][i], ch->fslide_table[1][i]);
     printf("\n");
     printf("%d AT ", frames_dumped);
     for (i = 0; i < 20; i++)

@@ -135,6 +135,9 @@ function get_carrier_vol_dump: AnsiString;
 function get_voice_table_dump: AnsiString;
 function get_fmpar_dump: AnsiString;
 function get_global_vol_dump: AnsiString;
+function get_portaFK_table_dump: AnsiString;
+function get_loopbck_table_dump: AnsiString;
+function get_fslide_table_dump: AnsiString;
 
 type
   tOPLOUT_proc = procedure(reg,data: Word);
@@ -4971,6 +4974,39 @@ begin
     LowerCase(IntToHex(overall_volume, 2)) +
     LowerCase(IntToHex(Byte(volume_scaling), 1)) +
     LowerCase(IntToHex(Byte(percussion_mode), 1));
+end;
+
+function get_portaFK_table_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp + LowerCase(IntToHex(Byte(portaFK_table[i]), 1));
+  get_portaFK_table_dump := tmp;
+end;
+
+function get_loopbck_table_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp + LowerCase(IntToHex(loopbck_table[i], 2));
+  get_loopbck_table_dump := tmp;
+end;
+
+function get_fslide_table_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp + LowerCase(IntToHex(fslide_table[i], 2));
+  get_fslide_table_dump := tmp;
 end;
 
 begin

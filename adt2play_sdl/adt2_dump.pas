@@ -183,6 +183,12 @@ begin
 
      ws := ws + IntToStr(frames_dumped) + ' FT ' + get_ftune_table_dump + #13#10;
 
+     ws := ws + IntToStr(frames_dumped) + ' FK ' + get_portaFK_table_dump + #13#10;
+
+     ws := ws + IntToStr(frames_dumped) + ' LB ' + get_loopbck_table_dump + #13#10;
+
+     ws := ws + IntToStr(frames_dumped) + ' FS ' + get_fslide_table_dump + #13#10;
+
      ws := ws + IntToStr(frames_dumped) + ' AT ' + get_arpgg_table_dump + #13#10;
 
      ws := ws + IntToStr(frames_dumped) + ' VT ' + get_vibr_table_dump + #13#10;
