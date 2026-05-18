@@ -108,7 +108,7 @@
   2. Is there a difference in how `effect_table` is stored? Pascal uses `ef_Arpeggio+ef_fix1` ($80) in low byte; C uses `ef_Arpeggio` (0) in `def` field.
   3. Does Pascal's `update_effects` check a different condition than C's `update_effects_slot`?
   4. Consider adding `ef_fix1` ($80) to C's `effect_table.def` for arpeggio effects, to match Pascal's encoding and enable proper carry-over detection.
-- **Affected modules**: `rbfactry` (842 diff lines at 30k, 240 non-MB). Likely affects other modules with arpeggio carry-over patterns.
+- **Affected modules**: `rbfactry` (842 diff lines at 30k, 240 non-MB). `drgwrrtt` (75 F/MB/0 diffs, arpeggio state out of phase by 1 step causing 0x46 frequency offset on ch6). Likely affects other modules with arpeggio carry-over patterns.
 
 ### Bug 14: Arpeggio val=0 Skip Guard Missing — FIXED
 - **Root cause**: Pascal (`a2player.pas:1498-1499`) skips the entire arpeggio block when `effect_def = ef_Arpeggio` AND `effect = 0`, preserving the previous arpeggio state/add1/add2. C had no such guard and always processed the arpeggio block, overwriting `add1`/`add2` with 0 and resetting state on carry-over rows.
