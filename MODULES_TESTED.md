@@ -237,8 +237,8 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| crackit | 19199 | 3782 | FRAME-DIFF | 240 MB, 180 each: 0, AT, F — macro state + event_table + freq divergence. |
-| intrcoop | 30000 | 12602 | FRAME-DIFF | Init volume artifact (`release_sustaining_sound`, 0x3f to vol regs) + extensive volume scaling divergence across song. 900 each: 0, F, MB. |
+| crackit | 19199 | 0 | PASS | Previously 3,782 diffs (MB/AT/F/0). Resolved by cumulative bug fixes. Effects: Arpeggio, TonePortamento, Vibrato, VibratoVolSlide, SetInsVolume, SetSpeed, VolSlideFine. |
+| intrcoop | 30000 | 0 | PASS | Previously 12,602 diffs (init volume artifact + volume scaling divergence). Resolved by cumulative bug fixes. Effects: Arpeggio, FSlideUp, FSlideDown, TonePortamento, Vibrato, VibratoVolSlide, SetInsVolume, SetSpeed, VolSlideFine. |
 
 ### modules/kkonaa
 
