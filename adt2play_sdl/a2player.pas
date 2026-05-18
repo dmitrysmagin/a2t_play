@@ -140,6 +140,7 @@ function get_loopbck_table_dump: AnsiString;
 function get_fslide_table_dump: AnsiString;
 function get_last_effect_dump: AnsiString;
 function get_keyoff_loop_dump: AnsiString;
+function get_reset_chan_dump: AnsiString;
 
 type
   tOPLOUT_proc = procedure(reg,data: Word);
