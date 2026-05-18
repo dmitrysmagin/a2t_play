@@ -650,6 +650,10 @@ static void dump_frame(void)
     for (i = 0; i < 20; i++)
       printf("%02x", ch->retrig_table[0][i]);
     printf("\n");
+    printf("%d RC ", frames_dumped);
+    for (i = 0; i < 20; i++)
+      printf("%02x", ch->reset_chan[i] ? 1 : 0);
+    printf("\n");
     printf("%d MV ", frames_dumped);
     for (i = 0; i < 20; i++)
       printf("%02x", ch->modulator_vol[i]);

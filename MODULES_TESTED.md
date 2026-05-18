@@ -180,9 +180,9 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 |--------|--------|-----------|--------|-------|
 | 1856step | 30000 | 0 | PASS | MB + 24 pre-existing non-MB (init volume artifact). |
 | acidtrac | 30000 | 0 | PASS | |
-| adr1ft | 21498 | 118703 | FRAME-DIFF | MB-only: `FINISHED` (0xffff) vs `IDLE` (0x0fff) for `fmreg_pos` on ch13/14 (keyoff_loop flag mismatch). **Benign state dump difference** — no shadow register, frequency, or audio output diffs. No X1 effects found in pattern data for ch12-13; Pascal's keyoff_loop=true origin unknown. Bug 11. |
+| adr1ft | 21498 | 193169 | FRAME-DIFF | MB-only: `FINISHED` (0xffff) vs `IDLE` (0x0fff) for `fmreg_pos` on ch13/14 (keyoff_loop flag mismatch). **Benign state dump difference** — no shadow register, frequency, or audio output diffs. No X1 effects found in pattern data for ch12-13; Pascal's keyoff_loop=true origin unknown. Bug 11. |
 | altair | 30000 | 0 | PASS | |
-| aquarius | 30000 | 10802 | FRAME-DIFF | MB + 3024 pre-existing non-MB (±1 nibble offsets + volume artifact). 984 MB, 216 RT. |
+| aquarius | 30000 | 10802 | FRAME-DIFF | MB + 3024 pre-existing non-MB. 984 MB (Bug 11 keyoff_loop), 216 RT (retrig_table state divergence frames 6741-11600, no shadow register diffs). RC line added to both dumpers for further investigation. |
 | ca54 | 30000 | 0 | PASS | |
 | catpeopl | 30000 | 0 | PASS | |
 | milinda | 30000 | 0 | PASS | |

@@ -201,6 +201,8 @@ begin
 
      ws := ws + IntToStr(frames_dumped) + ' RT ' + get_retrig_table_dump + #13#10;
 
+     ws := ws + IntToStr(frames_dumped) + ' RC ' + get_reset_chan_dump + #13#10;
+
      ws := ws + IntToStr(frames_dumped) + ' MV ' + get_modulator_vol_dump + #13#10;
 
     ws := ws + IntToStr(frames_dumped) + ' CV ' + get_carrier_vol_dump + #13#10;

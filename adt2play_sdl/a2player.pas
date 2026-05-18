@@ -4919,6 +4919,17 @@ begin
   get_retrig_table_dump := tmp;
 end;
 
+function get_reset_chan_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp + LowerCase(IntToHex(Byte(reset_chan[i]), 2));
+  get_reset_chan_dump := tmp;
+end;
+
 function get_modulator_vol_dump: AnsiString;
 var
   i: Integer;
