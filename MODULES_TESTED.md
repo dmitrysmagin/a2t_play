@@ -299,7 +299,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | khaos2 | 30000 | 0 | PASS | |
 | lbtrance | 30000 | 0 | PASS | |
 | old_001 | 24959 | 0 | PASS | |
-| old_002 | 25599 | 185144 | FRAME-DIFF | ±1 nibble offset most frames. ftune/fine_tune interaction. 10254 each: F, MB; 8954 0; 8779 1; 5900 each: FT, TT. |
+| old_002 | 25599 | 2942 | FRAME-DIFF | Fixed 2026-05-18: v5-8 loader now converts ef_ManualFSlide (22) to ef_Extended2 FineTuneUp/Down (matching Pascal's import_old_a2m_event2). Reduced from 185,144 to 2,942 diffs (98.4%). Remaining: 420 frames each of MB/F/0 — frequency offset (0x30) likely separate ftune bug. Effects: Arpeggio, FSlideDown, TonePortamento, Vibrato, SetInsVolume, Extended, VolSlideFine, ArpggVSlide, Extended2. |
 | opl303 | 30000 | 1058 | FRAME-DIFF | Small ±1 nibble diffs. ftune/fine_tune interaction. 66 each: 0, F, MB, PT. |
 | pink | 24360 | 2297 | FRAME-DIFF | ±1 pitch nibbles bank 0 ch0 F-Number Low. ftune/fine_tune interaction. 150 VT, 105 each: 0, MB. |
 | spacediv | 30000 | 50287 | FRAME-DIFF | ±1 nibble offset many frames. ftune/fine_tune interaction. 3580 each: F, MB; 3460 0; 180 1; 60 PT. |

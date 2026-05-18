@@ -74,7 +74,11 @@
 - **Fix applied** (`src/a2t.c`): Added `is_data_empty(instr, sizeof(tINSTR_DATA))` check to both `ef_SetInsVolume` and `ef_ForceInsVolume` handlers, matching Pascal's guard.
 - **Resolved module**: `amegas` — 437,366 diff lines → **0** (verified at 30k frames).
 
-### Bug 9: Arpeggio State Machine Divergence on Effect Carry-Over (x00 rows) — UNFIXED
+### Bug 13: v5-8 Loader Missing ManualFSlide→FineTune Conversion — FIXED
+- **Root cause**: C's v5-8 pattern loader (`src/a2t.c:4105-4160`) read raw effect bytes directly without converting `ef_ManualFSlide` (22) to `ef_Extended2` with `FineTuneUp`/`FineTuneDown` sub-commands. Pascal's `import_old_a2m_event2` (`iloaders.inc:395-423`) performs this conversion: when `effect_def == 22`, it maps to `ef_Extended2` with `ef_ex2_FineTuneUp*16 + (effect/16)` or `ef_ex2_FineTuneDown*16 + (effect%16)`.
+- **How it manifests**: C interprets raw def=22 as `ef_Tremolo` (new format), while Pascal converts it to FineTune effects. This causes `ftune_table` to diverge (C stays at 0, Pascal accumulates fine-tune values), cascading into frequency table and shadow register diffs.
+- **Fix applied** (`src/a2t.c:4130-4142`): Added ManualFSlide conversion in v5-8 loader, matching Pascal's logic.
+- **Resolved module**: `old_002` — 185,144 diff lines → 2,942 (98.4% reduction). Remaining 2,942 diffs are a separate frequency offset issue (0x30 delta, 420 frames).
 - **Root cause**: C's `arpgg_table[slot][chan].state` reaches a different state than Pascal's `arpgg_table[chan].state` during arpeggio effect carry-over (rows where `ef_Arpeggio` persists with `val=0x00`). The state machine cycles `0→1→2→0`, and at frame 1378 for `rbfactry` channel 10, C reaches state 2 (uses `add2=15`) while Pascal reaches state 1 (uses `add1=0`).
 - **How it manifests**: `arpeggio()` computes `freq = nFreq(note-1+add)` based on current state. C: `nFreq(49-1+15) = nFreq(63) = 0x1598`. Pascal: `nFreq(49-1+0) = nFreq(48) = 0x1157`. Frequency delta = `0x441` (1089). This propagates to `freq_table`, `macro_table.vib_freq` (MB line), and OPL F-number registers (shadow_regs bank 1).
 - **Key locations**:
@@ -131,6 +135,7 @@
 | brendan | ~70 | ~64 | 6 | Multiple bug classes compound |
 | diodema | 23 | 15 | 6 | Bug 3 fix resolved samsara (206→0), zaxxon (3548→0) |
 | mlf | 14 | 9 | 5 | Bug 3 fix resolved deorbit (128→0), glass (962→0) |
+| mlf | 14 | 9 | 5 | Bug 13 fix resolved old_002 (185,144→2,942, 98.4% reduction) |
 | brendan | ~70 | ~65 | 5 | Bug 3 fix resolved chivalry (2438→0) |
 | brendan | ~70 | ~66 | 4 | Bug 8 resolved dream7mx (C–Pascal divergence at 0x14c eliminated. Shadow reg diff: 0) |
 | kkonaa | 2 | 1 | 1 | `limitbrk`: Bug 12 fix resolved (310,177→0). `adr1ft`: Bug 11 (benign keyoff_loop MB diff). |
@@ -161,6 +166,7 @@
  6. ~~**Bug 8 (Pascal SetInsVolume bounds guard)** — FIXED 2026-05-16.~~ Resolved `dream7mx` (0x14c divergence eliminated).
   7. ~~**Bug 10 (C ef_SetInsVolume/ef_ForceInsVolume is_data_empty guard)** — FIXED 2026-05-17.~~ Resolved `amegas` (437,366 → 0).
   8. ~~**Bug 12 (TonePortamento effect_table cleared on new note with val=0)** — FIXED 2026-05-18.~~ Resolved `limitbrk` (310,177 → 0).
-  9. **Re-test all FRAME-DIFF modules** after each fix.
+  9. ~~**Bug 13 (v5-8 loader missing ManualFSlide→FineTune conversion)** — FIXED 2026-05-18.~~ Resolved `old_002` (185,144 → 2,942, 98.4% reduction).
+  10. **Re-test all FRAME-DIFF modules** after each fix.
 8. **Update MODULES_TESTED.md** with results.
 9. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.
