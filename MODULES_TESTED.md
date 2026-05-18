@@ -252,7 +252,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | ff2rebel | 30000 | 0 | PASS | |
 | kenseidn | 15840 | 0 | PASS | |
 | konahome | 30000 | 0 | PASS | |
-| limitbrk | 30000 | 310177 | FRAME-DIFF | 23400 PT, 14025 each: 0, F, MB — freq/volume divergence (fine_tune/ftune). |
+| limitbrk | 30000 | 0 | PASS | Fixed 2026-05-18: TonePortamento with val=0 and new note now correctly sets effect_table (matching Pascal's three-way branch). Previously C's update_effect_table cleared effect_table, causing immediate note output instead of deferred portamento slide. Bug 12. |
 | lostspc | 30000 | 0 | PASS | |
 | mutecity | 16781 | 0 | PASS | |
 | reflects | 19198 | 0 | PASS | |
@@ -299,10 +299,10 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | khaos2 | 30000 | 0 | PASS | |
 | lbtrance | 30000 | 0 | PASS | |
 | old_001 | 24959 | 0 | PASS | |
-| old_002 | 4400 | 185144 | FRAME-DIFF | ±1 nibble offset most frames. ftune/fine_tune interaction. 10254 each: F, MB; 8954 0; 8779 1; 5900 each: FT, TT. |
-| opl303 | 1963 | 1058 | FRAME-DIFF | Small ±1 nibble diffs. ftune/fine_tune interaction. 66 each: 0, F, MB, PT. |
-| pink | 4187 | 2297 | FRAME-DIFF | ±1 pitch nibbles bank 0 ch0 F-Number Low. ftune/fine_tune interaction. 150 VT, 105 each: 0, MB. |
-| spacediv | 4600 | 50287 | FRAME-DIFF | ±1 nibble offset many frames. ftune/fine_tune interaction. 3580 each: F, MB; 3460 0; 180 1; 60 PT. |
+| old_002 | 25599 | 185144 | FRAME-DIFF | ±1 nibble offset most frames. ftune/fine_tune interaction. 10254 each: F, MB; 8954 0; 8779 1; 5900 each: FT, TT. |
+| opl303 | 30000 | 1058 | FRAME-DIFF | Small ±1 nibble diffs. ftune/fine_tune interaction. 66 each: 0, F, MB, PT. |
+| pink | 24360 | 2297 | FRAME-DIFF | ±1 pitch nibbles bank 0 ch0 F-Number Low. ftune/fine_tune interaction. 150 VT, 105 each: 0, MB. |
+| spacediv | 30000 | 50287 | FRAME-DIFF | ±1 nibble offset many frames. ftune/fine_tune interaction. 3580 each: F, MB; 3460 0; 180 1; 60 PT. |
 
 ### modules/nula
 

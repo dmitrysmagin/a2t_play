@@ -42,6 +42,12 @@
 - **Fix applied**: Added `has_note`/`has_carry` guard at `src/a2t.c:1537-1559`. When `!has_note && !has_carry`, skip `update_effect_table` and explicitly zero `effect_table[slot][chan].def`/`.val` to counteract `process_effects_slot_prepare`'s unconditional write.
 - **Resolved modules**: `samsara` (206→0 at 50k), `deorbit` (128→0 at 50k), `glass` (962→0 at 50k). Partially resolved (active playback matching, end-of-song/other bugs remain): `zaxxon` (3548→14), `chivalry` (2438→12184), `os_wins` (3086→5150), `adven` (30→38). All had spurious TonePortamento slides on note=0 rows during active playback.
 
+### Bug 12: TonePortamento effect_table Cleared on New Note with val=0 — FIXED
+- **Root cause**: When a row carries a note AND `ef_TonePortamento` with `val=0` (no speed specified) AND no prior TonePortamento carry-over, C's `update_effect_table` (`src/a2t.c:1302`) falls into its else branch and clears `effect_table` (def=0, val=0). Pascal (`a2player.pas:1574-1579`) instead sets `effect_table := ef_TonePortamento` (def=3, val=0) — preserving the effect type so that `new_process_note` sees portamento active and defers the note output.
+- **How it manifests**: At frame 2045 of `limitbrk.a2m`, channels 3/4 have `note=0x32/0x36`, `eff[0]=03:00`. C clears `effect_table[0]` to `00:00`, so `new_process_note` sees `defer_note_row=false` and outputs the note immediately. Pascal keeps `effect_table.def=ef_TonePortamento`, defers the note, and activates tone_portamento with `porta_table.freq` set to the target note frequency. This cascades into 310,177 diff lines (PT: 46,800 | 0/F/MB: 28,050 each).
+- **Fix applied** (`src/a2t.c:1584-1598`): Replaced `update_effect_table` call in the TonePortamento case with inline logic matching Pascal's three-way branch: (1) if `val != 0`: set def+val, (2) else if last_effect is TonePortamento with non-zero val: carry over val, (3) else: set def=ef_TonePortamento, val=0.
+- **Resolved module**: `limitbrk` — 310,177 diff lines → **0** (verified at 30k frames).
+
 ### Bug 6: NULL Instrument Handling in Volume Functions — FIXED
 - **Root cause**: Three functions (`reset_ins_volume`, `set_ins_volume`, `set_volume`) in `src/a2t.c` returned early when `get_instr_data_by_ch(chan)` returned NULL. This happened when `voice_table[chan]` referenced an instrument index beyond `instrinfo->count` (e.g., pattern event with `instr=8` in a song with only 7 instruments). The early return meant `modulator_vol[chan]` and `carrier_vol[chan]` stayed at 0 instead of being computed, causing `set_global_volume` to skip those channels while Pascal processed them.
 - **Fix applied** (committed `246681f`):
@@ -127,6 +133,7 @@
 | mlf | 14 | 9 | 5 | Bug 3 fix resolved deorbit (128→0), glass (962→0) |
 | brendan | ~70 | ~65 | 5 | Bug 3 fix resolved chivalry (2438→0) |
 | brendan | ~70 | ~66 | 4 | Bug 8 resolved dream7mx (C–Pascal divergence at 0x14c eliminated. Shadow reg diff: 0) |
+| kkonaa | 2 | 1 | 1 | `limitbrk`: Bug 12 fix resolved (310,177→0). `adr1ft`: Bug 11 (benign keyoff_loop MB diff). |
 
 ## Key Files
 
@@ -152,7 +159,8 @@
 4. ~~**Bug 3 (TonePortamento on note=0)** — FIXED 2026-05-15.~~ Resolved 7 modules.
  5. ~~**Bug 6 (NULL instrument in volume functions)** — FIXED 2026-05-16.~~ Resolved `mechwar` (25,624 → 0).
  6. ~~**Bug 8 (Pascal SetInsVolume bounds guard)** — FIXED 2026-05-16.~~ Resolved `dream7mx` (0x14c divergence eliminated).
- 7. ~~**Bug 10 (C ef_SetInsVolume/ef_ForceInsVolume is_data_empty guard)** — FIXED 2026-05-17.~~ Resolved `amegas` (437,366 → 0).
- 8. **Re-test all FRAME-DIFF modules** after each fix.
+  7. ~~**Bug 10 (C ef_SetInsVolume/ef_ForceInsVolume is_data_empty guard)** — FIXED 2026-05-17.~~ Resolved `amegas` (437,366 → 0).
+  8. ~~**Bug 12 (TonePortamento effect_table cleared on new note with val=0)** — FIXED 2026-05-18.~~ Resolved `limitbrk` (310,177 → 0).
+  9. **Re-test all FRAME-DIFF modules** after each fix.
 8. **Update MODULES_TESTED.md** with results.
 9. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.
