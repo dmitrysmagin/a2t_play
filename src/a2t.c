@@ -1560,7 +1560,20 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
             bool has_carry = (ch->last_effect[slot][chan].def == ef_TonePortamento);
 
             if (has_note || has_carry) {
-                update_effect_table(slot, chan, EFGR_TONEPORTAMENTO, def, val);
+                /* Pascal (a2player.pas ~1574-1579): when note is present, set
+                 * effect_table even if val=0. Don't use update_effect_table here
+                 * because it clears effect_table when val=0 and no carry-over. */
+                if (val != 0) {
+                    ch->effect_table[slot][chan].def = def;
+                    ch->effect_table[slot][chan].val = val;
+                } else if (ch->last_effect[slot][chan].def == ef_TonePortamento &&
+                           ch->last_effect[slot][chan].val != 0) {
+                    ch->effect_table[slot][chan].def = def;
+                    ch->effect_table[slot][chan].val = ch->last_effect[slot][chan].val;
+                } else {
+                    ch->effect_table[slot][chan].def = def;
+                    ch->effect_table[slot][chan].val = 0;
+                }
 
                 ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
 
