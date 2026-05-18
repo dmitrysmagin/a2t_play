@@ -4097,7 +4097,7 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
     case 5:
     case 6:
     case 7:
-    case 8: // [8][8][18][64][4]
+    case 8: // [8][8][18][64][4] — v5-8 use ManualFSlide (22) for FineTune
         {
         uint8_t *old = calloc(8, tPATTERN_DATA_V5678_SIZE);
 
@@ -4125,8 +4125,21 @@ static int a2_read_patterns(char *src, int s, unsigned long size)
 
                     dst->note       = src[0];
                     dst->instr_def  = src[1];
-                    dst->eff[0].def = src[2];
-                    dst->eff[0].val = src[3];
+
+                    /* Pascal (iloaders.inc import_old_a2m_event2): convert
+                     * ef_ManualFSlide (22) to ef_Extended2 FineTuneUp/Down. */
+                    if (src[2] == 22) {
+                        if (src[3] / 16 != 0) {
+                            dst->eff[0].def = ef_Extended2;
+                            dst->eff[0].val = (ef_ex2_FineTuneUp << 4) | (src[3] / 16);
+                        } else {
+                            dst->eff[0].def = ef_Extended2;
+                            dst->eff[0].val = (ef_ex2_FineTuneDown << 4) | (src[3] % 16);
+                        }
+                    } else {
+                        dst->eff[0].def = src[2];
+                        dst->eff[0].val = src[3];
+                    }
                 }
             }
 
