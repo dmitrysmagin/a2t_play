@@ -169,9 +169,9 @@ begin
           ws := ws + LowerCase(IntToHex(pevt^[i].effect2, 2));
         end;
       ws := ws + #13#10;
-     ws := ws + IntToStr(frames_dumped) + ' LE ' + get_last_effect_dump + #13#10;
+     { ws := ws + IntToStr(frames_dumped) + ' LE ' + get_last_effect_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' EFT ' + get_effect_table_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' EFT ' + get_effect_table_dump + #13#10; }
 
      ws := ws + IntToStr(frames_dumped) + ' KL ' + get_keyoff_loop_dump + #13#10;
 

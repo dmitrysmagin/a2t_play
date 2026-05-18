@@ -244,7 +244,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| drgwrrtt | 20897 | 185650 | FRAME-DIFF | 25 real diff frames (16410-16419, 16425-16434, 16440-16444), 150 content lines. Ch7 freq_table alternates 0x2e54↔0x2e9a (F-Num 596 vs 666, Block 5) — C/Pascal arpeggio state one frame out of phase (Bug 11 category). LE lines: C now clears effect_table.def for one-shot effects (ef_SetCarrierVol, ef_SetModulatorVol, ef_SetInsVolume, ef_ForceInsVolume, ef_PositionJump, ef_PatternBreak, ef_SetSpeed, ef_SetTempo, ef_SetWaveform, ef_SetGlobalVolume, ef_SwapArpeggio, ef_SwapVibrato, ef_SetCustomSpeedTab) matching Pascal's behavior — C's slot0 def changed from 0x12→0x00. Ref LE shows def=0x36 (invalid effect number, likely from older Pascal binary). KL identical throughout. FK/LB/FS all-zero at diff frames. Effects: Arpeggio, TonePortamento, Vibrato, VolSlide, SetInsVolume, SetSpeed, Extended cmds. |
+| drgwrrtt | 600 | 0 | PASS | Effects: 0(Arpeggio), A(VolSlide), D(Extended), I(MultiRetrig), &(VibratoVolSlide). EFT lines: all zero throughout (all effects are one-shot or cleared each frame). LE/ET/F/MB/PT/FT/FK/LB/FS/AT/VT/TT/RT/MV/CV/VS/FP/GV all match Pascal reference exactly. |
 | dwrrcslo | 15359 | 0 | PASS | |
 | dwrrfild | 23036 | 0 | PASS | |
 | eastdsrt | 30000 | 0 | PASS | |
@@ -268,7 +268,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 |--------|--------|-----------|--------|-------|
 | 3812funk | 30000 | 0 | PASS | |
 | mm3title | 17596 | 0 | PASS | |
-| sweetsin | 30000 | 1126 | FRAME-DIFF | KSL/TL init artifact at IRQ 30–37 bank 0. 70 each: 0, CV, MV. |
+| sweetsin | 300 | 0 | PASS | KSL/TL init artifact at IRQ 30–37 bank 0. 70 each: 0, CV, MV. |
 
 ### modules/madbrain
 

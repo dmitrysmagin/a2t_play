@@ -557,6 +557,7 @@ static void dump_frame(void)
                ch->event_table[i].eff[1].val);
     }
     printf("\n");
+    /*
     printf("%d LE ", frames_dumped);
     for (i = 0; i < 20; i++) {
         printf("%02x%02x%02x%02x",
@@ -575,6 +576,7 @@ static void dump_frame(void)
                ch->effect_table[1][i].def & 0x7f);
     }
     printf("\n");
+    */
     printf("%d KL ", frames_dumped);
     for (i = 0; i < 20; i++)
         printf("%01x", ch->keyoff_loop[i] ? 1 : 0);
