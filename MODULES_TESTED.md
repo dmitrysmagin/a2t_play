@@ -319,7 +319,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | mtkamies | 23732 | 0 | PASS | |
 | onward | 26879 | 0 | PASS | |
 | pre | 29759 | 0 | PASS | |
-| psycho3x | 12805 | 130483 | FRAME-DIFF | ±1 nibble offset across most frames. 7950 each: 1, F, MB; 3875 each: FT, TT. |
+| psycho3x | 12805 | 0 | PASS | Previously 130,483 diffs (±1 nibble offset). Resolved by cumulative bug fixes (Bug 3, Bug 10, etc.). Effects: FSlideDown, FSlideUp, SetModulatorVol, SetCarrierVol, SetSpeed, PatternBreak, MultiRetrigNote, Extended2. |
 | psycho5 | 12805 | 168586 | FRAME-DIFF | ±1 nibble offset from frame 24+, likely INIT state divergence. 10180 each: F, MB; 6730 1; 6600 0; 4400 each: FT, TT. |
 | spa | 7691 | 0 | PASS | |
 | unreal | 6551 | 0 | PASS | |
