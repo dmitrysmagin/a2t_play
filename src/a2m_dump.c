@@ -566,6 +566,15 @@ static void dump_frame(void)
                ch->last_effect[1][i].val);
     }
     printf("\n");
+    printf("%d EFT ", frames_dumped);
+    for (i = 0; i < 20; i++) {
+        printf("%02x%02x%02x%02x",
+               ch->effect_table[0][i].val,
+               ch->effect_table[0][i].def & 0x7f,
+               ch->effect_table[1][i].val,
+               ch->effect_table[1][i].def & 0x7f);
+    }
+    printf("\n");
     printf("%d KL ", frames_dumped);
     for (i = 0; i < 20; i++)
         printf("%01x", ch->keyoff_loop[i] ? 1 : 0);
