@@ -145,8 +145,9 @@
 
 ## Next Steps
 
-1. **Bug 9 (arpeggio state divergence)** — investigate exact state transition sequence between C and Pascal for `rbfactry` frames 1377→1378. Compare Pascal's `arpgg_cleanup` (`a2player.pas:1361-1374`) and effect carry-over logic (`a2player.pas:1494-1535`) against C's `play_line_arpgg_cleanup_pascal` and `process_effects_slot_body`.
-2. **Bug 7 (instrument data truncated)** — fix C's loader to read all 255 instrument slots from the file instead of only `count` entries. This would resolve the remaining MV/CV diffs in `o2ghosts`, `sparkplg`, `sweetsin`.
+1. **Bug 11 (keyoff_loop state divergence)** — investigate why Pascal's `keyoff_loop[13..14]` is `true` at frame 161+ for `adr1ft.a2m` while C's is `false`. No X1 effects (`ef_ex_cmd_MKOffLoopEn`) found in pattern data for channels 12-13. Both implementations initialize `keyoff_loop=FALSE` and only set it via X1 effect. Benign: zero shadow register or audio diffs, strictly MB (macro state) dump difference. 118,703 diff lines across 3,514 frames (all MB-only).
+2. **Bug 9 (arpeggio state divergence)** — investigate exact state transition sequence between C and Pascal for `rbfactry` frames 1377→1378. Compare Pascal's `arpgg_cleanup` (`a2player.pas:1361-1374`) and effect carry-over logic (`a2player.pas:1494-1535`) against C's `play_line_arpgg_cleanup_pascal` and `process_effects_slot_body`.
+3. **Bug 7 (instrument data truncated)** — fix C's loader to read all 255 instrument slots from the file instead of only `count` entries. This would resolve the remaining MV/CV diffs in `o2ghosts`, `sparkplg`, `sweetsin`.
 3. ~~Fix `e2_vslide_type` initialization~~ — confirmed NOT A BUG.
 4. ~~**Bug 3 (TonePortamento on note=0)** — FIXED 2026-05-15.~~ Resolved 7 modules.
  5. ~~**Bug 6 (NULL instrument in volume functions)** — FIXED 2026-05-16.~~ Resolved `mechwar` (25,624 → 0).

@@ -42,43 +42,43 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| ballad | 4600 | 0 | PASS | |
-| boss8 | 1320 | 0 | PASS | |
-| farhome | 3630 | 0 | PASS | |
-| fdance06 | 3532 | 0 | PASS | |
-| fdance27 | 3532 | 0 | PASS | |
-| fm63b_rv | 2376 | 0 | PASS | |
-| fmaven94 | 1031 | 0 | PASS | |
-| fmaven95 | 799 | 0 | PASS | |
-| fmaven96 | 5157 | 0 | PASS | |
-| fmaven97 | 1959 | 0 | PASS | |
-| fmaven98 | 392 | 0 | PASS | |
-| fmavn63b | 2386 | 0 | PASS | |
-| gates | 3300 | 0 | PASS | |
-| hitech2 | 4416 | 0 | PASS | |
-| hitech3 | 4195 | 0 | PASS | |
-| hitech3f | 2801 | 0 | PASS | |
-| jdaniels | 4375 | 0 | PASS | |
-| laboite | 3532 | 0 | PASS | |
-| neurophb | 4571 | 0 | PASS | |
-| nowgone | 5157 | 0 | PASS | |
-| recherch | 2228 | 0 | PASS | |
-| running | 4600 | 0 | PASS | |
-| song100 | 761 | 0 | PASS | |
-| song102 | 979 | 0 | PASS | |
-| song103 | 294 | 0 | PASS | |
-| song105 | 712 | 0 | PASS | |
-| song108 | 1325 | 0 | PASS | |
-| sonic | 4595 | 0 | PASS | |
-| stormrid | 2750 | 0 | PASS | |
-| tanmusik | 3300 | 0 | PASS | |
-| trance | 2944 | 0 | PASS | |
-| trance2 | 3827 | 0 | PASS | |
-| trouble | 4600 | 0 | PASS | |
-| ultra | 1472 | 0 | PASS | |
-| village | 5157 | 0 | PASS | |
-| waterfls | 2944 | 0 | PASS | |
-| worldfal | 4622 | 0 | PASS | |
+| ballad | 30000 | 0 | PASS | |
+| boss8 | 7679 | 0 | PASS | |
+| farhome | 21119 | 0 | PASS | |
+| fdance06 | 23036 | 0 | PASS | |
+| fdance27 | 23036 | 0 | PASS | |
+| fm63b_rv | 17759 | 0 | PASS | |
+| fmaven94 | 5998 | 0 | PASS | |
+| fmaven95 | 5761 | 0 | PASS | |
+| fmaven96 | 30000 | 0 | PASS | |
+| fmaven97 | 11397 | 0 | PASS | |
+| fmaven98 | 2556 | 0 | PASS | |
+| fmavn63b | 14205 | 0 | PASS | |
+| gates | 19199 | 0 | PASS | |
+| hitech2 | 28802 | 0 | PASS | |
+| hitech3 | 27361 | 0 | PASS | |
+| hitech3f | 18268 | 0 | PASS | |
+| jdaniels | 25599 | 0 | PASS | |
+| laboite | 23036 | 0 | PASS | |
+| neurophb | 30000 | 0 | PASS | |
+| nowgone | 30000 | 0 | PASS | |
+| recherch | 13827 | 0 | PASS | |
+| running | 30000 | 0 | PASS | |
+| song100 | 5374 | 0 | PASS | |
+| song102 | 6913 | 0 | PASS | |
+| song103 | 1917 | 0 | PASS | |
+| song105 | 4796 | 0 | PASS | |
+| song108 | 8642 | 0 | PASS | |
+| sonic | 27356 | 0 | PASS | |
+| stormrid | 15999 | 0 | PASS | |
+| tanmusik | 19199 | 0 | PASS | |
+| trance | 19201 | 0 | PASS | |
+| trance2 | 24960 | 0 | PASS | |
+| trouble | 30000 | 0 | PASS | |
+| ultra | 9600 | 0 | PASS | |
+| village | 30000 | 0 | PASS | |
+| waterfls | 19201 | 0 | PASS | |
+| worldfal | 27840 | 0 | PASS | |
 
 ### modules/brendan
 
@@ -180,7 +180,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 |--------|--------|-----------|--------|-------|
 | 1856step | 30000 | 0 | PASS | MB + 24 pre-existing non-MB (init volume artifact). |
 | acidtrac | 30000 | 0 | PASS | |
-| adr1ft | 21498 | 118703 | FRAME-DIFF | MB-only: `FINISHED` vs `IDLE` (keyoff_loop flag mismatch). 13189 MB. |
+| adr1ft | 21498 | 118703 | FRAME-DIFF | MB-only: `FINISHED` (0xffff) vs `IDLE` (0x0fff) for `fmreg_pos` on ch13/14 (keyoff_loop flag mismatch). **Benign state dump difference** — no shadow register, frequency, or audio output diffs. No X1 effects found in pattern data for ch12-13; Pascal's keyoff_loop=true origin unknown. Bug 11. |
 | altair | 30000 | 0 | PASS | |
 | aquarius | 30000 | 10802 | FRAME-DIFF | MB + 3024 pre-existing non-MB (±1 nibble offsets + volume artifact). 984 MB, 216 RT. |
 | ca54 | 30000 | 0 | PASS | |
@@ -197,7 +197,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | ru41 | 30000 | 0 | PASS | |
 | samsara | 30000 | 0 | PASS | |
 | signs | 30000 | 0 | PASS | MB + 600 pre-existing non-MB (±1 nibble offsets). |
-| sv73 | 30000 | 6485 | FRAME-DIFF | 432 each: 1, CV. |
+| sv73 | 30000 | 0 | PASS | 432 each: 1, CV. |
 | ty58 | 30000 | 0 | PASS | |
 | xmission | 30000 | 186788 | FRAME-DIFF | 20754 MB. |
 | zaxxon | 30000 | 20738 | FRAME-DIFF | 2304 MB. |
