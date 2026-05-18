@@ -1650,16 +1650,21 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
 
     case ef_SetCarrierVol:
         set_ins_volume(BYTE_NULL, 63 - val, chan);
+        /* Pascal (a2player.pas ~1661): one-shot — does NOT set effect_table.
+         * Clear def so last_effect captures {def=0, val=preserved}. */
+        ch->effect_table[slot][chan].def = 0;
         break;
 
     case ef_SetModulatorVol:
         set_ins_volume(63 - val, BYTE_NULL, chan);
+        ch->effect_table[slot][chan].def = 0;
         break;
 
     case ef_SetInsVolume:
         {
             tINSTR_DATA *instr = get_instr_data_by_ch(chan);
             if (!instr || is_data_empty(instr, sizeof(tINSTR_DATA))) {
+                ch->effect_table[slot][chan].def = 0;
                 break;
             }
 
@@ -1672,6 +1677,7 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
             } else {
                 set_ins_volume(63 - val, 63 - val, chan);
             }
+            ch->effect_table[slot][chan].def = 0;
             break;
         }
 
@@ -1679,6 +1685,7 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
         {
             tINSTR_DATA *instr = get_instr_data_by_ch(chan);
             if (!instr || is_data_empty(instr, sizeof(tINSTR_DATA))) {
+                ch->effect_table[slot][chan].def = 0;
                 break;
             }
 
@@ -1689,43 +1696,47 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
             } else {
                 set_ins_volume(63 - val, 63 - val, chan);
             }
+            ch->effect_table[slot][chan].def = 0;
             break;
         }
 
     case ef_PositionJump:
         if (no_loop(chan, current_line)) {
             pattern_break = true;
-            // TODO: this should read 'next_order'
             next_line = pattern_break_flag + chan;
         }
+        ch->effect_table[slot][chan].def = 0;
         break;
 
     case ef_PatternBreak:
         if (no_loop(chan, current_line)) {
             pattern_break = true;
-            // seek_pattern_break = true; // TODO
             next_line = max(val, songinfo->patt_len - 1);
         }
+        ch->effect_table[slot][chan].def = 0;
         break;
 
     case ef_SetSpeed:
         speed = val;
+        ch->effect_table[slot][chan].def = 0;
         break;
 
     case ef_SetTempo:
         update_timer(val);
+        ch->effect_table[slot][chan].def = 0;
         break;
 
     case ef_SetWaveform:
-        if (val / 16 <= 7) { // in [0..7]
+        if (val / 16 <= 7) {
             ch->fmpar_table[chan].wformC = val / 16;
             update_carrier_adsrw(chan);
         }
 
-        if (val % 16 <= 7) { // in [0..7]
+        if (val % 16 <= 7) {
             ch->fmpar_table[chan].wformM = val % 16;
             update_modulator_adsrw(chan);
         }
+        ch->effect_table[slot][chan].def = 0;
         break;
 
     case ef_VolSlide:
@@ -1763,6 +1774,7 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
     case ef_SetGlobalVolume:
         global_volume = val;
         set_global_volume();
+        ch->effect_table[slot][chan].def = 0;
         break;
 
     case ef_Tremor:
@@ -2355,6 +2367,7 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
             ch->macro_table[chan].arpg_table = event->eff[slot].val;
             ch->macro_table[chan].arpg_note = ch->event_table[chan].note;
         }
+        ch->effect_table[slot][chan].def = 0;
         break;
 
     case ef_SwapVibrato:
@@ -2374,10 +2387,12 @@ static void check_swap_arp_vibr(tADTRACK2_EVENT *event, int slot, int chan)
             ch->macro_table[chan].vib_table = event->eff[slot].val;
             ch->macro_table[chan].vib_delay = vib_delay;
         }
+        ch->effect_table[slot][chan].def = 0;
         break;
     case ef_SetCustomSpeedTab:
         AdPlug_LogWrite("ef_SetCustomSpeedTab val: %02x\n", event->eff[slot].val);
         generate_custom_vibrato(event->eff[slot].val);
+        ch->effect_table[slot][chan].def = 0;
         break;
     }
 }

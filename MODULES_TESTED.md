@@ -244,7 +244,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| drgwrrtt | 20897 | 174485 | FRAME-DIFF | 25 real diff frames (16410-16419, 16425-16434, 16440-16444), 150 content lines. Ch7 freq_table alternates 0x2e54↔0x2e9a (F-Num 596 vs 666, Block 5) — C/Pascal arpeggio state one frame out of phase. Same Bug 11 category (MB-only timing sync). FK/LB/FS lines all-zero/unchanged at diff frames. Effects: Arpeggio, TonePortamento, Vibrato, VolSlide, SetInsVolume, SetSpeed, Extended cmds. |
+| drgwrrtt | 20897 | 77698 | FRAME-DIFF | 25 real diff frames (16410-16419, 16425-16434, 16440-16444), 150 content lines. Ch7 freq_table alternates 0x2e54↔0x2e9a (F-Num 596 vs 666, Block 5) — C/Pascal arpeggio state one frame out of phase (Bug 11 category). LE lines: C now clears effect_table.def for one-shot effects (ef_SetCarrierVol, ef_SetModulatorVol, ef_SetInsVolume, ef_ForceInsVolume, ef_PositionJump, ef_PatternBreak, ef_SetSpeed, ef_SetTempo, ef_SetWaveform, ef_SetGlobalVolume, ef_SwapArpeggio, ef_SwapVibrato, ef_SetCustomSpeedTab) matching Pascal's behavior — C's slot0 def changed from 0x12→0x00. Ref LE shows def=0x36 (invalid effect number, likely from older Pascal binary). KL identical throughout. FK/LB/FS all-zero at diff frames. Effects: Arpeggio, TonePortamento, Vibrato, VolSlide, SetInsVolume, SetSpeed, Extended cmds. |
 | dwrrcslo | 15359 | 0 | PASS | |
 | dwrrfild | 23036 | 0 | PASS | |
 | eastdsrt | 30000 | 0 | PASS | |
