@@ -55,44 +55,44 @@ typedef enum {
 #define ef_FSlideUpFine        7
 #define ef_FSlideDownFine      8
 #define ef_SetModulatorVol     9
-#define ef_VolSlide            10
-#define ef_PositionJump        11
-#define ef_SetInsVolume        12
-#define ef_PatternBreak        13
-#define ef_SetTempo            14
-#define ef_SetSpeed            15
-#define ef_TPortamVSlideFine   16
-#define ef_VibratoVSlideFine   17
-#define ef_SetCarrierVol       18
-#define ef_SetWaveform         19
-#define ef_VolSlideFine        20
-#define ef_RetrigNote          21
-#define ef_Tremolo             22
-#define ef_Tremor              23
-#define ef_ArpggVSlide         24
-#define ef_ArpggVSlideFine     25
-#define ef_MultiRetrigNote     26
-#define ef_FSlideUpVSlide      27
-#define ef_FSlideDownVSlide    28
-#define ef_FSlUpFineVSlide     29
-#define ef_FSlDownFineVSlide   30
-#define ef_FSlUpVSlF           31
-#define ef_FSlDownVSlF         32
-#define ef_FSlUpFineVSlF       33
-#define ef_FSlDownFineVSlF     34
-#define ef_Extended            35
-#define ef_Extended2           36
-#define ef_SetGlobalVolume     37
-#define ef_SwapArpeggio        38
-#define ef_SwapVibrato         39
-#define ef_ForceInsVolume      40
-#define ef_Extended3           41
-#define ef_ExtraFineArpeggio   42
-#define ef_ExtraFineVibrato    43
-#define ef_ExtraFineTremolo    44
-#define ef_SetCustomSpeedTab   45
-#define ef_GlobalFSlideUp      46
-#define ef_GlobalFSlideDown    47
+#define ef_VolSlide            10 // A
+#define ef_PositionJump        11 // B
+#define ef_SetInsVolume        12 // C
+#define ef_PatternBreak        13 // D
+#define ef_SetTempo            14 // E
+#define ef_SetSpeed            15 // F
+#define ef_TPortamVSlideFine   16 // G
+#define ef_VibratoVSlideFine   17 // H
+#define ef_SetCarrierVol       18 // I
+#define ef_SetWaveform         19 // J
+#define ef_VolSlideFine        20 // K
+#define ef_RetrigNote          21 // L
+#define ef_Tremolo             22 // M
+#define ef_Tremor              23 // N
+#define ef_ArpggVSlide         24 // O
+#define ef_ArpggVSlideFine     25 // P
+#define ef_MultiRetrigNote     26 // Q
+#define ef_FSlideUpVSlide      27 // R
+#define ef_FSlideDownVSlide    28 // S
+#define ef_FSlUpFineVSlide     29 // T
+#define ef_FSlDownFineVSlide   30 // U
+#define ef_FSlUpVSlF           31 // V
+#define ef_FSlDownVSlF         32 // W
+#define ef_FSlUpFineVSlF       33 // X
+#define ef_FSlDownFineVSlF     34 // Y
+#define ef_Extended            35 // Z
+#define ef_Extended2           36 // &
+#define ef_SetGlobalVolume     37 // %
+#define ef_SwapArpeggio        38 // !
+#define ef_SwapVibrato         39 // @
+#define ef_ForceInsVolume      40 // =
+#define ef_Extended3           41 // #
+#define ef_ExtraFineArpeggio   42 // $
+#define ef_ExtraFineVibrato    43 // ~
+#define ef_ExtraFineTremolo    44 // ^
+#define ef_SetCustomSpeedTab   45 // `
+#define ef_GlobalFSlideUp      46 // >
+#define ef_GlobalFSlideDown    47 // <
 #define ef_GlobalFreqSlideUpXF 48 // ef_fix2 replacement for >xx + ZFE
 #define ef_GlobalFreqSlideDnXF 49 // ef_fix2 replacement for <xx + ZFE
 

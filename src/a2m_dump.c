@@ -492,7 +492,7 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
 
 static void detect_all_effects(void)
 {
-    static char echars[256] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><`";
+    static char echars[256] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><";
     char effects[257];
     int p, c, r;
 

@@ -102,7 +102,7 @@ void show_event(tADTRACK2_EVENT table[20])
 
 void show_eff(char *name, tEFFECT_TABLE table[2][20])
 {
-    static char effects[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><`";
+    static char effects[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><";
 
     for (int j = 0; j < 2; j++) {
         printf("%s%d: ", name, j + 1);
