@@ -294,7 +294,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | deorbit | 30000 | 0 | PASS | Bug 3 fix resolved. |
 | fm-troni | 30000 | 542 | FRAME-DIFF | TonePortamento keyoff regression. 36 each: 0, F, MB; 18 PT. |
 | glass | 30000 | 110162 | FRAME-DIFF | 12240 MB. |
-| ishtar | 30000 | 0 | PASS | |
+| ishtar | 1963 | 0 | PASS | Effects: FSlideUp, FSlideDown, TonePortamento, SetModulatorVol, VolSlide, SetInsVolume, VolSlideFine, Extended, Extended2, SetGlobalVolume. |
 | khaos | 30000 | 0 | PASS | |
 | khaos2 | 30000 | 0 | PASS | |
 | lbtrance | 30000 | 0 | PASS | |
