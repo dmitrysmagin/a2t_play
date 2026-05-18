@@ -1475,6 +1475,12 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
     case ef_ExtraFineArpeggio:
     case ef_ArpggVSlide:
     case ef_ArpggVSlideFine:
+        /* Pascal (a2player.pas ~1498-1499): skip entire arpeggio block when
+         * effect_def == ef_Arpeggio AND effect == 0. This preserves the
+         * previous arpeggio state/add1/add2 instead of resetting them. */
+        if ((def == ef_Arpeggio) && (val == 0))
+            break;
+
         switch (def) {
         case ef_Arpeggio:
             ch->effect_table[slot][chan].def = ef_Arpeggio;
