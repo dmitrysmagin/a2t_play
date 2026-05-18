@@ -138,6 +138,8 @@ function get_global_vol_dump: AnsiString;
 function get_portaFK_table_dump: AnsiString;
 function get_loopbck_table_dump: AnsiString;
 function get_fslide_table_dump: AnsiString;
+function get_last_effect_dump: AnsiString;
+function get_keyoff_loop_dump: AnsiString;
 
 type
   tOPLOUT_proc = procedure(reg,data: Word);
@@ -5010,6 +5012,33 @@ begin
     tmp := tmp + LowerCase(IntToHex(fslide_table2[i], 2));
   end;
   get_fslide_table_dump := tmp;
+end;
+
+function get_last_effect_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+  begin
+    tmp := tmp + LowerCase(IntToHex(LO(last_effect[i]) AND $7f, 2));
+    tmp := tmp + LowerCase(IntToHex(HI(last_effect[i]), 2));
+    tmp := tmp + LowerCase(IntToHex(LO(last_effect2[i]) AND $7f, 2));
+    tmp := tmp + LowerCase(IntToHex(HI(last_effect2[i]), 2));
+  end;
+  get_last_effect_dump := tmp;
+end;
+
+function get_keyoff_loop_dump: AnsiString;
+var
+  i: Integer;
+  tmp: AnsiString;
+begin
+  tmp := '';
+  for i := 1 to 20 do
+    tmp := tmp + LowerCase(IntToHex(Byte(keyoff_loop[i]), 1));
+  get_keyoff_loop_dump := tmp;
 end;
 
 begin
