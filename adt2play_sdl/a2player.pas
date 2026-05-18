@@ -5005,7 +5005,10 @@ var
 begin
   tmp := '';
   for i := 1 to 20 do
+  begin
     tmp := tmp + LowerCase(IntToHex(fslide_table[i], 2));
+    tmp := tmp + LowerCase(IntToHex(fslide_table2[i], 2));
+  end;
   get_fslide_table_dump := tmp;
 end;
 
