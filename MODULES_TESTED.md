@@ -122,15 +122,15 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | frozen | 16796 | 0 | PASS | Init artifact bank 1 KSL/TL. |
 | fullthr | 9026 | 0 | PASS | |
 | funland | 15999 | 0 | PASS | Previously 383 diffs (init artifact bank 1 KSL/TL). Resolved by cumulative bug fixes. Effects: FSlideUp, FSlideDown, Vibrato, VolSlide, SetInsVolume. |
-| goldebel | 3199 | 383 | FRAME-DIFF | Init artifact bank 1 KSL/TL. 25 each: 0, CV, FP. |
+| goldebel | 3199 | 0 | PASS | Previously 383 diffs (init artifact bank 1 KSL/TL). Resolved by cumulative bug fixes. Effects: FSlideDown, Vibrato, VolSlide, SetInsVolume. |
 | horizon | 13437 | 0 | PASS | |
 | hovlane | 13122 | 0 | PASS | |
 | hunter | 22801 | 0 | PASS | |
-| inevitbl | 16680 | 144007 | FRAME-DIFF | 9000 each: 1, CV, FP. |
+| inevitbl | 16680 | 0 | PASS | Previously 144,007 diffs (9000 each: 1, CV, FP). Resolved by cumulative bug fixes. Effects: FSlideDown, VolSlide, SetInsVolume, PatternBreak, SetSpeed. |
 | invasion | 15999 | 0 | PASS | |
 | kelsey | 3199 | 0 | PASS | |
-| lemmings | 15999 | 48008 | FRAME-DIFF | 3200 each: 0, CV, FP. |
-| lostcaus | 22399 | 26007 | FRAME-DIFF | Init artifact ±1 nibble offsets. 1625 each: 1, CV, FP. |
+| lemmings | 15999 | 0 | PASS | Previously 48,008 diffs (3200 each: 0, CV, FP). Resolved by cumulative bug fixes. Effects: FSlideDown, Vibrato, VolSlide, SetInsVolume. |
+| lostcaus | 22399 | 0 | PASS | Previously 26,007 diffs (init artifact ±1 nibble offsets). Resolved by cumulative bug fixes. Effects: FSlideDown, Vibrato, VolSlide, SetInsVolume. |
 | lucky7s | 8396 | 0 | PASS | Init artifact ± freq diffs. |
 | manifest | 17599 | 0 | PASS | |
 | marblect | 30000 | 0 | PASS | |
@@ -157,7 +157,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | skylight | 17576 | 0 | PASS | |
 | skysharp | 9597 | 0 | PASS | |
 | sleepwrk | 17856 | 0 | PASS | |
-| spaceple | 23227 | 24967 | FRAME-DIFF | Init artifact ± freq diffs. 1560 each: 1, CV, FP. |
+| spaceple | 23227 | 0 | PASS | Previously 24,967 diffs (init artifact ± freq diffs). Resolved by cumulative bug fixes. Effects: FSlideUp, FSlideDown, Vibrato, VolSlide, SetInsVolume, PatternBreak. |
 | sparkplg | 26881 | 0 | PASS | Init artifact bank 1 KSL/TL. |
 | stormywe | 14423 | 0 | PASS | |
 | suspicis | 10755 | 0 | PASS | Init artifact bank 1 KSL/TL. |
@@ -192,15 +192,15 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | null | 12668 | 0 | PASS | MB + 1680 pre-existing non-MB (±1 nibble offsets). |
 | oddtime | 30000 | 0 | PASS | |
 | phone | 9955 | 0 | PASS | |
-| psg | 30000 | 13610 | FRAME-DIFF | 1512 RT. |
+| psg | 30000 | 0 | PASS | Previously 13,610 diffs (1512 RT). Resolved by cumulative bug fixes. Effects: Arpeggio, FSlideDown, TonePortamento, Vibrato, FSlideUpFine, FSlideDownFine, SetModulatorVol, VolSlide, SetInsVolume, PatternBreak, SetWaveform, VolSlideFine, RetrigNote, Extended, Extended2, SetGlobalVolume. |
 | rf62 | 30000 | 0 | PASS | |
 | ru41 | 30000 | 0 | PASS | |
 | samsara | 30000 | 0 | PASS | |
 | signs | 30000 | 0 | PASS | MB + 600 pre-existing non-MB (±1 nibble offsets). |
 | sv73 | 30000 | 0 | PASS | 432 each: 1, CV. |
 | ty58 | 30000 | 0 | PASS | |
-| xmission | 30000 | 186788 | FRAME-DIFF | 20754 MB. |
-| zaxxon | 30000 | 20738 | FRAME-DIFF | 2304 MB. |
+| xmission | 30000 | 20754 | FRAME-DIFF | 20754 MB-only (benign keyoff_loop state divergence, same as Bug 11). Effects: Arpeggio, FSlideDown, SetModulatorVol, SetSpeed, RetrigNote, Extended, Extended2. |
+| zaxxon | 30000 | 2304 | FRAME-DIFF | 2304 MB-only (benign keyoff_loop state divergence, same as Bug 11). Effects: FSlideUp, FSlideDown, TonePortamento, Vibrato, FSlideUpFine, FSlideDownFine, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Tremor, Extended. |
 
 ### modules/dretz
 
