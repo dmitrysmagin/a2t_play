@@ -137,7 +137,7 @@
 | hydra | 2 | 0 | 2 | 2,128 and 13,822 diffs |
 | dretz | 11 | 11 | 0 | All PASS at 100k frames |
 | o2star | 15 | 14 | 1 | `o2ghosts`: 53,516 diffs |
-| televics | 36 | 8 | 28 | 4thcoast frame-drift, topgear/build/cwack/discwrld large diffs, rest small/end-of-song. |
+| televics | 36 | 8 | 28 | 4thcoast frame-drift, topgear/build/cwack/discwrld large diffs, rest small/end-of-song. 5ontelev: Bug 11 benign MB diff (2,304). 4xmisste: Bug 14 fixed (228K→25K), remaining MB is Bug 11. |
 | brendan | ~70 | ~64 | 6 | Multiple bug classes compound |
 | diodema | 23 | 15 | 6 | Bug 3 fix resolved samsara (206→0), zaxxon (3548→0) |
 | mlf | 14 | 9 | 5 | Bug 3 fix resolved deorbit (128→0), glass (962→0) |
@@ -163,7 +163,7 @@
 
 ## Next Steps
 
-1. **Bug 11 (keyoff_loop state divergence)** — investigate why Pascal's `keyoff_loop[13..14]` is `true` at frame 161+ for `adr1ft.a2m` while C's is `false`. No X1 effects (`ef_ex_cmd_MKOffLoopEn`) found in pattern data for channels 12-13. Both implementations initialize `keyoff_loop=FALSE` and only set it via X1 effect. Benign: zero shadow register or audio diffs, strictly MB (macro state) dump difference. 118,703 diff lines across 3,514 frames (all MB-only).
+1. **Bug 11 (keyoff_loop state divergence)** — investigate why Pascal's `keyoff_loop[13..14]` is `true` at frame 161+ for `adr1ft.a2m` while C's is `false`. No X1 effects (`ef_ex_cmd_MKOffLoopEn`) found in pattern data for channels 12-13. Both implementations initialize `keyoff_loop=FALSE` and only set it via X1 effect. Benign: zero shadow register or audio diffs, strictly MB (macro state) dump difference. 118,703 diff lines across 3,514 frames (all MB-only). Also affects `4xmisste` (25,362 MB), `5ontelev` (2,304 MB), `glass` (12,240 MB), `xmission` (20,754 MB), `zaxxon` (2,304 MB).
 2. **Bug 9 (arpeggio state divergence)** — investigate exact state transition sequence between C and Pascal for `rbfactry` frames 1377→1378. Compare Pascal's `arpgg_cleanup` (`a2player.pas:1361-1374`) and effect carry-over logic (`a2player.pas:1494-1535`) against C's `play_line_arpgg_cleanup_pascal` and `process_effects_slot_body`.
 3. **Bug 7 (instrument data truncated)** — fix C's loader to read all 255 instrument slots from the file instead of only `count` entries. This would resolve the remaining MV/CV diffs in `o2ghosts`, `sparkplg`, `sweetsin`.
 3. ~~Fix `e2_vslide_type` initialization~~ — confirmed NOT A BUG.
