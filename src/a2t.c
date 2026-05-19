@@ -1555,9 +1555,9 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
 
                 if (has_note)
-                    ch->porta_table[slot][chan].freq = (uint16_t)
-                        ((int32_t)nFreq((uint8_t)(event->note - 1)) +
-                        (int32_t)get_instr_fine_tune(ch->event_table[chan].instr_def));
+                    ch->porta_table[slot][chan].freq =
+                        nFreq((event->note - 1)) +
+                        get_instr_fine_tune(ch->event_table[chan].instr_def);
             }
             else {
                 /* Pascal: do nothing — effect_table keeps def=0 (from AND $0ff00)
@@ -2600,7 +2600,7 @@ static void arpeggio(int slot, int chan)
 
     ch->arpgg_table[slot][chan].state = arpgg_state[ch->arpgg_table[slot][chan].state];
     change_frequency(chan, freq +
-            get_instr_fine_tune(ch->event_table[chan].instr_def));
+        get_instr_fine_tune(ch->event_table[chan].instr_def));
 }
 
 static void vibrato(int slot, int chan)
