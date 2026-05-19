@@ -1317,28 +1317,21 @@ static void update_effect_table(int slot, int chan, int eff_group, uint8_t def, 
 
 /* a2player.pas play_line first loop: single else-if between arpgg_table and arpgg_table2 — not two
  * independent cleanups, and cleanup runs before Case effect_def (FineTune etc.) on either column. */
-static void play_line_arpgg_cleanup_pascal(const tADTRACK2_EVENT *event, int chan)
+static void play_line_arpgg_cleanup(const tADTRACK2_EVENT *event, int chan)
 {
-    uint8_t d0 = event->eff[0].def;
-    uint8_t v0 = event->eff[0].val;
-    uint8_t d1 = event->eff[1].def;
-    uint8_t v1 = event->eff[1].val;
+    for (int slot = 0; slot < 2; slot++) {
+        uint8_t def = event->eff[slot].def;
+        uint8_t val = event->eff[slot].val;
 
-    bool col1_arp = (((d0 == ef_Arpeggio) && (v0 != 0)) || (d0 == ef_ExtraFineArpeggio));
-    bool col2_arp = (((d1 == ef_Arpeggio) && (v1 != 0)) || (d1 == ef_ExtraFineArpeggio));
+        bool arp = (((def == ef_Arpeggio) && (val != 0)) || (def == ef_ExtraFineArpeggio));
 
-    if (!col1_arp &&
-        ch->arpgg_table[0][chan].note != 0 &&
-        ch->arpgg_table[0][chan].state != 1) {
-        ch->arpgg_table[0][chan].state = 1;
-        change_frequency(chan, nFreq(ch->arpgg_table[0][chan].note - 1) +
-            get_instr_fine_tune(ch->event_table[chan].instr_def));
-    } else if (!col2_arp &&
-               ch->arpgg_table[1][chan].note != 0 &&
-               ch->arpgg_table[1][chan].state != 1) {
-        ch->arpgg_table[1][chan].state = 1;
-        change_frequency(chan, nFreq(ch->arpgg_table[1][chan].note - 1) +
-            get_instr_fine_tune(ch->event_table[chan].instr_def));
+        if (arp &&
+            ch->arpgg_table[slot][chan].note != 0 &&
+            ch->arpgg_table[slot][chan].state != 1) {
+            ch->arpgg_table[slot][chan].state = 1;
+            change_frequency(chan, nFreq(ch->arpgg_table[slot][chan].note - 1) +
+                get_instr_fine_tune(ch->event_table[chan].instr_def));
+        }
     }
 }
 
@@ -1418,34 +1411,17 @@ static void play_line_apply_global_fslide_row(tADTRACK2_EVENT *event, int chan)
 /* a2player.pas ~1452–1466: once per row after init loop, from pattern columns. */
 static void play_line_tremor_row_reset(const tADTRACK2_EVENT *event, int chan)
 {
-    if (ch->tremor_table[0][chan].pos && (event->eff[0].def != ef_Tremor)) {
-        ch->tremor_table[0][chan].pos = 0;
-        set_ins_volume(ch->tremor_table[0][chan].volM, ch->tremor_table[0][chan].volC, chan);
-    }
-    if (ch->tremor_table[1][chan].pos && (event->eff[1].def != ef_Tremor)) {
-        ch->tremor_table[1][chan].pos = 0;
-        set_ins_volume(ch->tremor_table[1][chan].volM, ch->tremor_table[1][chan].volC, chan);
+    for (int slot = 0; slot < 2; slot++) {
+        if (ch->tremor_table[slot][chan].pos && (event->eff[slot].def != ef_Tremor)) {
+            ch->tremor_table[slot][chan].pos = 0;
+            set_ins_volume(ch->tremor_table[slot][chan].volM, ch->tremor_table[slot][chan].volC, chan);
+        }
     }
 }
 
-static void process_effects_slot_prepare(tADTRACK2_EVENT *event, int slot, int chan)
+static void process_effects_prepare(tADTRACK2_EVENT *event, int slot, int chan)
 {
     uint8_t def = event->eff[slot].def;
-    uint8_t val = event->eff[slot].val;
-
-    /* Pascal (a2player.pas ~1494): "If (effect_def <> ef_Arpeggio) or (effect <> 0)"
-     * — only overwrite effect_table when this condition holds. With ef_Arpeggio=50
-     * (non-zero), we can now distinguish arpeggio carry-over (def=50, val=0) from
-     * "no effect" (def=0, val=0). The normalization above ensures carry-over rows
-     * have def=ef_Arpeggio, so this condition correctly preserves effect_table.
-     * When def=0 and val=0, Pascal does NOT zero effect_table in the general case —
-     * it remains with def=0 and val preserved from the AND $0ff00 clearing at
-     * play_line start (a2player.pas ~1312). Only specific effect blocks (e.g.,
-     * arpeggio with no note) explicitly zero effect_table. */
-    if ((def != 0) || (val != 0)) {
-        ch->effect_table[slot][chan].def = def;
-        ch->effect_table[slot][chan].val = val;
-    }
 
     if ((def != ef_Vibrato) &&
         (def != ef_ExtraFineVibrato) &&
@@ -1462,7 +1438,7 @@ static void process_effects_slot_prepare(tADTRACK2_EVENT *event, int slot, int c
         memset(&ch->trem_table[slot][chan], 0, sizeof(ch->trem_table[slot][chan]));
 }
 
-static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan)
+static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
 {
     uint8_t def = event->eff[slot].def;
     uint8_t val = event->eff[slot].val;
@@ -1559,7 +1535,8 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
          * A key-off note (note | 0x80) is NOT in [1..97], so Pascal falls through
          * to the carry-over branch — effect_table/speed only set if prior porta existed. */
         {
-            bool has_note = (event->note >= 1 && event->note <= 12 * 8 + 1);
+            uint8_t note = event->note & 0x7f; //note_in_range
+            bool has_note = (note >= 1 && note <= 12 * 8 + 1);
             bool has_carry = (ch->last_effect[slot][chan].def == ef_TonePortamento);
 
             if (has_note || has_carry) {
@@ -1578,9 +1555,9 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
                 ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
 
                 if (has_note)
-                    ch->porta_table[slot][chan].freq =
-                        nFreq((uint8_t)(event->note - 1)) +
-                        get_instr_fine_tune(ch->event_table[chan].instr_def);
+                    ch->porta_table[slot][chan].freq = (uint16_t)
+                        ((int32_t)nFreq((uint8_t)(event->note - 1)) +
+                        (int32_t)get_instr_fine_tune(ch->event_table[chan].instr_def));
             }
             else {
                 /* Pascal: do nothing — effect_table keeps def=0 (from AND $0ff00)
@@ -2085,48 +2062,32 @@ static bool no_swap_and_restart(tADTRACK2_EVENT *event)
             (event->eff[1].val == ef_ex_ExtendedCmd2 * 16 + ef_ex_cmd2_NoRestart));
 }
 
-/* Pascal play_line uses LO(effect_table[chan]) — merged global freq slide etc. */
-static bool effect_def_is_porta(uint8_t def)
+static bool is_eff_porta(tADTRACK2_EVENT *event)
 {
-    return def == ef_TonePortamento || def == ef_TPortamVolSlide ||
-           def == ef_TPortamVSlideFine;
+    int eff0 = event->eff[0].def;
+    bool is_p0 = (eff0 == ef_TonePortamento) ||
+                (eff0 == ef_TPortamVolSlide) ||
+                (eff0 == ef_TPortamVSlideFine);
+    int eff1 = event->eff[1].def;
+    bool is_p1 = (eff1 == ef_TonePortamento) ||
+                (eff1 == ef_TPortamVolSlide) ||
+                (eff1 == ef_TPortamVSlideFine);
+    return is_p0 || is_p1;
 }
 
-/* play_line loop 2 (a2player.pas ~2626): tporta_flag uses pattern event defs only — not LO(effect_table).
- * Branches after the NOT(porta|notedelay) output_note use this flag; mixing in effect_table breaks
- * continued porta (x00) rows vs Pascal (fm63b_rv ~IRQ 5305 secondary key-on). */
-static bool is_tporta_flag_ev(const tADTRACK2_EVENT *event)
+static bool is_eff_notedelay(tADTRACK2_EVENT *event)
 {
-    return effect_def_is_porta(event->eff[0].def) ||
-           effect_def_is_porta(event->eff[1].def);
-}
-
-/* Pascal play_line ~2648–2655: one compound guard per effect slot — LO(effect_table[chan])
- * or LO(effect_table2[chan]) in {TonePortamento family, Extended2+NoteDelay packed LO}.
- * When either slot blocks, skip immediate output_note (~2666) and use ~2668+2672 chain.
- * Do NOT early-return on NoteDelay alone: that prevented ~2668 (key-off + pattern porta)
- * from matching Pascal (notedelay active in LO still allows output_note stripped old pitch).
- */
-static bool effect_slot_blocks_same_row_immediate_note(int slot, int chan)
-{
-    uint8_t def = ch->effect_table[slot][chan].def;
-    uint8_t val = ch->effect_table[slot][chan].val;
-
-    if (effect_def_is_porta(def))
-        return true;
-    return def == ef_Extended2 && (val / 16 == ef_ex2_NoteDelay);
-}
-
-static bool play_line_note_deferred_by_effect_lo(int chan)
-{
-    return effect_slot_blocks_same_row_immediate_note(0, chan) ||
-           effect_slot_blocks_same_row_immediate_note(1, chan);
+    return (
+        (event->eff[0].def == ef_Extended2 && (event->eff[0].val / 16 == ef_ex2_NoteDelay)) ||
+        (event->eff[1].def == ef_Extended2 && (event->eff[1].val / 16 == ef_ex2_NoteDelay))
+    );
 }
 
 static void new_process_note(tADTRACK2_EVENT *event, int chan)
 {
-    bool defer_note_row = play_line_note_deferred_by_effect_lo(chan);
-    bool tporta_flag_ev = is_tporta_flag_ev(event);
+    bool tporta_flag = is_eff_porta(event);
+    bool notedelay_flag = is_eff_notedelay(event);
+    bool defer_note_row = tporta_flag || notedelay_flag;
 
     if (event->note == 0) {
         if (ch->ftune_table[chan])
@@ -2152,14 +2113,14 @@ static void new_process_note(tADTRACK2_EVENT *event, int chan)
     }
 
     /* a2player.pas: old note had keyoff — retrigger from stored pitch */
-    if ((event->note != 0) && tporta_flag_ev && (ch->event_table[chan].note & keyoff_flag)) {
+    if ((event->note != 0) && tporta_flag && (ch->event_table[chan].note & keyoff_flag)) {
         output_note(ch->event_table[chan].note & ~keyoff_flag,
                     ch->voice_table[chan], chan, false, true);
         return;
     }
 
     if (event->note != 0) {
-        if (ch->portaFK_table[chan] && tporta_flag_ev) {
+        if (ch->portaFK_table[chan] && tporta_flag) {
             output_note(event->note, event->instr_def, chan, false, true);
         } else {
             ch->event_table[chan].note = event->note;
@@ -2217,7 +2178,7 @@ static void play_line()
         // Fixup event->note
         if (event->note == 0xff) { // Key off
             event->note = ch->event_table[chan].note | keyoff_flag;
-        } else if ((event->note >= fixed_note_flag + 1) /*&& (event->note <= fixed_note_flag + 12*8+1)*/) {
+        } else if ((event->note >= fixed_note_flag + 1) && (event->note <= fixed_note_flag + 12*8+1)) {
             event->note -= fixed_note_flag;
         }
 
@@ -2241,22 +2202,13 @@ static void play_line()
             ch->event_table[chan].eff[1].val = event->eff[1].val;
         }
 
-        /* Pascal play_line (~2638-2650): copy event effect fields to event_table
-         * only when they are non-zero (otherwise carry over from previous row). */
-        for (int slot = 0; slot < 2; slot++) {
-            if (event->eff[slot].def | event->eff[slot].val) {
-                ch->event_table[chan].eff[slot].def = event->eff[slot].def;
-                ch->event_table[chan].eff[slot].val = event->eff[slot].val;
-            }
-        }
-
         // alters ch->event_table[].instr_def
         set_ins_data(event->instr_def, chan);
 
         // set effect_table here
-        process_effects_slot_prepare(event, 0, chan);
-        process_effects_slot_prepare(event, 1, chan);
-        play_line_arpgg_cleanup_pascal(event, chan);
+        process_effects_prepare(event, 0, chan);
+        process_effects_prepare(event, 1, chan);
+        play_line_arpgg_cleanup(event, chan);
         play_line_apply_global_fslide_row(event, chan);
     }
 
@@ -2267,12 +2219,12 @@ static void play_line()
 
     for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
         event = &events[chan];
-        process_effects_slot_body(event, 0, chan);
+        process_effects(event, 0, chan);
     }
 
     for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
         event = &events[chan];
-        process_effects_slot_body(event, 1, chan);
+        process_effects(event, 1, chan);
     }
 
     for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
@@ -2280,7 +2232,6 @@ static void play_line()
             if ((events[chan].eff[slot].def == 0) && (events[chan].eff[slot].val == 0)) {
                 if ((ch->glfsld_table[slot][chan].def == 0) && (ch->glfsld_table[slot][chan].val == 0)) {
                     ch->effect_table[slot][chan].def = 0;
-                    ch->effect_table[slot][chan].val = 0;
                 }
             } else {
                 ch->event_table[chan].eff[slot].def = events[chan].eff[slot].def;
