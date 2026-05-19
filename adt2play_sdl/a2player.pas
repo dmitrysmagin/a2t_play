@@ -4805,10 +4805,10 @@ begin
   tmp := '';
   for i := 1 to 20 do
     tmp := tmp +
-      LowerCase(IntToHex(HI(effect_table[i]), 2)) +
       LowerCase(IntToHex(LO(effect_table[i]), 2)) +
-      LowerCase(IntToHex(HI(effect_table2[i]), 2)) +
-      LowerCase(IntToHex(LO(effect_table2[i]), 2));
+      LowerCase(IntToHex(HI(effect_table[i]), 2)) +
+      LowerCase(IntToHex(LO(effect_table2[i]), 2)) +
+      LowerCase(IntToHex(HI(effect_table2[i]), 2));
   get_effect_table_dump := tmp;
 end;
 
