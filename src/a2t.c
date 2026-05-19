@@ -1583,8 +1583,9 @@ static void process_effects_slot_body(tADTRACK2_EVENT *event, int slot, int chan
                         get_instr_fine_tune(ch->event_table[chan].instr_def);
             }
             else {
+                /* Pascal: do nothing — effect_table keeps def=0 (from AND $0ff00)
+                 * and val preserved from previous row. */
                 ch->effect_table[slot][chan].def = 0;
-                ch->effect_table[slot][chan].val = 0;
             }
         }
         break;
@@ -2272,6 +2273,20 @@ static void play_line()
     for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
         event = &events[chan];
         process_effects_slot_body(event, 1, chan);
+    }
+
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
+        for (int slot = 0; slot < 2; slot++) {
+            if ((events[chan].eff[slot].def == 0) && (events[chan].eff[slot].val == 0)) {
+                if ((ch->glfsld_table[slot][chan].def == 0) && (ch->glfsld_table[slot][chan].val == 0)) {
+                    ch->effect_table[slot][chan].def = 0;
+                    ch->effect_table[slot][chan].val = 0;
+                }
+            } else {
+                ch->event_table[chan].eff[slot].def = events[chan].eff[slot].def;
+                ch->event_table[chan].eff[slot].val = events[chan].eff[slot].val;
+            }
+        }
     }
 
     for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
