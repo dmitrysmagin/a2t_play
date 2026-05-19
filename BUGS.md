@@ -110,6 +110,12 @@
   4. Consider adding `ef_fix1` ($80) to C's `effect_table.def` for arpeggio effects, to match Pascal's encoding and enable proper carry-over detection.
 - **Affected modules**: `rbfactry` (842 diff lines at 30k, 240 non-MB). `drgwrrtt` (75 F/MB/0 diffs, arpeggio state out of phase by 1 step causing 0x46 frequency offset on ch6). Likely affects other modules with arpeggio carry-over patterns.
 
+### Bug 17: TonePortamento Key-Off Note Treated as Valid Note — FIXED
+- **Root cause**: C's `process_effects_slot_body` (`src/a2t.c:1562-1563`) masked off `keyoff_flag` when checking `has_note`: `uint8_t nb = event->note & ~keyoff_flag; bool has_note = (nb >= 1 && nb <= 12*8+1);`. Pascal (`a2player.pas:1578`) checks the **raw** note value: `If (event[chan].note in [1..12*8+1])`. A key-off note (e.g., `0xaf = note 47 | 0x80`) is NOT in Pascal's range `[1..97]`, so Pascal falls to the carry-over branch — `porta_table.speed` is only set if a prior TonePortamento effect existed. C incorrectly treated it as a valid note, setting `porta_table.speed` and `porta_table.freq` even without carry-over.
+- **How it manifests**: For `opl303.a2m` at frame 9361 (pattern 2, row 28), channel 3 has `note=0xaf` (key-off) with `ef_TonePortamento` val=0x30. No prior TonePortamento carry-over. C sets `porta_table.speed=0x30` and starts sliding from `freq=0x0e63` toward `portafreq=0x0d57`. Pascal skips entirely — `porta_table.speed` stays 0, no slide, frequency remains `0x0e63`. This produces 4622 diff lines across 66 frames (F: freq_table, PT: porta_table, 0: shadow_regs).
+- **Fix applied** (`src/a2t.c:1563`): Removed `keyoff_flag` masking from `has_note` check. Changed from `uint8_t nb = event->note & ~keyoff_flag; bool has_note = (nb >= 1 && nb <= 12*8+1);` to `bool has_note = (event->note >= 1 && event->note <= 12*8+1);`. The `porta_table.freq` assignment also simplified to use `event->note` directly (only reached when `has_note` is true, meaning no keyoff bit).
+- **Resolved module**: `opl303` — 660 diff lines at frame 5005 region → **0**. Remaining 4622 diffs are a separate timing issue (portamento starts 2 ticks later in C vs Pascal due to `effect_table` clearing in `play_line`).
+
 ### Bug 16: Volume Slide Early Return on NULL Instrument — FIXED
 - **Root cause**: C's `slide_volume_up` (`src/a2t.c:2479-2486`) and `slide_volume_down` (`src/a2t.c:2559-2566`) had an early `return` guard when `get_instr_data_by_ch(chan)` returned NULL. This happens when `voice_table[chan]` references an instrument index beyond `instrinfo->count`. The early return skipped the entire volume slide, including `slide_carrier_volume_up/down` which does NOT need instrument data (it reads from `fmpar_table` and writes directly). Only the modulator volume step needs the instrument data (to check `connect` flag).
 - **How it manifests**: For `spaceple.a2m`, `instrinfo->count=10` but `voice_table[10]=0x0b=11` (channel 11 references instrument 11, which doesn't exist). At pattern 1 row 1, channels 10 and 11 have `ef_VolSlide` (0x0A) with value 0x02 but no note or instrument event. C's `slide_volume_down` returns early for channel 11, skipping the carrier volume slide entirely. Pascal has no such guard and proceeds. This causes `carrier_vol[10]` (CV line) to diverge: C stays at 0x00, Pascal slides from 0x3d downward. Also affects `shadow_regs[1][0x43]` (channel 9 carrier total level register) and `fmpar_table[9].volC` (FP line).
@@ -171,6 +177,7 @@
 | brendan | ~70 | ~65 | 5 | Bug 3 fix resolved chivalry (2438→0) |
 | brendan | ~70 | ~66 | 4 | Bug 8 resolved dream7mx (C–Pascal divergence at 0x14c eliminated. Shadow reg diff: 0) |
 | brendan | ~70 | ~67 | 3 | Bug 16 resolved spaceple (24,967→0). Volume slide early return on NULL instrument removed. |
+| mlf | 14 | 9 | 5 | Bug 17 resolved opl303 key-off portamento (660→0 at frame 5005 region). Remaining 4622 diffs are timing issue. |
 | kkonaa | 2 | 1 | 1 | `limitbrk`: Bug 12 fix resolved (310,177→0). `adr1ft`: Bug 11 (benign keyoff_loop MB diff). |
 
 ## Key Files
@@ -190,6 +197,7 @@
 - `adt2play_sdl/a2player.pas:1662-1678` — Pascal's `ef_SetInsVolume`/`ef_ForceInsVolume` handlers (reference for Bug 10)
 - `src/a2t.c:2175-2189` — C's `play_line` unconditional eff write (Bug 4 fix)
 - `src/a2t.c:3416-3420` — C's `init_player` key_off/init_buffers order (Bug 5 fix)
+- `src/a2t.c:1563` — C's `process_effects_slot_body` TonePortamento `has_note` check (Bug 17 fix: removed keyoff_flag masking)
 - `adt2play_sdl/a2player.pas:1313-1322` — Pascal's LOOP1 unconditional eff write (reference for Bug 4)
 
 ## Next Steps
@@ -205,7 +213,8 @@
   8. ~~**Bug 12 (TonePortamento effect_table cleared on new note with val=0)** — FIXED 2026-05-18.~~ Resolved `limitbrk` (310,177 → 0).
   9. ~~**Bug 13 (v5-8 loader missing ManualFSlide→FineTune conversion)** — FIXED 2026-05-18.~~ Resolved `old_002` (185,144 → 2,942, 98.4% reduction).
    10. ~~**Bug 14 (Arpeggio val=0 skip guard missing)** — FIXED 2026-05-18.~~ Resolved `4xmisste` (228,524 → 25,362, 88.9% reduction).
-   11. ~~**Bug 16 (Volume slide early return on NULL instrument)** — FIXED 2026-05-19.~~ Resolved `spaceple` (24,967 → 0).
+    11. ~~**Bug 16 (Volume slide early return on NULL instrument)** — FIXED 2026-05-19.~~ Resolved `spaceple` (24,967 → 0).
+    12. ~~**Bug 17 (TonePortamento key-off note treated as valid note)** — FIXED 2026-05-19.~~ Resolved `opl303` key-off portamento (660 → 0 at frame 5005 region).
    12. **Re-test all FRAME-DIFF modules** after each fix.
 8. **Update MODULES_TESTED.md** with results.
 9. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.
