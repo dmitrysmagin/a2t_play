@@ -12,6 +12,7 @@ Match C tool to have the same data dump as Pascal tool
 
 # Testing and Fixing a2t.c
 * run run_one_test.sh with module filename and MAX_FRAMES=30000
+* memorize effects used in the module from *.reg file, use later in Notes column of MODULES_TESTED.md
 * compare diffs, note the frames region at which diff is found
 * a2m_dump: modify to isolate the frame region at which diff starts
 * a2m_dump: add additional dumping information if needed
