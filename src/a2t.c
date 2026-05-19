@@ -2232,6 +2232,7 @@ static void play_line()
             if ((events[chan].eff[slot].def == 0) && (events[chan].eff[slot].val == 0)) {
                 if ((ch->glfsld_table[slot][chan].def == 0) && (ch->glfsld_table[slot][chan].val == 0)) {
                     ch->effect_table[slot][chan].def = 0;
+                    ch->effect_table[slot][chan].val = 0;
                 }
             } else {
                 ch->event_table[chan].eff[slot].def = events[chan].eff[slot].def;
