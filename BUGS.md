@@ -110,6 +110,24 @@
   4. Consider adding `ef_fix1` ($80) to C's `effect_table.def` for arpeggio effects, to match Pascal's encoding and enable proper carry-over detection.
 - **Affected modules**: `rbfactry` (842 diff lines at 30k, 240 non-MB). `drgwrrtt` (75 F/MB/0 diffs, arpeggio state out of phase by 1 step causing 0x46 frequency offset on ch6). Likely affects other modules with arpeggio carry-over patterns.
 
+### Bug 15: retrig_table Off-by-1 Timing Alignment — UNFIXED
+- **Root cause**: C's `ticklooper` timing is misaligned with Pascal's by 1 frame increment for the retrig_table counter on channel 2 of `yellowwe.a2m`. Beginning at frame 26905 (when ch2 receives note=37, ins=3 with `ef_RetrigNote` effect value 0xF1=241), C's `retrig_table[2]` is always exactly 1 ahead of Pascal's (`C = Pascal + 1`) for 30 consecutive frames.
+- **Pattern observed** (frames 26905–26934, all diffs on ch2 only):
+  ```
+  Frames    Pascal   C
+  26905-09  1        2
+  26910-14  2        3
+  26915-19  3        4
+  26920-24  4        5
+  26925-29  5        6
+  26930-34  6        7
+  ```
+  Delta is always 1, increments every 5 frames (matching retrig speed parameter).
+- **How it manifests**: `retrig_table[chan]` increments each tick. When it reaches the effect value threshold (241), the note is retriggered. With C 1 tick ahead, in a module with retrig speed=1 and a long enough pattern, C would trigger the retrig 1 frame before Pascal. For yellowwe the window is only 30 frames and the threshold 241 is never reached, so it's benign.
+- **Likely cause**: The `ticklooper` reset/wrap logic at `src/a2t.c:4608-4610` (C) vs `a2player.pas:4306-4308` (Pascal) aligns `play_line` calls to a different phase of the audio frame cycle. The 1-frame offset propagates to the RT counter increment inside `update_effects`.
+- **Affected modules**: yellowwe (272 diff lines, all RT off-by-1). Potentially any module using `ef_RetrigNote`/`ef_MultiRetrigNote` where the retrig counter stays below threshold within the active window; audible only if the retrig threshold is reached during a pattern segment.
+- **Fix direction**: Align C's `ticklooper` reset timing with Pascal's — either adjust the reset condition at `src/a2t.c:4609` (`if (ticklooper >= IRQ_freq / tempo) ticklooper = 0;`) to match Pascal's `if (ticklooper >= IRQ_freq DIV tempo) then ticklooper := 0;`, or adjust the increment timing of `retrig_table[chan]` to match Pascal's update_effects tick count.
+
 ### Bug 14: Arpeggio val=0 Skip Guard Missing — FIXED
 - **Root cause**: Pascal (`a2player.pas:1498-1499`) skips the entire arpeggio block when `effect_def = ef_Arpeggio` AND `effect = 0`, preserving the previous arpeggio state/add1/add2. C had no such guard and always processed the arpeggio block, overwriting `add1`/`add2` with 0 and resetting state on carry-over rows.
 - **How it manifests**: On rows where `ef_Arpeggio` persists with `val=0x00` (pattern data contains raw 0, normalized to 0x80 in player state), C zeroes the arpeggio parameters while Pascal preserves them. This causes the arpeggio state machine to cycle at different rates, producing frequency table, arpeggio table, and shadow register diffs.

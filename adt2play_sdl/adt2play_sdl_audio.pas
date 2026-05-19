@@ -56,13 +56,13 @@ end;
 
 procedure snd_set_timer(freq: Longint);
 begin
-  sample_frame_size := ROUND(sdl_sample_rate / freq);
+  sample_frame_size := sdl_sample_rate DIV freq;
 end;
 
 procedure snd_init;
 begin
   GetMem(opl3_sample_buffer_ptr,sdl_sample_buffer*4);
-  sample_frame_size := ROUND(sdl_sample_rate/50);
+  sample_frame_size := sdl_sample_rate DIV 50;
   snd_SetTimer := snd_set_timer;
 
   OPL3EMU_init;
