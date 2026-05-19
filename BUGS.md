@@ -110,6 +110,14 @@
   4. Consider adding `ef_fix1` ($80) to C's `effect_table.def` for arpeggio effects, to match Pascal's encoding and enable proper carry-over detection.
 - **Affected modules**: `rbfactry` (842 diff lines at 30k, 240 non-MB). `drgwrrtt` (75 F/MB/0 diffs, arpeggio state out of phase by 1 step causing 0x46 frequency offset on ch6). Likely affects other modules with arpeggio carry-over patterns.
 
+### Bug 16: Volume Slide Early Return on NULL Instrument — FIXED
+- **Root cause**: C's `slide_volume_up` (`src/a2t.c:2479-2486`) and `slide_volume_down` (`src/a2t.c:2559-2566`) had an early `return` guard when `get_instr_data_by_ch(chan)` returned NULL. This happens when `voice_table[chan]` references an instrument index beyond `instrinfo->count`. The early return skipped the entire volume slide, including `slide_carrier_volume_up/down` which does NOT need instrument data (it reads from `fmpar_table` and writes directly). Only the modulator volume step needs the instrument data (to check `connect` flag).
+- **How it manifests**: For `spaceple.a2m`, `instrinfo->count=10` but `voice_table[10]=0x0b=11` (channel 11 references instrument 11, which doesn't exist). At pattern 1 row 1, channels 10 and 11 have `ef_VolSlide` (0x0A) with value 0x02 but no note or instrument event. C's `slide_volume_down` returns early for channel 11, skipping the carrier volume slide entirely. Pascal has no such guard and proceeds. This causes `carrier_vol[10]` (CV line) to diverge: C stays at 0x00, Pascal slides from 0x3d downward. Also affects `shadow_regs[1][0x43]` (channel 9 carrier total level register) and `fmpar_table[9].volC` (FP line).
+- **Fix applied** (`src/a2t.c`):
+  - `slide_volume_up`: Moved `get_instr_data_by_ch` call after `slide_carrier_volume_up`, removed `if (!i) return;`. Only use `i` for the modulator volume guard: `if (i && (i->fm.connect || ...))`.
+  - `slide_volume_down`: Same pattern — call `slide_carrier_volume_down` first, then fetch instrument data only for the modulator check.
+- **Resolved module**: `spaceple` — 24,967 diff lines → **0** (verified at 30k frames). All 3 diff types eliminated: CV (carrier_vol), FP (fmpar volC), SR1 (shadow_regs bank 1 reg 0x43).
+
 ### Bug 15: retrig_table Off-by-1 Timing Alignment — UNFIXED
 - **Root cause**: C's `ticklooper` timing is misaligned with Pascal's by 1 frame increment for the retrig_table counter on channel 2 of `yellowwe.a2m`. Beginning at frame 26905 (when ch2 receives note=37, ins=3 with `ef_RetrigNote` effect value 0xF1=241), C's `retrig_table[2]` is always exactly 1 ahead of Pascal's (`C = Pascal + 1`) for 30 consecutive frames.
 - **Pattern observed** (frames 26905–26934, all diffs on ch2 only):
@@ -162,6 +170,7 @@
 | mlf | 14 | 9 | 5 | Bug 13 fix resolved old_002 (185,144→2,942, 98.4% reduction) |
 | brendan | ~70 | ~65 | 5 | Bug 3 fix resolved chivalry (2438→0) |
 | brendan | ~70 | ~66 | 4 | Bug 8 resolved dream7mx (C–Pascal divergence at 0x14c eliminated. Shadow reg diff: 0) |
+| brendan | ~70 | ~67 | 3 | Bug 16 resolved spaceple (24,967→0). Volume slide early return on NULL instrument removed. |
 | kkonaa | 2 | 1 | 1 | `limitbrk`: Bug 12 fix resolved (310,177→0). `adr1ft`: Bug 11 (benign keyoff_loop MB diff). |
 
 ## Key Files
@@ -173,6 +182,10 @@
 - `adt2play_sdl/a2player.pas:925-999` — Pascal's `set_ins_data` (reference)
 - `adt2play_sdl/a2player.pas:1111-1177` — Pascal's `output_note` (reference)
 - `src/a2t.c:2121-2215` — C's `play_line` (ordering reference)
+- `src/a2t.c:2477-2486` — `slide_volume_up` NULL instrument guard (Bug 16 fix: moved after carrier slide)
+- `src/a2t.c:2555-2566` — `slide_volume_down` NULL instrument guard (Bug 16 fix: moved after carrier slide)
+- `adt2play_sdl/a2player.pas:2900-2972` — Pascal's `slide_volume_up` (reference for Bug 16)
+- `adt2play_sdl/a2player.pas:2974-2987` — Pascal's `slide_carrier_volume_down` (reference for Bug 16)
 - `src/a2t.c:1648-1691` — C's `ef_SetInsVolume`/`ef_ForceInsVolume` handlers (Bug 10 fix: added `is_data_empty` guard)
 - `adt2play_sdl/a2player.pas:1662-1678` — Pascal's `ef_SetInsVolume`/`ef_ForceInsVolume` handlers (reference for Bug 10)
 - `src/a2t.c:2175-2189` — C's `play_line` unconditional eff write (Bug 4 fix)
@@ -191,7 +204,8 @@
   7. ~~**Bug 10 (C ef_SetInsVolume/ef_ForceInsVolume is_data_empty guard)** — FIXED 2026-05-17.~~ Resolved `amegas` (437,366 → 0).
   8. ~~**Bug 12 (TonePortamento effect_table cleared on new note with val=0)** — FIXED 2026-05-18.~~ Resolved `limitbrk` (310,177 → 0).
   9. ~~**Bug 13 (v5-8 loader missing ManualFSlide→FineTune conversion)** — FIXED 2026-05-18.~~ Resolved `old_002` (185,144 → 2,942, 98.4% reduction).
-  10. ~~**Bug 14 (Arpeggio val=0 skip guard missing)** — FIXED 2026-05-18.~~ Resolved `4xmisste` (228,524 → 25,362, 88.9% reduction).
-  11. **Re-test all FRAME-DIFF modules** after each fix.
+   10. ~~**Bug 14 (Arpeggio val=0 skip guard missing)** — FIXED 2026-05-18.~~ Resolved `4xmisste` (228,524 → 25,362, 88.9% reduction).
+   11. ~~**Bug 16 (Volume slide early return on NULL instrument)** — FIXED 2026-05-19.~~ Resolved `spaceple` (24,967 → 0).
+   12. **Re-test all FRAME-DIFF modules** after each fix.
 8. **Update MODULES_TESTED.md** with results.
 9. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.

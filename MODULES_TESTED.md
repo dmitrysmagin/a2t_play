@@ -157,7 +157,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | skylight | 17576 | 0 | PASS | |
 | skysharp | 9597 | 0 | PASS | |
 | sleepwrk | 17856 | 0 | PASS | |
-| spaceple | 23227 | 24967 | FRAME-DIFF | Previously 24,967 diffs (init artifact ± freq diffs). Resolved by cumulative bug fixes. Effects: FSlideUp, FSlideDown, Vibrato, VolSlide, SetInsVolume, PatternBreak. |
+| spaceple | 30720 | 0 | PASS | Fixed 2026-05-19: `slide_volume_up`/`slide_volume_down` early return on NULL instrument removed (Bug 16). Channel 11 had `voice_table[10]=0x0b=11` beyond `instrinfo->count=10`, causing C to skip carrier volume slide while Pascal proceeded. Previously 24,967 diffs (CV/FP/SR1). Effects: FSlideUp, FSlideDown, Vibrato, VolSlide, SetInsVolume, PatternBreak. |
 | sparkplg | 26881 | 0 | PASS | Init artifact bank 1 KSL/TL. |
 | stormywe | 14423 | 0 | PASS | |
 | suspicis | 10755 | 0 | PASS | Init artifact bank 1 KSL/TL. |
