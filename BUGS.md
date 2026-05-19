@@ -110,6 +110,12 @@
   4. Consider adding `ef_fix1` ($80) to C's `effect_table.def` for arpeggio effects, to match Pascal's encoding and enable proper carry-over detection.
 - **Affected modules**: `rbfactry` (842 diff lines at 30k, 240 non-MB). `drgwrrtt` (75 F/MB/0 diffs, arpeggio state out of phase by 1 step causing 0x46 frequency offset on ch6). Likely affects other modules with arpeggio carry-over patterns.
 
+### Bug 18: LOOP 5 — Missing effect_table zeroing and event_table eff copy — FIXED
+- **Root cause**: Pascal's `play_line` LOOP 5 (2661-2673) performs two operations AFTER the Case blocks: (1) zeros `effect_table` when `effect_def+effect = 0` AND `glfsld_table = 0`; (2) copies event effect fields to `event_table` when an effect is present. C had no equivalent logic, relying on `process_effects_slot_prepare` (LOOP 1) to handle effect_table, which ran BEFORE the Case blocks.
+- **How it manifests**: Timing mismatch between C and Pascal for when effect_table is zeroed and when event_table is updated. Pascal's Case blocks see preserved val from `AND $0ff00`, while C's Case blocks saw either zeroed or stale values. This contributed to `opl303.a2m` divergence at frame 9361.
+- **Fix applied** (`src/a2t.c:2278-2290`): Added LOOP 5 equivalent after `process_effects_slot_body` loops and before `new_process_note`. For each channel/slot: if no effect AND no global fslide, zero effect_table; if effect present, copy to event_table. Matches Pascal's timing and semantics.
+- **Resolved module**: `opl303` — 12,144 → 2,640 diff lines (78.3% reduction). `spaceple` remains at 0 diffs (no regression).
+
 ### Bug 17: TonePortamento Key-Off Note Treated as Valid Note — FIXED
 - **Root cause**: C's `process_effects_slot_body` (`src/a2t.c:1562-1563`) masked off `keyoff_flag` when checking `has_note`: `uint8_t nb = event->note & ~keyoff_flag; bool has_note = (nb >= 1 && nb <= 12*8+1);`. Pascal (`a2player.pas:1578`) checks the **raw** note value: `If (event[chan].note in [1..12*8+1])`. A key-off note (e.g., `0xaf = note 47 | 0x80`) is NOT in Pascal's range `[1..97]`, so Pascal falls to the carry-over branch — `porta_table.speed` is only set if a prior TonePortamento effect existed. C incorrectly treated it as a valid note, setting `porta_table.speed` and `porta_table.freq` even without carry-over.
 - **How it manifests**: For `opl303.a2m` at frame 9361 (pattern 2, row 28), channel 3 has `note=0xaf` (key-off) with `ef_TonePortamento` val=0x30. No prior TonePortamento carry-over. C sets `porta_table.speed=0x30` and starts sliding from `freq=0x0e63` toward `portafreq=0x0d57`. Pascal skips entirely — `porta_table.speed` stays 0, no slide, frequency remains `0x0e63`. This produces 4622 diff lines across 66 frames (F: freq_table, PT: porta_table, 0: shadow_regs).
@@ -198,6 +204,7 @@
 - `src/a2t.c:2175-2189` — C's `play_line` unconditional eff write (Bug 4 fix)
 - `src/a2t.c:3416-3420` — C's `init_player` key_off/init_buffers order (Bug 5 fix)
 - `src/a2t.c:1563` — C's `process_effects_slot_body` TonePortamento `has_note` check (Bug 17 fix: removed keyoff_flag masking)
+- `src/a2t.c:2278-2290` — C's LOOP 5 effect_table zeroing and event_table eff copy (Bug 18 fix: added after Case blocks)
 - `adt2play_sdl/a2player.pas:1313-1322` — Pascal's LOOP1 unconditional eff write (reference for Bug 4)
 
 ## Next Steps
@@ -214,7 +221,8 @@
   9. ~~**Bug 13 (v5-8 loader missing ManualFSlide→FineTune conversion)** — FIXED 2026-05-18.~~ Resolved `old_002` (185,144 → 2,942, 98.4% reduction).
    10. ~~**Bug 14 (Arpeggio val=0 skip guard missing)** — FIXED 2026-05-18.~~ Resolved `4xmisste` (228,524 → 25,362, 88.9% reduction).
     11. ~~**Bug 16 (Volume slide early return on NULL instrument)** — FIXED 2026-05-19.~~ Resolved `spaceple` (24,967 → 0).
-    12. ~~**Bug 17 (TonePortamento key-off note treated as valid note)** — FIXED 2026-05-19.~~ Resolved `opl303` key-off portamento (660 → 0 at frame 5005 region).
+     12. ~~**Bug 17 (TonePortamento key-off note treated as valid note)** — FIXED 2026-05-19.~~ Resolved `opl303` key-off portamento (660 → 0 at frame 5005 region).
+    13. ~~**Bug 18 (LOOP 5 missing effect_table zeroing)** — FIXED 2026-05-19.~~ Resolved `opl303` (12,144 → 2,640, 78.3% reduction).
    12. **Re-test all FRAME-DIFF modules** after each fix.
 8. **Update MODULES_TESTED.md** with results.
 9. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, fm-troni, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.
