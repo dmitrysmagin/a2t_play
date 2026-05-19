@@ -181,7 +181,7 @@ begin
       ws := ws + LowerCase(IntToHex(pft^[i], 4));
     ws := ws + #13#10;
 
-    ws := ws + IntToStr(frames_dumped) + ' MB ' + get_macro_table_dump + #13#10;
+    { ws := ws + IntToStr(frames_dumped) + ' MB ' + get_macro_table_dump + #13#10; }
 
     ws := ws + IntToStr(frames_dumped) + ' PT ' + get_porta_table_dump + #13#10;
 

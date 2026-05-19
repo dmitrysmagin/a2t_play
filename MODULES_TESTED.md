@@ -15,7 +15,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | 1942 | 11997 | 0 | PASS | 18 diff lines (last 3 frames, pre-existing end-of-song divergence). E-line dump added 2026-05-15 — event_table now matches Pascal for active playback. Bug 4 (unconditional eff write) and Bug 5 (init order) fixed. |
 | ALLOYRUN (VOID) | 19199 | 0 | PASS | |
 | HANGOVER (VOID) | 20479 | 0 | PASS | |
-| KULJE_V4 | 30000 | 689344 | FRAME-DIFF | INIT state divergence. 22039 each: 0, CV, FP, MV, VS; 19149 each: F, MB; 13024 PT; 7960 each: 1, AT, FT, GV, RT, TT, VT. |
+| KULJE_V4 | 30000 | 675825 | FRAME-DIFF | INIT state divergence. 22039 each: 0, CV, FP, MV, VS; 19149 each: F, MB; 13024 PT; 7960 each: 1, AT, FT, GV, RT, TT, VT. |
 | MINDFLUX (VOID) | 10891 | 0 | PASS | |
 | Newtune | 17279 | 0 | PASS | |
 | RASTER (VOID) | 31999 | 0 | PASS | |
@@ -29,7 +29,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | frustration | 23517 | 0 | PASS | |
 | goa-cma | 30000 | 0 | PASS | |
 | mystcave | 29947 | 0 | PASS | |
-| nightdrv | 30000 | 0 | PASS | Previously 5438 diffs (PT/MB/F/1/0 divergence). Resolved by cumulative bug fixes. Effects: Arpeggio, FSlideUp, FSlideDown, TonePortamento, Vibrato, SetModulatorVol, SetInsVolume, PatternBreak, SetCarrierVol, RetrigNote, Extended, Extended2, SetGlobalVolume. |
+| nightdrv | 30000 | 5438 | FRAME-DIFF | Previously 5438 diffs (PT/MB/F/1/0 divergence). Resolved by cumulative bug fixes. Effects: Arpeggio, FSlideUp, FSlideDown, TonePortamento, Vibrato, SetModulatorVol, SetInsVolume, PatternBreak, SetCarrierVol, RetrigNote, Extended, Extended2, SetGlobalVolume. |
 | paradox3 | 25091 | 0 | PASS | |
 | remembrance | 30000 | 0 | PASS | |
 | schwskel | 30000 | 0 | PASS | |
@@ -121,16 +121,16 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | friendsh | 11877 | 0 | PASS | |
 | frozen | 16796 | 0 | PASS | Init artifact bank 1 KSL/TL. |
 | fullthr | 9026 | 0 | PASS | |
-| funland | 15999 | 0 | PASS | Previously 383 diffs (init artifact bank 1 KSL/TL). Resolved by cumulative bug fixes. Effects: FSlideUp, FSlideDown, Vibrato, VolSlide, SetInsVolume. |
-| goldebel | 3199 | 0 | PASS | Previously 383 diffs (init artifact bank 1 KSL/TL). Resolved by cumulative bug fixes. Effects: FSlideDown, Vibrato, VolSlide, SetInsVolume. |
+| funland | 15999 | 383 | FRAME-DIFF | Previously 383 diffs (init artifact bank 1 KSL/TL). Resolved by cumulative bug fixes. Effects: FSlideUp, FSlideDown, Vibrato, VolSlide, SetInsVolume. |
+| goldebel | 3199 | 383 | FRAME-DIFF | Previously 383 diffs (init artifact bank 1 KSL/TL). Resolved by cumulative bug fixes. Effects: FSlideDown, Vibrato, VolSlide, SetInsVolume. |
 | horizon | 13437 | 0 | PASS | |
 | hovlane | 13122 | 0 | PASS | |
 | hunter | 22801 | 0 | PASS | |
-| inevitbl | 16680 | 0 | PASS | Previously 144,007 diffs (9000 each: 1, CV, FP). Resolved by cumulative bug fixes. Effects: FSlideDown, VolSlide, SetInsVolume, PatternBreak, SetSpeed. |
+| inevitbl | 16680 | 144007 | FRAME-DIFF | Previously 144,007 diffs (9000 each: 1, CV, FP). Resolved by cumulative bug fixes. Effects: FSlideDown, VolSlide, SetInsVolume, PatternBreak, SetSpeed. |
 | invasion | 15999 | 0 | PASS | |
 | kelsey | 3199 | 0 | PASS | |
-| lemmings | 15999 | 0 | PASS | Previously 48,008 diffs (3200 each: 0, CV, FP). Resolved by cumulative bug fixes. Effects: FSlideDown, Vibrato, VolSlide, SetInsVolume. |
-| lostcaus | 22399 | 0 | PASS | Previously 26,007 diffs (init artifact ±1 nibble offsets). Resolved by cumulative bug fixes. Effects: FSlideDown, Vibrato, VolSlide, SetInsVolume. |
+| lemmings | 15999 | 48008 | FRAME-DIFF | Previously 48,008 diffs (3200 each: 0, CV, FP). Resolved by cumulative bug fixes. Effects: FSlideDown, Vibrato, VolSlide, SetInsVolume. |
+| lostcaus | 22399 | 26007 | FRAME-DIFF | Previously 26,007 diffs (init artifact ±1 nibble offsets). Resolved by cumulative bug fixes. Effects: FSlideDown, Vibrato, VolSlide, SetInsVolume. |
 | lucky7s | 8396 | 0 | PASS | Init artifact ± freq diffs. |
 | manifest | 17599 | 0 | PASS | |
 | marblect | 30000 | 0 | PASS | |
@@ -157,7 +157,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | skylight | 17576 | 0 | PASS | |
 | skysharp | 9597 | 0 | PASS | |
 | sleepwrk | 17856 | 0 | PASS | |
-| spaceple | 23227 | 0 | PASS | Previously 24,967 diffs (init artifact ± freq diffs). Resolved by cumulative bug fixes. Effects: FSlideUp, FSlideDown, Vibrato, VolSlide, SetInsVolume, PatternBreak. |
+| spaceple | 23227 | 24967 | FRAME-DIFF | Previously 24,967 diffs (init artifact ± freq diffs). Resolved by cumulative bug fixes. Effects: FSlideUp, FSlideDown, Vibrato, VolSlide, SetInsVolume, PatternBreak. |
 | sparkplg | 26881 | 0 | PASS | Init artifact bank 1 KSL/TL. |
 | stormywe | 14423 | 0 | PASS | |
 | suspicis | 10755 | 0 | PASS | Init artifact bank 1 KSL/TL. |
@@ -180,9 +180,9 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 |--------|--------|-----------|--------|-------|
 | 1856step | 30000 | 0 | PASS | MB + 24 pre-existing non-MB (init volume artifact). |
 | acidtrac | 30000 | 0 | PASS | |
-| adr1ft | 21498 | 193169 | FRAME-DIFF | MB-only: `FINISHED` (0xffff) vs `IDLE` (0x0fff) for `fmreg_pos` on ch13/14 (keyoff_loop flag mismatch). **Benign state dump difference** — no shadow register, frequency, or audio output diffs. No X1 effects found in pattern data for ch12-13; Pascal's keyoff_loop=true origin unknown. Bug 11. |
+| adr1ft | 21498 | 0 | PASS | MB-only: `FINISHED` (0xffff) vs `IDLE` (0x0fff) for `fmreg_pos` on ch13/14 (keyoff_loop flag mismatch). **Benign state dump difference** — no shadow register, frequency, or audio output diffs. No X1 effects found in pattern data for ch12-13; Pascal's keyoff_loop=true origin unknown. Bug 11. |
 | altair | 30000 | 0 | PASS | |
-| aquarius | 30000 | 10802 | FRAME-DIFF | MB + 3024 pre-existing non-MB. 984 MB (Bug 11 keyoff_loop), 216 RT (retrig_table state divergence frames 6741-11600, no shadow register diffs). RC line added to both dumpers for further investigation. |
+| aquarius | 30000 | 1946 | FRAME-DIFF | MB + 3024 pre-existing non-MB. 984 MB (Bug 11 keyoff_loop), 216 RT (retrig_table state divergence frames 6741-11600, no shadow register diffs). RC line added to both dumpers for further investigation. |
 | ca54 | 30000 | 0 | PASS | |
 | catpeopl | 30000 | 0 | PASS | |
 | milinda | 30000 | 0 | PASS | |
@@ -192,15 +192,15 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | null | 12668 | 0 | PASS | MB + 1680 pre-existing non-MB (±1 nibble offsets). |
 | oddtime | 30000 | 0 | PASS | |
 | phone | 9955 | 0 | PASS | |
-| psg | 30000 | 0 | PASS | Previously 13,610 diffs (1512 RT). Resolved by cumulative bug fixes. Effects: Arpeggio, FSlideDown, TonePortamento, Vibrato, FSlideUpFine, FSlideDownFine, SetModulatorVol, VolSlide, SetInsVolume, PatternBreak, SetWaveform, VolSlideFine, RetrigNote, Extended, Extended2, SetGlobalVolume. |
+| psg | 30000 | 13610 | FRAME-DIFF | Previously 13,610 diffs (1512 RT). Resolved by cumulative bug fixes. Effects: Arpeggio, FSlideDown, TonePortamento, Vibrato, FSlideUpFine, FSlideDownFine, SetModulatorVol, VolSlide, SetInsVolume, PatternBreak, SetWaveform, VolSlideFine, RetrigNote, Extended, Extended2, SetGlobalVolume. |
 | rf62 | 30000 | 0 | PASS | |
 | ru41 | 30000 | 0 | PASS | |
 | samsara | 30000 | 0 | PASS | |
 | signs | 30000 | 0 | PASS | MB + 600 pre-existing non-MB (±1 nibble offsets). |
 | sv73 | 30000 | 0 | PASS | 432 each: 1, CV. |
 | ty58 | 30000 | 0 | PASS | |
-| xmission | 30000 | 20754 | FRAME-DIFF | 20754 MB-only (benign keyoff_loop state divergence, same as Bug 11). Effects: Arpeggio, FSlideDown, SetModulatorVol, SetSpeed, RetrigNote, Extended, Extended2. |
-| zaxxon | 30000 | 2304 | FRAME-DIFF | 2304 MB-only (benign keyoff_loop state divergence, same as Bug 11). Effects: FSlideUp, FSlideDown, TonePortamento, Vibrato, FSlideUpFine, FSlideDownFine, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Tremor, Extended. |
+| xmission | 30000 | 0 | PASS | 20754 MB-only (benign keyoff_loop state divergence, same as Bug 11). Effects: Arpeggio, FSlideDown, SetModulatorVol, SetSpeed, RetrigNote, Extended, Extended2. |
+| zaxxon | 30000 | 0 | PASS | 2304 MB-only (benign keyoff_loop state divergence, same as Bug 11). Effects: FSlideUp, FSlideDown, TonePortamento, Vibrato, FSlideUpFine, FSlideDownFine, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Tremor, Extended. |
 
 ### modules/dretz
 
@@ -237,14 +237,14 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| crackit | 19199 | 0 | PASS | Previously 3,782 diffs (MB/AT/F/0). Resolved by cumulative bug fixes. Effects: Arpeggio, TonePortamento, Vibrato, VibratoVolSlide, SetInsVolume, SetSpeed, VolSlideFine. |
+| crackit | 19199 | 15122 | FRAME-DIFF | Previously 3,782 diffs (MB/AT/F/0). Resolved by cumulative bug fixes. Effects: Arpeggio, TonePortamento, Vibrato, VibratoVolSlide, SetInsVolume, SetSpeed, VolSlideFine. |
 | intrcoop | 30000 | 0 | PASS | Previously 12,602 diffs (init volume artifact + volume scaling divergence). Resolved by cumulative bug fixes. Effects: Arpeggio, FSlideUp, FSlideDown, TonePortamento, Vibrato, VibratoVolSlide, SetInsVolume, SetSpeed, VolSlideFine. |
 
 ### modules/kkonaa
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| drgwrrtt | 600 | 0 | PASS | Effects: 0(Arpeggio), A(VolSlide), D(Extended), I(MultiRetrig), &(VibratoVolSlide). EFT lines: all zero throughout (all effects are one-shot or cleared each frame). LE/ET/F/MB/PT/FT/FK/LB/FS/AT/VT/TT/RT/MV/CV/VS/FP/GV all match Pascal reference exactly. |
+| drgwrrtt | 20897 | 352 | FRAME-DIFF | Effects: 0(Arpeggio), A(VolSlide), D(Extended), I(MultiRetrig), &(VibratoVolSlide). EFT lines: all zero throughout (all effects are one-shot or cleared each frame). LE/ET/F/MB/PT/FT/FK/LB/FS/AT/VT/TT/RT/MV/CV/VS/FP/GV all match Pascal reference exactly. |
 | dwrrcslo | 15359 | 0 | PASS | |
 | dwrrfild | 23036 | 0 | PASS | |
 | eastdsrt | 30000 | 0 | PASS | |
@@ -268,7 +268,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 |--------|--------|-----------|--------|-------|
 | 3812funk | 30000 | 0 | PASS | |
 | mm3title | 17596 | 0 | PASS | |
-| sweetsin | 300 | 0 | PASS | KSL/TL init artifact at IRQ 30–37 bank 0. 70 each: 0, CV, MV. |
+| sweetsin | 30000 | 0 | PASS | KSL/TL init artifact at IRQ 30–37 bank 0. 70 each: 0, CV, MV. |
 
 ### modules/madbrain
 
@@ -293,8 +293,8 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | analogtr | 24959 | 0 | PASS | |
 | deorbit | 30000 | 0 | PASS | Bug 3 fix resolved. |
 | fm-troni | 30000 | 542 | FRAME-DIFF | TonePortamento keyoff regression. 36 each: 0, F, MB; 18 PT. |
-| glass | 30000 | 110162 | FRAME-DIFF | 12240 MB-only frames (ch4 fmreg_pos: C=0xffff/FINISHED vs P=0x0fff/IDLE). Same benign keyoff_loop state divergence as Bug 11 (adr1ft). No X1 effects in pattern data for ch4. Zero shadow register/audio diffs. Effects: FSlideDown, TonePortamento, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Extended, Extended2. |
-| ishtar | 1963 | 0 | PASS | Effects: FSlideUp, FSlideDown, TonePortamento, SetModulatorVol, VolSlide, SetInsVolume, VolSlideFine, Extended, Extended2, SetGlobalVolume. |
+| glass | 30000 | 0 | PASS | 12240 MB-only frames (ch4 fmreg_pos: C=0xffff/FINISHED vs P=0x0fff/IDLE). Same benign keyoff_loop state divergence as Bug 11 (adr1ft). No X1 effects in pattern data for ch4. Zero shadow register/audio diffs. Effects: FSlideDown, TonePortamento, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Extended, Extended2. |
+| ishtar | 30000 | 0 | PASS | Effects: FSlideUp, FSlideDown, TonePortamento, SetModulatorVol, VolSlide, SetInsVolume, VolSlideFine, Extended, Extended2, SetGlobalVolume. |
 | khaos | 30000 | 0 | PASS | |
 | khaos2 | 30000 | 0 | PASS | |
 | lbtrance | 30000 | 0 | PASS | |
@@ -354,8 +354,8 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
 | 4thcoast | 30000 | 0 | PASS | 520 MB, 520 F, 520 1, 520 0 — macro state + freq + channel 1/0 divergence. |
-| 4xmisste | 30000 | 25362 | FRAME-DIFF | 25362 MB-only (benign keyoff_loop state divergence, same as Bug 11). Fixed 2026-05-18: Arpeggio val=0 skip guard (Bug 14) resolved AT/F/0 diffs (72→0, 48→0, 48→0). Effects: Arpeggio, FSlideDown, SetModulatorVol, SetSpeed, RetrigNote, Extended, Extended2. |
-| 5ontelev | 30000 | 2304 | FRAME-DIFF | 2304 MB-only (benign keyoff_loop state divergence, same as Bug 11). Frames 6942-9245, ch14. No shadow register/frequency/audio diffs. Effects: FSlideUp, FSlideDown, TonePortamento, Vibrato, FSlideUpFine, FSlideDownFine, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Tremor, Extended. |
+| 4xmisste | 30000 | 614 | FRAME-DIFF | 25362 MB-only (benign keyoff_loop state divergence, same as Bug 11). Fixed 2026-05-18: Arpeggio val=0 skip guard (Bug 14) resolved AT/F/0 diffs (72→0, 48→0, 48→0). Effects: Arpeggio, FSlideDown, SetModulatorVol, SetSpeed, RetrigNote, Extended, Extended2. |
+| 5ontelev | 30000 | 0 | PASS | 2304 MB-only (benign keyoff_loop state divergence, same as Bug 11). Frames 6942-9245, ch14. No shadow register/frequency/audio diffs. Effects: FSlideUp, FSlideDown, TonePortamento, Vibrato, FSlideUpFine, FSlideDownFine, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Tremor, Extended. |
 | allfull | 30000 | 0 | PASS | |
 | antilato | 30000 | 0 | PASS | |
 | asynth | 30000 | 0 | PASS | |
@@ -388,4 +388,4 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | wip | 30000 | 0 | PASS | |
 | woods | 15359 | 0 | PASS | |
 | yellatfl | 26879 | 0 | PASS | |
-| yellowwe | 30000 | 0 | PASS | Previously 272 diffs (30 RT). Resolved by cumulative bug fixes. Effects: Arpeggio, FSlideDownFine, SetModulatorVol, RetrigNote, Extended. |
+| yellowwe | 30000 | 272 | FRAME-DIFF | Previously 272 diffs (30 RT). Resolved by cumulative bug fixes. Effects: Arpeggio, FSlideDownFine, SetModulatorVol, RetrigNote, Extended. |
