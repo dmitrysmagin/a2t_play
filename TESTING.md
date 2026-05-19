@@ -27,14 +27,22 @@ Match C tool to have the same data dump as Pascal tool
 
 Both tools output lines per IRQ frame:
 
-  <frame_num> 0  <256 reg bytes as hex>        — shadow_regs[0] (OPL register file 0)
-  <frame_num> 1  <256 reg bytes as hex>        — shadow_regs[1] (OPL register file 1)
-  <frame_num> ET <120 bytes as hex>            — event_table[0..19] (6 bytes/channel: note, instr_def, eff0_def, eff0_val, eff1_def, eff1_val)
-  <frame_num> VS <40 bytes as hex>             — voice_table[0..19] (current instrument per channel)
-  <frame_num> FP <140 bytes as hex>            — fmpar dump per channel (volM, volC, kslM, kslC, connect)
-  <frame_num> GV <8 bytes as hex>              — global volume state (global_volume, fade_out_volume, overall_volume, volume_scaling, percussion_mode)
+  <frame_num> <pattern> <line> <ticks> <tick0> <tickD> <tickXF> 0  <256 reg bytes as hex>        — shadow_regs[0] (OPL register file 0)
+  <frame_num> <pattern> <line> <ticks> <tick0> <tickD> <tickXF> 1  <256 reg bytes as hex>        — shadow_regs[1] (OPL register file 1)
+  <frame_num> <pattern> <line> <ticks> <tick0> <tickD> <tickXF> ET <120 bytes as hex>            — event_table[0..19] (6 bytes/channel: note, instr_def, eff0_def, eff0_val, eff1_def, eff1_val)
+  <frame_num> <pattern> <line> <ticks> <tick0> <tickD> <tickXF> VS <40 bytes as hex>             — voice_table[0..19] (current instrument per channel)
+  <frame_num> <pattern> <line> <ticks> <tick0> <tickD> <tickXF> FP <140 bytes as hex>            — fmpar dump per channel (volM, volC, kslM, kslC, connect)
+  <frame_num> <pattern> <line> <ticks> <tick0> <tickD> <tickXF> GV <8 bytes as hex>              — global volume state (global_volume, fade_out_volume, overall_volume, volume_scaling, percussion_mode)
+
+Context fields (prepended to every line):
+  <pattern>   — current_pattern (pattern index in the pattern order list)
+  <line>      — current_line (row index within the current pattern)
+  <ticks>     — total tick counter (increments each IRQ)
+  <tick0>     — tick counter reset point (used for tempo/speed timing)
+  <tickD>     — pattern delay tick counter (counts down during pattern delay)
+  <tickXF>    — extra-fine tick counter (used for extra-fine effects)
 
 Additional debug lines (may be added/removed during investigation):
 
-  <frame_num> RT <40 bytes as hex>            — retrig_table[0][0..19] (retrigger counter per channel)
-  <frame_num> RC <40 bytes as hex>            — reset_chan[0..19] (reset flag per channel, 0 or 1)
+  <frame_num> <pattern> <line> <ticks> <tick0> <tickD> <tickXF> RT <40 bytes as hex>            — retrig_table[0][0..19] (retrigger counter per channel)
+  <frame_num> <pattern> <line> <ticks> <tick0> <tickD> <tickXF> RC <40 bytes as hex>            — reset_chan[0..19] (reset flag per channel, 0 or 1)

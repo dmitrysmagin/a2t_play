@@ -533,6 +533,7 @@ static void wr_trace(uint16_t full_reg, uint8_t val)
 static void dump_frame(void)
 {
     int i;
+    char ctx[64];
 #ifdef A2M_DUMP_CONTEXT
     a2m_dump_context_at_irq_frames();
 #endif
@@ -540,13 +541,15 @@ static void dump_frame(void)
         play_status = isStopped;
         return;
     }
-    printf("%d 0 ", frames_dumped);
+    snprintf(ctx, sizeof(ctx), "%d %d %d %d %d %d ",
+             current_pattern, current_line, ticks, tick0, tickD, tickXF);
+    printf("%d %s0 ", frames_dumped, ctx);
     for (i = 0; i < 256; i++) printf("%02x", shadow_regs[0][i]);
     printf("\n");
-    printf("%d 1 ", frames_dumped);
+    printf("%d %s1 ", frames_dumped, ctx);
     for (i = 0; i < 256; i++) printf("%02x", shadow_regs[1][i]);
     printf("\n");
-    printf("%d ET ", frames_dumped);
+    printf("%d %sET ", frames_dumped, ctx);
     for (i = 0; i < 20; i++) {
         printf("%02x%02x%02x%02x%02x%02x",
                ch->event_table[i].note,
@@ -558,7 +561,7 @@ static void dump_frame(void)
     }
     printf("\n");
     /*
-    printf("%d LE ", frames_dumped);
+    printf("%d %sLE ", frames_dumped, ctx);
     for (i = 0; i < 20; i++) {
         printf("%02x%02x%02x%02x",
                ch->last_effect[0][i].def & 0x7f,
@@ -567,7 +570,7 @@ static void dump_frame(void)
                ch->last_effect[1][i].val);
     }
     printf("\n");
-    printf("%d EFT ", frames_dumped);
+    printf("%d %sEFT ", frames_dumped, ctx);
     for (i = 0; i < 20; i++) {
         printf("%02x%02x%02x%02x",
                ch->effect_table[0][i].val,
@@ -577,16 +580,16 @@ static void dump_frame(void)
     }
     printf("\n");
     */
-    printf("%d KL ", frames_dumped);
+    printf("%d %sKL ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
         printf("%01x", ch->keyoff_loop[i] ? 1 : 0);
     printf("\n");
-    printf("%d F ", frames_dumped);
+    printf("%d %sF ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%04x", ch->freq_table[i]);
     printf("\n");
     /*
-    printf("%d MB ", frames_dumped);
+    printf("%d %sMB ", frames_dumped, ctx);
     for (i = 0; i < 20; i++) {
         tCH_MACRO_TABLE *mt = &ch->macro_table[i];
         printf("%04x%04x%04x%02x%02x%02x%02x%02x%02x%02x%02x%02x%04x",
@@ -598,7 +601,7 @@ static void dump_frame(void)
     }
     printf("\n");
     */
-    printf("%d PT ", frames_dumped);
+    printf("%d %sPT ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%04x%02x%04x%02x",
              ch->porta_table[0][i].freq,
@@ -606,23 +609,23 @@ static void dump_frame(void)
              ch->porta_table[1][i].freq,
              ch->porta_table[1][i].speed);
     printf("\n");
-    printf("%d FT ", frames_dumped);
+    printf("%d %sFT ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%02x", (unsigned)(uint8_t)ch->ftune_table[i]);
     printf("\n");
-    printf("%d FK ", frames_dumped);
+    printf("%d %sFK ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%01x", ch->portaFK_table[i] ? 1 : 0);
     printf("\n");
-    printf("%d LB ", frames_dumped);
+    printf("%d %sLB ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%02x", (unsigned)(uint8_t)ch->loopbck_table[i]);
     printf("\n");
-    printf("%d FS ", frames_dumped);
+    printf("%d %sFS ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%02x%02x", ch->fslide_table[0][i], ch->fslide_table[1][i]);
     printf("\n");
-    printf("%d AT ", frames_dumped);
+    printf("%d %sAT ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%02x%02x%02x%02x",
              ch->arpgg_table[0][i].state,
@@ -630,7 +633,7 @@ static void dump_frame(void)
              ch->arpgg_table[0][i].add1,
              ch->arpgg_table[0][i].add2);
     printf("\n");
-    printf("%d VT ", frames_dumped);
+    printf("%d %sVT ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%02x%02x%02x%02x%01x",
              ch->vibr_table[0][i].pos,
@@ -639,7 +642,7 @@ static void dump_frame(void)
              ch->vibr_table[0][i].depth,
              ch->vibr_table[0][i].fine ? 1 : 0);
     printf("\n");
-    printf("%d TT ", frames_dumped);
+    printf("%d %sTT ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%02x%02x%02x%02x%01x",
              ch->trem_table[0][i].pos,
@@ -648,29 +651,29 @@ static void dump_frame(void)
              ch->trem_table[0][i].depth,
              ch->trem_table[0][i].fine ? 1 : 0);
     printf("\n");
-    printf("%d RT ", frames_dumped);
+    printf("%d %sRT ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%02x", ch->retrig_table[0][i]);
     printf("\n");
-    printf("%d RC ", frames_dumped);
+    printf("%d %sRC ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%02x", ch->reset_chan[i] ? 1 : 0);
     printf("\n");
-    printf("%d MV ", frames_dumped);
+    printf("%d %sMV ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%02x", ch->modulator_vol[i]);
     printf("\n");
-    printf("%d CV ", frames_dumped);
+    printf("%d %sCV ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%02x", ch->carrier_vol[i]);
     printf("\n");
 
-    printf("%d VS ", frames_dumped);
+    printf("%d %sVS ", frames_dumped, ctx);
     for (i = 0; i < 20; i++)
       printf("%02x", ch->voice_table[i]);
     printf("\n");
 
-    printf("%d FP ", frames_dumped);
+    printf("%d %sFP ", frames_dumped, ctx);
     for (i = 0; i < 20; i++) {
         tFM_INST_DATA *fp = &ch->fmpar_table[i];
         printf("%02x%02x%01x%01x%01x",
@@ -680,7 +683,7 @@ static void dump_frame(void)
     }
     printf("\n");
 
-    printf("%d GV ", frames_dumped);
+    printf("%d %sGV ", frames_dumped, ctx);
     printf("%02x%02x%02x%01x%01x",
            (unsigned)global_volume, (unsigned)fade_out_volume,
            (unsigned)overall_volume,
@@ -688,7 +691,7 @@ static void dump_frame(void)
            (unsigned)(percussion_mode ? 1 : 0));
     printf("\n");
 
-    // printf("%d WR ", frames_dumped);
+    // printf("%d %sWR ", frames_dumped, ctx);
     // for (i = 0; i < WR_TRACE_SIZE; i++) {
     //     int idx;
     //     if (i < wr_trace_count) {

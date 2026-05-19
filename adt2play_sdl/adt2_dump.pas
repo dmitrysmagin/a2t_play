@@ -143,21 +143,25 @@ var
    pft: ^tFreqTable;
    i: Integer;
    ws: AnsiString;
+   ctx: AnsiString;
 begin
    if frames_dumped >= max_frames then
      begin
        play_status := isStopped;
        Exit;
      end;
-   ws := IntToStr(frames_dumped) + ' 0 ';
+   ctx := IntToStr(current_pattern) + ' ' + IntToStr(current_line) + ' ' +
+          IntToStr(ticks) + ' ' + IntToStr(tick0) + ' ' +
+          IntToStr(tickD) + ' ' + IntToStr(tickXF) + ' ';
+   ws := IntToStr(frames_dumped) + ' ' + ctx + '0 ';
    for i := 0 to 255 do
      ws := ws + LowerCase(IntToHex(shadow_regs[0, i], 2));
    ws := ws + #13#10;
-   ws := ws + IntToStr(frames_dumped) + ' 1 ';
+   ws := ws + IntToStr(frames_dumped) + ' ' + ctx + '1 ';
    for i := 0 to 255 do
      ws := ws + LowerCase(IntToHex(shadow_regs[1, i], 2));
    ws := ws + #13#10;
-      ws := ws + IntToStr(frames_dumped) + ' ET ';
+      ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'ET ';
       pevt := Pointer(get_event_table);
       for i := 1 to 20 do
         begin
@@ -169,49 +173,49 @@ begin
           ws := ws + LowerCase(IntToHex(pevt^[i].effect2, 2));
         end;
       ws := ws + #13#10;
-     { ws := ws + IntToStr(frames_dumped) + ' LE ' + get_last_effect_dump + #13#10;
+     { ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'LE ' + get_last_effect_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' EFT ' + get_effect_table_dump + #13#10; }
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'EFT ' + get_effect_table_dump + #13#10; }
 
-     ws := ws + IntToStr(frames_dumped) + ' KL ' + get_keyoff_loop_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'KL ' + get_keyoff_loop_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' F ';
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'F ';
     pft := Pointer(get_freq_table);
     for i := 1 to 20 do
       ws := ws + LowerCase(IntToHex(pft^[i], 4));
     ws := ws + #13#10;
 
-    { ws := ws + IntToStr(frames_dumped) + ' MB ' + get_macro_table_dump + #13#10; }
+    { ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'MB ' + get_macro_table_dump + #13#10; }
 
-    ws := ws + IntToStr(frames_dumped) + ' PT ' + get_porta_table_dump + #13#10;
+    ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'PT ' + get_porta_table_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' FT ' + get_ftune_table_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'FT ' + get_ftune_table_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' FK ' + get_portaFK_table_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'FK ' + get_portaFK_table_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' LB ' + get_loopbck_table_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'LB ' + get_loopbck_table_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' FS ' + get_fslide_table_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'FS ' + get_fslide_table_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' AT ' + get_arpgg_table_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'AT ' + get_arpgg_table_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' VT ' + get_vibr_table_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'VT ' + get_vibr_table_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' TT ' + get_trem_table_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'TT ' + get_trem_table_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' RT ' + get_retrig_table_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'RT ' + get_retrig_table_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' RC ' + get_reset_chan_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'RC ' + get_reset_chan_dump + #13#10;
 
-     ws := ws + IntToStr(frames_dumped) + ' MV ' + get_modulator_vol_dump + #13#10;
+     ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'MV ' + get_modulator_vol_dump + #13#10;
 
-    ws := ws + IntToStr(frames_dumped) + ' CV ' + get_carrier_vol_dump + #13#10;
+    ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'CV ' + get_carrier_vol_dump + #13#10;
 
-    ws := ws + IntToStr(frames_dumped) + ' VS ' + get_voice_table_dump + #13#10;
+    ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'VS ' + get_voice_table_dump + #13#10;
 
-    ws := ws + IntToStr(frames_dumped) + ' FP ' + get_fmpar_dump + #13#10;
+    ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'FP ' + get_fmpar_dump + #13#10;
 
-    ws := ws + IntToStr(frames_dumped) + ' GV ' + get_global_vol_dump + #13#10;
+    ws := ws + IntToStr(frames_dumped) + ' ' + ctx + 'GV ' + get_global_vol_dump + #13#10;
 
     { WR line removed - benign write-order differences only }
 
