@@ -2477,12 +2477,10 @@ static void slide_volume_up(int chan, uint8_t slide)
     switch (ch->volslide_type[chan]) {
     case 0:
         if (!_4op_vol_valid_chan(chan)) {
-            tINSTR_DATA *i = get_instr_data_by_ch(chan);
-            if (!i) return;
-
             slide_carrier_volume_up(chan, slide, limit1);
 
-            if (i->fm.connect || (percussion_mode && (chan >= 16)))  // in [17..20]
+            tINSTR_DATA *i = get_instr_data_by_ch(chan);
+            if (i && (i->fm.connect || (percussion_mode && (chan >= 16))))  // in [17..20]
                slide_modulator_volume_up(chan, slide, limit2);
         } else {
             // Can use get_instr_data_by_ch()
@@ -2559,12 +2557,10 @@ static void slide_volume_down(int chan, uint8_t slide)
     switch (ch->volslide_type[chan]) {
     case 0:
         if (!_4op_vol_valid_chan(chan)) {
-            tINSTR_DATA *i = get_instr_data_by_ch(chan);
-            if (!i) return;
-
             slide_carrier_volume_down(chan, slide);
 
-            if (i->fm.connect || (percussion_mode && (chan >= 16))) { //in [17..20]
+            tINSTR_DATA *i = get_instr_data_by_ch(chan);
+            if (i && (i->fm.connect || (percussion_mode && (chan >= 16)))) { //in [17..20]
                slide_modulator_volume_down(chan, slide);
             }
         } else {
