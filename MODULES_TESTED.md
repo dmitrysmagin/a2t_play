@@ -354,7 +354,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
 | 4thcoast | 30000 | 0 | PASS | 520 MB, 520 F, 520 1, 520 0 — macro state + freq + channel 1/0 divergence. |
-| 4xmisste | 50688 | 243020 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 614). 25362 MB-only (benign keyoff_loop state divergence, same as Bug 11). Previously fixed 2026-05-18: Arpeggio val=0 skip guard (Bug 14) resolved AT/F/0 diffs (72→0, 48→0, 48→0). Effects: Arpeggio, FSlideDown, SetModulatorVol, SetSpeed, RetrigNote, Extended, Extended2. |
+| 4xmisste | 50688 | 241760 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 614). 25362 MB-only (benign keyoff_loop state divergence, same as Bug 11). Previously fixed 2026-05-18: Arpeggio val=0 skip guard (Bug 14) resolved AT/F/0 diffs (72→0, 48→0, 48→0). Effects: Arpeggio, FSlideDown, SetModulatorVol, SetSpeed, RetrigNote, Extended, Extended2. |
 | 5ontelev | 50688 | 0 | PASS | 2304 MB-only (benign keyoff_loop state divergence, same as Bug 11). Frames 6942-9245, ch14. No shadow register/frequency/audio diffs. Effects: FSlideUp, FSlideDown, TonePortamento, Vibrato, FSlideUpFine, FSlideDownFine, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Tremor, Extended. |
 | allfull | 30000 | 0 | PASS | |
 | antilato | 30000 | 0 | PASS | |
