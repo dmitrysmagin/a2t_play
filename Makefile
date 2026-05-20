@@ -18,7 +18,7 @@ else
   BASE_CFLAGS := -std=c99 -g -Wall -Wextra -Wno-unused-parameter -Wno-unused-function
 endif
 
-SDL_CONFIG  := sdl2-config
+SDL_CONFIG  := /c/Users/user/msys64/ucrt64/bin/sdl2-config
 SDL_CFLAGS  := $(shell $(SDL_CONFIG) --cflags)
 SDL_LDFLAGS := $(shell $(SDL_CONFIG) --libs)
 

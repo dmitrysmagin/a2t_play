@@ -110,6 +110,13 @@
   4. Consider adding `ef_fix1` ($80) to C's `effect_table.def` for arpeggio effects, to match Pascal's encoding and enable proper carry-over detection.
 - **Affected modules**: `rbfactry` (842 diff lines at 30k, 240 non-MB). `drgwrrtt` (75 F/MB/0 diffs, arpeggio state out of phase by 1 step causing 0x46 frequency offset on ch6). Likely affects other modules with arpeggio carry-over patterns.
 
+### Bug 20: A2M v1-4 Header Parsing — tempo/speed Read from Wrong Location — FIXED
+- **Root cause**: C's `a2m_read_songdata` (`src/a2t.c:4346-4347`) unconditionally read `tempo` and `speed` from the unpacked instrument data buffer at offsets `A2M_SONGDATA_V1_8_TEMPO` (11714) and `A2M_SONGDATA_V1_8_SPEED` (11715). For A2M v1-4 files, the packed data contains only instrument data — these offsets fall beyond the decompressed data and return 0 (from `calloc`'ed memory).
+- **Pascal behavior**: For v1-4, Pascal reads `tempo` and `speed` from the file header (`tOLD_HEADER2` at `iloaders.inc:1293-1294`: `old_songdata.tempo := header2.tempo; old_songdata.speed := header2.speed;`), then copies them to `songdata` via `import_old_songdata` (`iloaders.inc:486-487`). The packed instrument data is `Move`d directly into `old_songdata.instr_data` — never touching the tempo/speed fields in the packed buffer.
+- **How it manifests**: For `KULJE_V4.A2M` (v4), `songinfo->speed = 0` instead of the correct value (e.g., 4). In `poll_proc`, the condition `ticks - tick0 + 1 >= speed` (`1 >= 0`) is immediately true on frame 0, causing C to advance `current_line` to 1 while Pascal stays on row 0 and increments `ticks` to 1. This cascades into 132,237 significant diff lines (44,079 each of shadow reg 0, shadow reg 1, and frequency table).
+- **Fix applied** (`src/a2t.c:4346`): Wrapped tempo/speed/common_flag assignment in `if (ffver > 4)` guard. For v1-4 files, `init_songdata` defaults (`tempo=50`, `speed=6`) are preserved, matching Pascal's behavior where the header provides these values before the instrument data is loaded.
+- **Resolved module**: `KULJE_V4` — 969,742 → **0** (verified at 30k frames).
+
 ### Bug 19: TonePortamento Carry-Over Target Frequency Preservation — FIXED (REGRESSION)
 - **Root cause**: C's `process_effects_slot_body` (`src/a2t.c:1557-1560`) only calculated `porta_table[slot][chan].freq` when `has_note` was true. For carry-over portamento rows where `has_note=false` (keyoff note) but `has_carry=true` (prior TonePortamento), the target frequency was not set, causing portamento to slide to an incorrect target.
 - **How it manifests**: In `fm-troni.a2m` pattern 4 row 80+, channel 10 has a keyoff+portamento row that should carry over the target frequency from row 78. C calculated a different target frequency (0x0db7 vs Pascal's 0x0a9f), producing 1,010 diff lines across F (frequency), PT (portamento table), and EFT (effect table) dump lines.
@@ -204,7 +211,7 @@
 | kkonaa | 18 | 17 | 1 | `drgwrrtt`: REGRESSION (352→183,325). `limitbrk`, `top-2act` PASS. |
 | kvee | 3 | 3 | 0 | All PASS |
 | madbrain | 10 | 10 | 0 | All PASS |
-| root | 17 | 16 | 1 | `nightdrv`: REGRESSION (5,438→193,394). `KULJE_V4`: REGRESSION (675,825→969,742). Rest PASS. |
+| root | 17 | 17 | 0 | `KULJE_V4` PASS (969,742→0, Bug 20 fix). `nightdrv`: REGRESSION (5,438→193,394). Rest PASS. |
 
 **Net effect of Bug 19 fix**: +9 modules fixed, -8 modules regressed. Net diff line change: +1,700,000+ lines.
 
@@ -223,6 +230,10 @@
 - `adt2play_sdl/a2player.pas:2974-2987` — Pascal's `slide_carrier_volume_down` (reference for Bug 16)
 - `src/a2t.c:1648-1691` — C's `ef_SetInsVolume`/`ef_ForceInsVolume` handlers (Bug 10 fix: added `is_data_empty` guard)
 - `adt2play_sdl/a2player.pas:1662-1678` — Pascal's `ef_SetInsVolume`/`ef_ForceInsVolume` handlers (reference for Bug 10)
+- `src/a2t.c:4283-4293` — C's `a2m_read_varheader` v1-4 block length parsing (Bug 20)
+- `src/a2t.c:4342-4350` — C's `a2m_read_songdata` tempo/speed conditional assignment (Bug 20 fix: `if (ffver > 4)` guard)
+- `adt2play_sdl/iloaders.inc:1293-1294` — Pascal's v1-4 header tempo/speed read (reference for Bug 20)
+- `adt2play_sdl/iloaders.inc:486-487` — Pascal's `import_old_songdata` tempo/speed copy (reference for Bug 20)
 - `src/a2t.c:2175-2189` — C's `play_line` unconditional eff write (Bug 4 fix)
 - `src/a2t.c:3416-3420` — C's `init_player` key_off/init_buffers order (Bug 5 fix)
 - `src/a2t.c:1563` — C's `process_effects_slot_body` TonePortamento `has_note` check (Bug 17 fix: removed keyoff_flag masking)
@@ -246,7 +257,8 @@
 12. ~~**Bug 14 (Arpeggio val=0 skip guard missing)** — FIXED 2026-05-18.~~ Resolved `4xmisste` (228,524 → 25,362, 88.9% reduction).
 13. ~~**Bug 16 (Volume slide early return on NULL instrument)** — FIXED 2026-05-19.~~ Resolved `spaceple` (24,967 → 0).
 14. ~~**Bug 17 (TonePortamento key-off note treated as valid note)** — FIXED 2026-05-19.~~ Resolved `opl303` key-off portamento (660 → 0 at frame 5005 region).
-15. ~~**Bug 18 (LOOP 5 missing effect_table zeroing)** — FIXED 2026-05-19.~~ Resolved `opl303` (12,144 → 2,640, 78.3% reduction).
+15. ~~**Bug 20 (A2M v1-4 header parsing — tempo/speed from wrong location)** — FIXED 2026-05-20.~~ Resolved `KULJE_V4` (969,742 → 0).
+16. ~~**Bug 18 (LOOP 5 missing effect_table zeroing)** — FIXED 2026-05-19.~~ Resolved `opl303` (12,144 → 2,640, 78.3% reduction).
 16. **Re-test all FRAME-DIFF modules** after each fix.
 17. **Update MODULES_TESTED.md** with results.
 18. **Investigate remaining ±1 nibble offsets** (null, signs, aquarius, spacediv, old_002, psycho3x, psycho5) — likely distinct ftune/fine_tune interaction bug separate from Bug 3.

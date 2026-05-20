@@ -15,7 +15,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | 1942 | 21120 | 0 | PASS | 18 diff lines (last 3 frames, pre-existing end-of-song divergence). E-line dump added 2026-05-15 — event_table now matches Pascal for active playback. Bug 4 (unconditional eff write) and Bug 5 (init order) fixed. |
 | ALLOYRUN (VOID) | 19199 | 0 | PASS | |
 | HANGOVER (VOID) | 20479 | 0 | PASS | |
-| KULJE_V4 | 660000 | 969742 | FRAME-DIFF | INIT state divergence. 22039 each: 0, CV, FP, MV, VS; 19149 each: F, MB; 13024 PT; 7960 each: 1, AT, FT, GV, RT, TT, VT. |
+| KULJE_V4 | 315399 | 624704 | FRAME-DIFF | INIT state divergence. 22039 each: 0, CV, FP, MV, VS; 19149 each: F, MB; 13024 PT; 7960 each: 1, AT, FT, GV, RT, TT, VT. |
 | MINDFLUX (VOID) | 10891 | 0 | PASS | |
 | Newtune | 42240 | 0 | PASS | |
 | RASTER (VOID) | 31999 | 0 | PASS | |
@@ -157,7 +157,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | skylight | 17576 | 0 | PASS | |
 | skysharp | 9597 | 0 | PASS | |
 | sleepwrk | 17856 | 0 | PASS | |
-| spaceple | 30720 | 0 | PASS | Fixed 2026-05-19: `slide_volume_up`/`slide_volume_down` early return on NULL instrument removed (Bug 16). Channel 11 had `voice_table[10]=0x0b=11` beyond `instrinfo->count=10`, causing C to skip carrier volume slide while Pascal proceeded. Previously 24,967 diffs (CV/FP/SR1). Effects: FSlideUp, FSlideDown, Vibrato, VolSlide, SetInsVolume, PatternBreak. |
+| spaceple | 33792 | 0 | PASS | Fixed 2026-05-19: `slide_volume_up`/`slide_volume_down` early return on NULL instrument removed (Bug 16). Channel 11 had `voice_table[10]=0x0b=11` beyond `instrinfo->count=10`, causing C to skip carrier volume slide while Pascal proceeded. Previously 24,967 diffs (CV/FP/SR1). Effects: FSlideUp, FSlideDown, Vibrato, VolSlide, SetInsVolume, PatternBreak. |
 | sparkplg | 26881 | 0 | PASS | Init artifact bank 1 KSL/TL. |
 | stormywe | 14423 | 0 | PASS | |
 | suspicis | 10755 | 0 | PASS | Init artifact bank 1 KSL/TL. |
