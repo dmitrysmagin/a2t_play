@@ -29,7 +29,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | frustration | 23517 | 0 | PASS | |
 | goa-cma | 30000 | 0 | PASS | |
 | mystcave | 29947 | 0 | PASS | |
-| nightdrv | 50556 | 193394 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 5438). Effects: Arpeggio, FSlideUp, FSlideDown, TonePortamento, Vibrato, SetModulatorVol, SetInsVolume, PatternBreak, SetCarrierVol, RetrigNote, Extended, Extended2, SetGlobalVolume. |
+| nightdrv | 50556 | 164792 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 5438). Effects: Arpeggio, FSlideUp, FSlideDown, TonePortamento, Vibrato, SetModulatorVol, SetInsVolume, PatternBreak, SetCarrierVol, RetrigNote, Extended, Extended2, SetGlobalVolume. |
 | paradox3 | 25091 | 0 | PASS | |
 | remembrance | 30000 | 0 | PASS | |
 | schwskel | 30000 | 0 | PASS | |
@@ -182,7 +182,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | acidtrac | 30000 | 0 | PASS | |
 | adr1ft | 21498 | 0 | PASS | MB-only: `FINISHED` (0xffff) vs `IDLE` (0x0fff) for `fmreg_pos` on ch13/14 (keyoff_loop flag mismatch). **Benign state dump difference** — no shadow register, frequency, or audio output diffs. No X1 effects found in pattern data for ch12-13; Pascal's keyoff_loop=true origin unknown. Bug 11. |
 | altair | 30000 | 0 | PASS | |
-| aquarius | 38016 | 73361 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 1946). MB + 3024 pre-existing non-MB. 984 MB (Bug 11 keyoff_loop), 216 RT (retrig_table state divergence frames 6741-11600, no shadow register diffs). RC line added to both dumpers for further investigation. |
+| aquarius | 38016 | 73847 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 1946). MB + 3024 pre-existing non-MB. 984 MB (Bug 11 keyoff_loop), 216 RT (retrig_table state divergence frames 6741-11600, no shadow register diffs). RC line added to both dumpers for further investigation. |
 | ca54 | 30000 | 0 | PASS | |
 | catpeopl | 30000 | 0 | PASS | |
 | milinda | 30000 | 0 | PASS | |
@@ -237,7 +237,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| crackit | 84370 | 430208 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 15122). Effects: Arpeggio, TonePortamento, Vibrato, VibratoVolSlide, SetInsVolume, SetSpeed, VolSlideFine. |
+| crackit | 84370 | 172568 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 15122). Effects: Arpeggio, TonePortamento, Vibrato, VibratoVolSlide, SetInsVolume, SetSpeed, VolSlideFine. |
 | intrcoop | 30000 | 0 | PASS | Previously 12,602 diffs (init volume artifact + volume scaling divergence). Resolved by cumulative bug fixes. Effects: Arpeggio, FSlideUp, FSlideDown, TonePortamento, Vibrato, VibratoVolSlide, SetInsVolume, SetSpeed, VolSlideFine. |
 
 ### modules/kkonaa
@@ -299,7 +299,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | khaos2 | 30000 | 0 | PASS | |
 | lbtrance | 30000 | 0 | PASS | |
 | old_001 | 24959 | 0 | PASS | |
-| old_002 | 70400 | 596344 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 2942). Previously fixed 2026-05-18: v5-8 loader now converts ef_ManualFSlide (22) to ef_Extended2 FineTuneUp/Down (matching Pascal's import_old_a2m_event2). Reduced from 185,144 to 2,942 diffs (98.4%). Remaining: 420 frames each of MB/F/0 — frequency offset (0x30) likely separate ftune bug. Effects: Arpeggio, FSlideDown, TonePortamento, Vibrato, SetInsVolume, RetrigNote, ArpggVSlide, Extended, Extended2. |
+| old_002 | 70400 | 142427 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 2942). Previously fixed 2026-05-18: v5-8 loader now converts ef_ManualFSlide (22) to ef_Extended2 FineTuneUp/Down (matching Pascal's import_old_a2m_event2). Reduced from 185,144 to 2,942 diffs (98.4%). Remaining: 420 frames each of MB/F/0 — frequency offset (0x30) likely separate ftune bug. Effects: Arpeggio, FSlideDown, TonePortamento, Vibrato, SetInsVolume, RetrigNote, ArpggVSlide, Extended, Extended2. |
 | opl303 | 92686 | 0 | PASS | Bug 17 fixed (2026-05-19): key-off note no longer treated as valid note in TonePortamento (was 660 lines at frame 5005 region → 0). Remaining 4622 diffs: portamento starts 2 ticks later in C vs Pascal (effect_table cleared at play_line start, update_effects sees def=0 on first 2 ticks of new row). 66 each: 0, F, MB, PT. |
 | pink | 70070 | 0 | PASS | ±1 pitch nibbles bank 0 ch0 F-Number Low. ftune/fine_tune interaction. 150 VT, 105 each: 0, MB. |
 | spacediv | 21010 | 0 | PASS | ±1 nibble offset many frames. ftune/fine_tune interaction. 3580 each: F, MB; 3460 0; 180 1; 60 PT. |
@@ -354,8 +354,8 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
 | 4thcoast | 30000 | 0 | PASS | 520 MB, 520 F, 520 1, 520 0 — macro state + freq + channel 1/0 divergence. |
-| 4xmisste | 50688 | 284492 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 614). 25362 MB-only (benign keyoff_loop state divergence, same as Bug 11). Previously fixed 2026-05-18: Arpeggio val=0 skip guard (Bug 14) resolved AT/F/0 diffs (72→0, 48→0, 48→0). Effects: Arpeggio, FSlideDown, SetModulatorVol, SetSpeed, RetrigNote, Extended, Extended2. |
-| 5ontelev | 30000 | 0 | PASS | 2304 MB-only (benign keyoff_loop state divergence, same as Bug 11). Frames 6942-9245, ch14. No shadow register/frequency/audio diffs. Effects: FSlideUp, FSlideDown, TonePortamento, Vibrato, FSlideUpFine, FSlideDownFine, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Tremor, Extended. |
+| 4xmisste | 50688 | 243020 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 614). 25362 MB-only (benign keyoff_loop state divergence, same as Bug 11). Previously fixed 2026-05-18: Arpeggio val=0 skip guard (Bug 14) resolved AT/F/0 diffs (72→0, 48→0, 48→0). Effects: Arpeggio, FSlideDown, SetModulatorVol, SetSpeed, RetrigNote, Extended, Extended2. |
+| 5ontelev | 50688 | 0 | PASS | 2304 MB-only (benign keyoff_loop state divergence, same as Bug 11). Frames 6942-9245, ch14. No shadow register/frequency/audio diffs. Effects: FSlideUp, FSlideDown, TonePortamento, Vibrato, FSlideUpFine, FSlideDownFine, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Tremor, Extended. |
 | allfull | 30000 | 0 | PASS | |
 | antilato | 30000 | 0 | PASS | |
 | asynth | 30000 | 0 | PASS | |
@@ -388,4 +388,4 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | wip | 30000 | 0 | PASS | |
 | woods | 15359 | 0 | PASS | |
 | yellatfl | 26879 | 0 | PASS | |
-| yellowwe | 42130 | 45362 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 272). Effects: Arpeggio, FSlideDownFine, SetModulatorVol, RetrigNote, Extended. |
+| yellowwe | 42130 | 0 | PASS | REGRESSION after TonePortamento carry-over fix (was 272). Effects: Arpeggio, FSlideDownFine, SetModulatorVol, RetrigNote, Extended. |
