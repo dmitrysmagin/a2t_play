@@ -388,4 +388,4 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 | wip | 30000 | 0 | PASS | |
 | woods | 15359 | 0 | PASS | |
 | yellatfl | 26879 | 0 | PASS | |
-| yellowwe | 42130 | 15392 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 272). Effects: Arpeggio, FSlideDownFine, SetModulatorVol, RetrigNote, Extended. |
+| yellowwe | 42130 | 45362 | FRAME-DIFF | REGRESSION after TonePortamento carry-over fix (was 272). Effects: Arpeggio, FSlideDownFine, SetModulatorVol, RetrigNote, Extended. |

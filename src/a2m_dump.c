@@ -563,18 +563,18 @@ static void dump_frame(void)
     printf("%d %sLE ", frames_dumped, ctx);
     for (i = 0; i < 20; i++) {
         printf("%02x%02x%02x%02x",
-               ch->last_effect[0][i].def & 0x7f,
+               ch->last_effect[0][i].def,
                ch->last_effect[0][i].val,
-               ch->last_effect[1][i].def & 0x7f,
+               ch->last_effect[1][i].def,
                ch->last_effect[1][i].val);
     }
     printf("\n");
     printf("%d %sEFT ", frames_dumped, ctx);
     for (i = 0; i < 20; i++) {
         printf("%02x%02x%02x%02x",
-               ch->effect_table[0][i].def & 0x7f,
+               ch->effect_table[0][i].def,
                ch->effect_table[0][i].val,
-               ch->effect_table[1][i].def & 0x7f,
+               ch->effect_table[1][i].def,
                ch->effect_table[1][i].val);
     }
     printf("\n");
