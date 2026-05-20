@@ -12,16 +12,16 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| 1942 | 11997 | 0 | PASS | 18 diff lines (last 3 frames, pre-existing end-of-song divergence). E-line dump added 2026-05-15 — event_table now matches Pascal for active playback. Bug 4 (unconditional eff write) and Bug 5 (init order) fixed. |
+| 1942 | 21120 | 0 | PASS | 18 diff lines (last 3 frames, pre-existing end-of-song divergence). E-line dump added 2026-05-15 — event_table now matches Pascal for active playback. Bug 4 (unconditional eff write) and Bug 5 (init order) fixed. |
 | ALLOYRUN (VOID) | 19199 | 0 | PASS | |
 | HANGOVER (VOID) | 20479 | 0 | PASS | |
-| KULJE_V4 | 30000 | 675825 | FRAME-DIFF | INIT state divergence. 22039 each: 0, CV, FP, MV, VS; 19149 each: F, MB; 13024 PT; 7960 each: 1, AT, FT, GV, RT, TT, VT. |
+| KULJE_V4 | 660000 | 969742 | FRAME-DIFF | INIT state divergence. 22039 each: 0, CV, FP, MV, VS; 19149 each: F, MB; 13024 PT; 7960 each: 1, AT, FT, GV, RT, TT, VT. |
 | MINDFLUX (VOID) | 10891 | 0 | PASS | |
-| Newtune | 17279 | 0 | PASS | |
+| Newtune | 42240 | 0 | PASS | |
 | RASTER (VOID) | 31999 | 0 | PASS | |
 | TERRANIA (VOID) | 19199 | 0 | PASS | |
-| adven | 30000 | 0 | PASS | Bug 3 fix resolved active playback (was 30 at 21k — 38 at 50k is end-of-song divergence). |
-| andromeda | 30000 | 0 | PASS | |
+| adven | 42130 | 0 | PASS | Bug 3 fix resolved active playback (was 30 at 21k — 38 at 50k is end-of-song divergence). |
+| andromeda | 95040 | 0 | PASS | |
 | bxx_nowgone | 3357 | 0 | PASS | |
 | class05 | 24959 | 0 | PASS | 6390 E-line diffs (event_table eff fields). |
 | damn-sh | 30000 | 0 | PASS | |
@@ -42,39 +42,39 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 
 | Module | Frames | Diff Lines | Status | Notes |
 |--------|--------|-----------|--------|-------|
-| ballad | 30000 | 0 | PASS | |
-| boss8 | 7679 | 0 | PASS | |
-| farhome | 21119 | 0 | PASS | |
-| fdance06 | 23036 | 0 | PASS | |
-| fdance27 | 23036 | 0 | PASS | |
-| fm63b_rv | 17759 | 0 | PASS | |
-| fmaven94 | 5998 | 0 | PASS | |
-| fmaven95 | 5761 | 0 | PASS | |
-| fmaven96 | 30000 | 0 | PASS | |
-| fmaven97 | 11397 | 0 | PASS | |
-| fmaven98 | 2556 | 0 | PASS | |
-| fmavn63b | 14205 | 0 | PASS | |
-| gates | 19199 | 0 | PASS | |
-| hitech2 | 28802 | 0 | PASS | |
-| hitech3 | 27361 | 0 | PASS | |
-| hitech3f | 18268 | 0 | PASS | |
-| jdaniels | 25599 | 0 | PASS | |
-| laboite | 23036 | 0 | PASS | |
-| neurophb | 30000 | 0 | PASS | |
-| nowgone | 30000 | 0 | PASS | |
-| recherch | 13827 | 0 | PASS | |
-| running | 30000 | 0 | PASS | |
-| song100 | 5374 | 0 | PASS | |
-| song102 | 6913 | 0 | PASS | |
-| song103 | 1917 | 0 | PASS | |
-| song105 | 4796 | 0 | PASS | |
-| song108 | 8642 | 0 | PASS | |
-| sonic | 27356 | 0 | PASS | |
-| stormrid | 15999 | 0 | PASS | |
-| tanmusik | 19199 | 0 | PASS | |
-| trance | 19201 | 0 | PASS | |
-| trance2 | 24960 | 0 | PASS | |
-| trouble | 30000 | 0 | PASS | |
+| ballad | 49280 | 0 | PASS | |
+| boss8 | 14058 | 0 | PASS | |
+| farhome | 42130 | 0 | PASS | |
+| fdance06 | 42130 | 0 | PASS | |
+| fdance27 | 42152 | 0 | PASS | |
+| fm63b_rv | 10450 | 136450 | FRAME-DIFF | |
+| fmaven94 | 5236 | 0 | PASS | |
+| fmaven95 | 21142 | 0 | PASS | |
+| fmaven96 | 49170 | 0 | PASS | |
+| fmaven97 | 4334 | 0 | PASS | |
+| fmaven98 | 28072 | 0 | PASS | |
+| fmavn63b | 8360 | 0 | PASS | |
+| gates | 84370 | 0 | PASS | |
+| hitech2 | 42284 | 0 | PASS | |
+| hitech3 | 10582 | 0 | PASS | |
+| hitech3f | 11110 | 0 | PASS | |
+| jdaniels | 22506 | 0 | PASS | |
+| laboite | 42152 | 0 | PASS | |
+| neurophb | 21054 | 0 | PASS | |
+| nowgone | 42130 | 0 | PASS | |
+| recherch | 50622 | 0 | PASS | |
+| running | 42240 | 0 | PASS | |
+| song100 | 16852 | 0 | PASS | |
+| song102 | 16918 | 0 | PASS | |
+| song103 | 21054 | 0 | PASS | |
+| song105 | 21010 | 0 | PASS | |
+| song108 | 42284 | 0 | PASS | |
+| sonic | 10450 | 0 | PASS | |
+| stormrid | 35178 | 0 | PASS | |
+| tanmusik | 42130 | 0 | PASS | |
+| trance | 21142 | 0 | PASS | |
+| trance2 | 21120 | 0 | PASS | |
+| trouble | 84370 | 0 | PASS | |
 | ultra | 9600 | 0 | PASS | |
 | village | 30000 | 0 | PASS | |
 | waterfls | 19201 | 0 | PASS | |
@@ -292,7 +292,7 @@ Results of comparing C (a2m_dump) vs Pascal (adt2_dump) output.
 |--------|--------|-----------|--------|-------|
 | analogtr | 24959 | 0 | PASS | |
 | deorbit | 30000 | 0 | PASS | Bug 3 fix resolved. |
-| fm-troni | 50622 | 1010 | FRAME-DIFF | Previously 542 diffs. Bug 18 fix (effect_table val not cleared) reduced from 260,915 to 1,010. Remaining diffs: pattern 4 row 80+, ch10 FSlideUp/TonePortamento carryover issue. Effects: FSlideUp, FSlideDown, TonePortamento, Vibrato, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Tremor, Extended, Extended2, SetGlobalVolume. |
+| fm-troni | 50622 | 0 | PASS | Previously 542 diffs. Bug 18 fix (effect_table val not cleared) reduced from 260,915 to 1,010. Remaining diffs: pattern 4 row 80+, ch10 FSlideUp/TonePortamento carryover issue. Effects: FSlideUp, FSlideDown, TonePortamento, Vibrato, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Tremor, Extended, Extended2, SetGlobalVolume. |
 | glass | 30000 | 0 | PASS | 12240 MB-only frames (ch4 fmreg_pos: C=0xffff/FINISHED vs P=0x0fff/IDLE). Same benign keyoff_loop state divergence as Bug 11 (adr1ft). No X1 effects in pattern data for ch4. Zero shadow register/audio diffs. Effects: FSlideDown, TonePortamento, SetModulatorVol, VolSlide, SetInsVolume, SetTempo, RetrigNote, Extended, Extended2. |
 | ishtar | 30000 | 0 | PASS | Effects: FSlideUp, FSlideDown, TonePortamento, SetModulatorVol, VolSlide, SetInsVolume, VolSlideFine, Extended, Extended2, SetGlobalVolume. |
 | khaos | 30000 | 0 | PASS | |
