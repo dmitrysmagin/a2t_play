@@ -5034,9 +5034,9 @@ begin
   tmp := '';
   for i := 1 to 20 do
   begin
-    tmp := tmp + LowerCase(IntToHex(LO(last_effect[i]) AND $7f, 2));
+    tmp := tmp + LowerCase(IntToHex(LO(last_effect[i]), 2));
     tmp := tmp + LowerCase(IntToHex(HI(last_effect[i]), 2));
-    tmp := tmp + LowerCase(IntToHex(LO(last_effect2[i]) AND $7f, 2));
+    tmp := tmp + LowerCase(IntToHex(LO(last_effect2[i]), 2));
     tmp := tmp + LowerCase(IntToHex(HI(last_effect2[i]), 2));
   end;
   get_last_effect_dump := tmp;
