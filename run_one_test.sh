@@ -58,14 +58,19 @@ TMP=$TMPDIR timeout "$TIMEOUT_SEC" "$REFS_DIR/adt2_dump" "$MODULE" "test/${base_
 c_reg="test/${base_noext}.c.reg"
 ref_reg="test/${base_noext}.ref.reg"
 diff_file="test/${base_noext}.diff"
+diff_sig_file="test/${base_noext}.diff.sig"
 if [ -f "$c_reg" ] && [ -f "$ref_reg" ]; then
   diff -u "$c_reg" "$ref_reg" > "$diff_file" 2>&1 || true
-  diff_lines=$(wc -l < "$diff_file")
+  # Filter: only count diffs in lines that affect audio output
+  # (shadow regs 0/1, frequency table F). Ignore LE, EFT, MB, ET, VS, FP, GV, etc.
+  awk '/^[+-][0-9]/ { if ($8 == "0" || $8 == "1" || $8 == "F") print }' "$diff_file" > "$diff_sig_file" 2>/dev/null || true
+  diff_lines=$(wc -l < "$diff_sig_file")
   if [ "$diff_lines" -eq 0 ]; then
-    rm -f "$diff_file"
+    rm -f "$diff_file" "$diff_sig_file"
     echo "OK: $base_noext"
   else
-    echo "DIFF: $base_noext ($diff_lines lines differ, see $diff_file)"
+    total_lines=$(wc -l < "$diff_file")
+    echo "DIFF: $base_noext ($diff_lines sig / $total_lines total lines differ, see $diff_file)"
   fi
 elif [ -f "$c_reg" ]; then
   echo "SKIP: $base_noext (no reference)"

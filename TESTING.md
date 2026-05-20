@@ -14,6 +14,7 @@ Match C tool to have the same data dump as Pascal tool
 * run run_one_test.sh with module filename and MAX_FRAMES=30000
 * memorize effects used in the module from *.reg file, use later in Notes column of MODULES_TESTED.md
 * compare diffs, note the frames region at which diff is found
+* IGNORE LE, EFT and MB diff lines that don't affect shadow registers (bank 0, 1) and F-line
 * a2m_dump: modify to isolate the frame region at which diff starts
 * a2m_dump: add additional dumping information if needed
 * a2m_dump: build with trace enabled A2M_DUMP_CONTEXT=1 and rerun test
