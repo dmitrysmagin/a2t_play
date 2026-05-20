@@ -1325,7 +1325,7 @@ static void play_line_arpgg_cleanup(const tADTRACK2_EVENT *event, int chan)
 
         bool arp = (((def == ef_Arpeggio) && (val != 0)) || (def == ef_ExtraFineArpeggio));
 
-        if (arp &&
+        if (!arp &&
             ch->arpgg_table[slot][chan].note != 0 &&
             ch->arpgg_table[slot][chan].state != 1) {
             ch->arpgg_table[slot][chan].state = 1;
