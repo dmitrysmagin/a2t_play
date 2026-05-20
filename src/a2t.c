@@ -3604,7 +3604,7 @@ static inline void a2t_depack(char *src, int srcsize, char *dst, int dstsize)
         break;
     case 4:
     case 8: // unpacked
-        if (dstsize <= srcsize)
+        if (srcsize <= dstsize)
             memcpy(dst, src, srcsize);
         break;
     case 9:
@@ -4282,11 +4282,11 @@ static int a2m_read_varheader(char *blockptr, int npatt, unsigned long size)
 
     if (ffver >= 1 && ffver <= 4) {
         /* v1-4: block lengths start immediately after 16-byte signature.
-         * tempo/speed are NOT in the packed instrument data at the
-         * A2M_SONGDATA_V1_8_TEMPO/SPEED offsets; keep init_songdata defaults. */
+         * tempo/speed are in the unpacked songdata buffer at standard offsets. */
         lensize = 5;
         if (lensize * 2 > size) return INT_MAX;
 
+        // skip possible rubbish (MARIO.A2M)
         for (unsigned int i = 0; (i < lensize) && (i <= maxblock); i++)
             len[i] = UINT16LE(src16 + i * 2);
 
@@ -4340,9 +4340,10 @@ static int a2m_read_songdata(char *packed, unsigned long size)
 
         memcpy(songinfo->pattern_order, A2M_SONGDATA_V1_8_PATTERN_ORDER_P(unpacked, 0), 128);
 
+        songinfo->tempo = A2M_SONGDATA_V1_8_TEMPO(unpacked);
+        songinfo->speed = A2M_SONGDATA_V1_8_SPEED(unpacked);
+
         if (ffver > 4) { // 5 - 8
-            songinfo->tempo = A2M_SONGDATA_V1_8_TEMPO(unpacked);
-            songinfo->speed = A2M_SONGDATA_V1_8_SPEED(unpacked);
             songinfo->common_flag = A2M_SONGDATA_V1_8_COMMON_FLAG(unpacked);
         }
 
