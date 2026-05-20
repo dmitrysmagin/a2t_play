@@ -1562,6 +1562,8 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
                 ch->effect_table[slot][chan].val = 0;
             }
             ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
+        } else {
+            /* adt2play.pas doesn't handle this branch, so it's UB */
         }
         break;
 
@@ -2181,7 +2183,7 @@ static void play_line()
         }
 
         /* Normalize arpeggio: raw file uses def=0 for arpeggio. Convert to
-         * ef_Arpeggio (50) so it's distinguishable from "no effect". */
+         * ef_Arpeggio (0x80) so it's distinguishable from "no effect". */
         for (int slot = 0; slot < 2; slot++) {
             if (event->eff[slot].def == 0 && event->eff[slot].val != 0)
                 event->eff[slot].def = ef_Arpeggio;
@@ -3860,7 +3862,7 @@ void convert_v1234_effects(tADTRACK2_EVENT *ev, int chan)
     };
 
     switch (ev->eff[0].def) {
-    case fx_Arpeggio:           ev->eff[0].def = 0/*ef_Arpeggio is 50 now*/;        break;
+    case fx_Arpeggio:           ev->eff[0].def = 0/*ef_Arpeggio is 0x80 now*/;        break;
     case fx_FSlideUp:           ev->eff[0].def = ef_FSlideUp;        break;
     case fx_FSlideDown:         ev->eff[0].def = ef_FSlideDown;      break;
     case fx_FSlideUpFine:       ev->eff[0].def = ef_FSlideUpFine;    break;
