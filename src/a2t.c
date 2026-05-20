@@ -1534,36 +1534,34 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
          * last_effect's type already matches ef_TonePortamento (carry-over).
          * A key-off note (note | 0x80) is NOT in [1..97], so Pascal falls through
          * to the carry-over branch — effect_table/speed only set if prior porta existed. */
-        {
-            uint8_t note = event->note & 0x7f; //note_in_range
-            bool has_note = (note >= 1 && note <= 12 * 8 + 1);
-            bool has_carry = (ch->last_effect[slot][chan].def == ef_TonePortamento);
-
-            if (has_note || has_carry) {
-                if (val != 0) {
-                    ch->effect_table[slot][chan].def = def;
-                    ch->effect_table[slot][chan].val = val;
-                } else if (ch->last_effect[slot][chan].def == ef_TonePortamento &&
-                           ch->last_effect[slot][chan].val != 0) {
-                    ch->effect_table[slot][chan].def = def;
-                    ch->effect_table[slot][chan].val = ch->last_effect[slot][chan].val;
-                } else {
-                    ch->effect_table[slot][chan].def = def;
-                    ch->effect_table[slot][chan].val = 0;
-                }
-
-                ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
-
-                if (has_note)
-                    ch->porta_table[slot][chan].freq =
-                        nFreq((event->note - 1)) +
-                        get_instr_fine_tune(ch->event_table[chan].instr_def);
+        if (event->note >= 1 && event->note  <= 12*8+1) {
+            if (event->eff[slot].val != 0) {
+                ch->effect_table[slot][chan].def = ef_TonePortamento;
+                ch->effect_table[slot][chan].val = val;
+            } else if (ch->last_effect[slot][chan].def == ef_TonePortamento && ch->last_effect[slot][chan].val != 0) {
+                ch->effect_table[slot][chan].def = ef_TonePortamento;
+                ch->effect_table[slot][chan].val = ch->last_effect[slot][chan].val;
+            } else {
+                ch->effect_table[slot][chan].def = ef_TonePortamento;
+                ch->effect_table[slot][chan].val = 0;
             }
-            else {
-                /* Pascal: do nothing — effect_table keeps def=0 (from AND $0ff00)
-                 * and val preserved from previous row. */
-                ch->effect_table[slot][chan].def = 0;
+
+            ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
+            ch->porta_table[slot][chan].freq =
+                nFreq((event->note - 1)) +
+                get_instr_fine_tune(ch->event_table[chan].instr_def);
+        } else if (ch->last_effect[slot][chan].def == ef_TonePortamento) {
+            if (event->eff[slot].val != 0) {
+                ch->effect_table[slot][chan].def = ef_TonePortamento;
+                ch->effect_table[slot][chan].val = val;
+            } else if (ch->last_effect[slot][chan].def == ef_TonePortamento && ch->last_effect[slot][chan].val != 0) {
+                ch->effect_table[slot][chan].def = ef_TonePortamento;
+                ch->effect_table[slot][chan].val = ch->last_effect[slot][chan].val;
+            } else {
+                ch->effect_table[slot][chan].def = ef_TonePortamento;
+                ch->effect_table[slot][chan].val = 0;
             }
+            ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
         }
         break;
 
