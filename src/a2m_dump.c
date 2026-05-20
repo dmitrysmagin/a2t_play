@@ -490,32 +490,6 @@ static void basename_no_ext(char *dst, size_t dstsize, const char *path)
     dst[len] = '\0';
 }
 
-static void detect_all_effects(void)
-{
-    static char echars[256] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><";
-    char effects[257];
-    int p, c, r;
-
-    memset(effects, '_', sizeof(effects));
-    effects[256] = '\0';
-
-    for (p = 0; p < eventsinfo->patterns; p++) {
-        for (c = 0; c < songinfo->nm_tracks; c++) {
-            for (r = 0; r < songinfo->patt_len; r++) {
-                tADTRACK2_EVENT *ev = get_event_p(p, c, r);
-                if (ev->eff[0].def != 0 || ev->eff[0].val != 0) {
-                    effects[ev->eff[0].def] = echars[ev->eff[0].def];
-                }
-                if (ev->eff[1].def != 0 || ev->eff[1].val != 0) {
-                    effects[ev->eff[1].def] = echars[ev->eff[1].def];
-                }
-            }
-        }
-    }
-
-    printf("EF %s\n", effects);
-}
-
 static int max_frames = 500;
 #define WR_TRACE_SIZE 64
 static uint16_t wr_trace_reg[WR_TRACE_SIZE];

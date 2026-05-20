@@ -4269,6 +4269,10 @@ static bool a2t_import(char *tune, unsigned long size)
 
     memory_usage();
 
+#ifndef clocks
+    detect_all_effects();
+#endif
+
     return true;
 }
 
@@ -4486,8 +4490,11 @@ static bool a2m_import(char *tune, unsigned long size)
     printf("Percussion mode: %d\n", percussion_mode);
     printf("Track volume lock: %d\n", lockvol);
 #endif
-
     memory_usage();
+
+#ifndef clocks
+    detect_all_effects();
+#endif
 
     return true;
 }
@@ -4580,4 +4587,30 @@ void a2t_update(unsigned char *stream, int len)
         OPL3_GenerateStream(&opl, (int16_t *)(stream + cntr), 1);
         cnt++;
     }
+}
+
+void detect_all_effects(void)
+{
+    static char echars[256] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ&%!@=#$~^`><";
+    char effects[257];
+    int p, c, r;
+
+    memset(effects, '_', sizeof(effects));
+    effects[256] = '\0';
+
+    for (p = 0; p < eventsinfo->patterns; p++) {
+        for (c = 0; c < songinfo->nm_tracks; c++) {
+            for (r = 0; r < songinfo->patt_len; r++) {
+                tADTRACK2_EVENT *ev = get_event_p(p, c, r);
+                if (ev->eff[0].def != 0 || ev->eff[0].val != 0) {
+                    effects[ev->eff[0].def] = echars[ev->eff[0].def];
+                }
+                if (ev->eff[1].def != 0 || ev->eff[1].val != 0) {
+                    effects[ev->eff[1].def] = echars[ev->eff[1].def];
+                }
+            }
+        }
+    }
+
+    printf("EF %.50s\n", effects);
 }
