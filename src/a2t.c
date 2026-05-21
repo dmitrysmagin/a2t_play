@@ -2239,10 +2239,6 @@ static void play_line()
         process_effects_prepare(event, 1, chan);
         play_line_arpgg_cleanup(event, chan);
         play_line_apply_global_fslide_row(event, chan);
-    }
-
-    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
-        event = &events[chan];
         play_line_tremor_row_reset(event, chan);
     }
 
