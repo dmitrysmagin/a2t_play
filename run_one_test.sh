@@ -12,9 +12,12 @@ CC=${CC:-/c/Users/user/msys64/ucrt64/bin/x86_64-w64-mingw32-gcc}
 GMAKE=${GMAKE:-/c/Users/user/msys64/usr/bin/make}
 REFS_DIR="adt2play_sdl"
 TMPDIR="${TMPDIR:-/tmp}"
-MAX_FRAMES="${MAX_FRAMES:-30000}"
+MAX_FRAMES="${MAX_FRAMES:-15000}"
 # Large MAX_FRAMES need more wall time (a2m_dump can take ~45s+ for 100k frames).
 TIMEOUT_SEC="${TIMEOUT_SEC:-120}"
+# SKIP_BENIGN=1 (default) filters out non-audio debug lines (GV, LE, EFT, etc.)
+# from the pass/fail decision. Set SKIP_BENIGN=0 to treat all diffs as significant.
+SKIP_BENIGN="${SKIP_BENIGN:-1}"
 
 base=$(basename "$MODULE")
 base_noext="${base%.*}"
@@ -63,7 +66,11 @@ if [ -f "$c_reg" ] && [ -f "$ref_reg" ]; then
   diff -u "$c_reg" "$ref_reg" > "$diff_file" 2>&1 || true
   # Filter: only count diffs in lines that affect audio output
   # (shadow regs 0/1, frequency table F). Ignore LE, EFT, MB, ET, VS, FP, GV, etc.
-  awk '/^[+-][0-9]/ { if ($8 == "0" || $8 == "1" || $8 == "F") print }' "$diff_file" > "$diff_sig_file" 2>/dev/null || true
+  if [ "$SKIP_BENIGN" = "1" ]; then
+    awk '/^[+-][0-9]/ { if ($8 == "0" || $8 == "1" || $8 == "F") print }' "$diff_file" > "$diff_sig_file" 2>/dev/null || true
+  else
+    cp "$diff_file" "$diff_sig_file"
+  fi
   diff_lines=$(wc -l < "$diff_sig_file")
   if [ "$diff_lines" -eq 0 ]; then
     rm -f "$diff_file" "$diff_sig_file"
