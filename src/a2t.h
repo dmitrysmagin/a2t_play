@@ -473,6 +473,7 @@ typedef struct _4op_data {
 extern tCHDATA *ch;
 extern bool songend;
 extern tPLAY_STATUS play_status;
+extern uint8_t global_volume;
 
 void detect_all_effects(void);
 

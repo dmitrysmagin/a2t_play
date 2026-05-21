@@ -128,7 +128,7 @@ begin
         end;
 
   ws := 'EF ';
-  for p := 0 to 255 do
+  for p := 0 to 49{255} do
     ws := ws + effects[p];
   ws := ws + #13#10;
   FileWrite(outfd, ws[1], Length(ws));

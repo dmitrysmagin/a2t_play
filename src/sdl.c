@@ -124,7 +124,8 @@ void show_eff(char *name, tEFFECT_TABLE table[2][20])
 
 int show_info()
 {
-    printf("Order %03d, Pattern %03d, Row %03d\n", current_order, current_pattern, current_line);
+    printf("Order %03d, Pattern %03d, Row %03d, Global Volume: %d\n",
+        current_order, current_pattern, current_line, global_volume);
     printf("VOIC: ");
     for (int i = 0; i < 20; i++) {
         printf("  %02x%s", ch->voice_table[i], i < 19 ? "|" : "\n");

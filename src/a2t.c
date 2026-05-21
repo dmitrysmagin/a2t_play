@@ -1,9 +1,9 @@
 /*
     TODO:
     - Bug in the original player: need to reset global_volume after order restart
-    - Implement fade_out_volume in set_ins_volume() and set_volume
-    - Implement bpm_rows_per_beat and bpm_tempo_finetune
-    - Implement using custom vibrato/tremolo tables
+    - Implement fade_out_volume in set_ins_volume() and set_volume - IMPLEMENTED
+    - Implement bpm_rows_per_beat and bpm_tempo_finetune - seems to be not used anywhere
+    - Implement using custom vibrato/tremolo tables - IMPLEMENTED
 
     Refactoring:
     - Refactor update_song_position(), calc_following_order()
@@ -3014,10 +3014,23 @@ static void update_song_position()
 
                 if (current_order <= old_order)
                     songend = true;
+                /* Reset global volume when jumping back to the start order (order 0)
+                    adt2play doesn't do it, but mmori.a2m has global volume fade at the end */
+                if (val == 0 && old_order != 0) {
+                    global_volume = 63;
+                    set_global_volume();
+                }
                 pattern_break = false;
             } else {
                 int new_order = current_order < 0x7f ? current_order + 1 : 0;
+                uint8_t old_order = current_order;
                 set_current_order(new_order);
+                /* Reset global volume when jumping back to the start order (order 0)
+                    adt2play doesn't do it, but mmori.a2m has global volume fade at the end */
+                if (current_order == 0 && old_order != 0) {
+                    global_volume = 63;
+                    set_global_volume();
+                }
             }
         }
 
