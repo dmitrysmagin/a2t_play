@@ -2139,8 +2139,7 @@ static void play_line()
      *   Z21 pattern-delay-rows: tickD = speed * n) see a stale speed when a higher
      *   channel’s column-1 had Dxx SetSpeed (tunes/MLF/PINK.A2T).
      * - Final pass: new_process_note + swap macros + update_fine_effects per channel. */
-    tADTRACK2_EVENT events[20];
-    tADTRACK2_EVENT *event;
+    tADTRACK2_EVENT _event, *event = &_event;
     /* // This can be omitted, no side effects for ZCx/ZDx
     bool do_pattern_loop = pattern_break && ((next_line & 0xf0) == pattern_loop_flag);
 
@@ -2151,10 +2150,7 @@ static void play_line()
     }
     */
 
-    assert((int)songinfo->nm_tracks <= 20);
-
     for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
-        event = &events[chan];
         // save effect_table into last_effect
         for (int slot = 0; slot < 2; slot++) {
             if (ch->effect_table[slot][chan].def | ch->effect_table[slot][chan].val) {
@@ -2208,41 +2204,26 @@ static void play_line()
         // set effect_table here
         process_effects_prepare(event, 0, chan);
         process_effects_prepare(event, 1, chan);
+
         play_line_arpgg_cleanup(event, chan);
         play_line_apply_global_fslide_row(event, chan);
-    }
-
-    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
-        event = &events[chan];
         play_line_tremor_row_reset(event, chan);
-    }
 
-    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
-        event = &events[chan];
         process_effects(event, 0, chan);
-    }
-
-    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
-        event = &events[chan];
         process_effects(event, 1, chan);
-    }
 
-    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
         for (int slot = 0; slot < 2; slot++) {
-            if ((events[chan].eff[slot].def == 0) && (events[chan].eff[slot].val == 0)) {
+            if ((event->eff[slot].def == 0) && (event->eff[slot].val == 0)) {
                 if ((ch->glfsld_table[slot][chan].def == 0) && (ch->glfsld_table[slot][chan].val == 0)) {
                     ch->effect_table[slot][chan].def = 0;
                     ch->effect_table[slot][chan].val = 0;
                 }
             } else {
-                ch->event_table[chan].eff[slot].def = events[chan].eff[slot].def;
-                ch->event_table[chan].eff[slot].val = events[chan].eff[slot].val;
+                ch->event_table[chan].eff[slot].def = event->eff[slot].def;
+                ch->event_table[chan].eff[slot].val = event->eff[slot].val;
             }
         }
-    }
 
-    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
-        event = &events[chan];
         new_process_note(event, chan);
 
         check_swap_arp_vibr(event, 0, chan);
