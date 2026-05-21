@@ -1534,6 +1534,34 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
          * last_effect's type already matches ef_TonePortamento (carry-over).
          * A key-off note (note | 0x80) is NOT in [1..97], so Pascal falls through
          * to the carry-over branch — effect_table/speed only set if prior porta existed. */
+        #if 1
+        {
+            uint8_t has_note = event->note >= 1 && event->note  <= 12*8+1;
+            bool has_carry = ch->last_effect[slot][chan].def == ef_TonePortamento;
+
+            if (has_note || has_carry) {
+                if (event->eff[slot].val != 0) {
+                    ch->effect_table[slot][chan].def = ef_TonePortamento;
+                    ch->effect_table[slot][chan].val = val;
+                } else if (has_carry && ch->last_effect[slot][chan].val != 0) {
+                    ch->effect_table[slot][chan].def = ef_TonePortamento;
+                    ch->effect_table[slot][chan].val = ch->last_effect[slot][chan].val;
+                } else {
+                    ch->effect_table[slot][chan].def = ef_TonePortamento;
+                    ch->effect_table[slot][chan].val = 0;
+                }
+
+                ch->porta_table[slot][chan].speed = ch->effect_table[slot][chan].val;
+                if (has_note) {
+                    ch->porta_table[slot][chan].freq =
+                        nFreq((event->note - 1)) +
+                        get_instr_fine_tune(ch->event_table[chan].instr_def);
+                }
+            } else {
+                /* adt2play.pas doesn't handle this branch, so it's UB */
+            }
+        }
+        #else
         if (event->note >= 1 && event->note  <= 12*8+1) {
             if (event->eff[slot].val != 0) {
                 ch->effect_table[slot][chan].def = ef_TonePortamento;
@@ -1565,6 +1593,7 @@ static void process_effects(tADTRACK2_EVENT *event, int slot, int chan)
         } else {
             /* adt2play.pas doesn't handle this branch, so it's UB */
         }
+        #endif
         break;
 
     case ef_TPortamVolSlide:
@@ -2139,7 +2168,8 @@ static void play_line()
      *   Z21 pattern-delay-rows: tickD = speed * n) see a stale speed when a higher
      *   channel’s column-1 had Dxx SetSpeed (tunes/MLF/PINK.A2T).
      * - Final pass: new_process_note + swap macros + update_fine_effects per channel. */
-    tADTRACK2_EVENT _event, *event = &_event;
+    tADTRACK2_EVENT events[20];
+    tADTRACK2_EVENT *event;
     /* // This can be omitted, no side effects for ZCx/ZDx
     bool do_pattern_loop = pattern_break && ((next_line & 0xf0) == pattern_loop_flag);
 
@@ -2150,7 +2180,10 @@ static void play_line()
     }
     */
 
+    assert((int)songinfo->nm_tracks <= 20);
+
     for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
+        event = &events[chan];
         // save effect_table into last_effect
         for (int slot = 0; slot < 2; slot++) {
             if (ch->effect_table[slot][chan].def | ch->effect_table[slot][chan].val) {
@@ -2204,26 +2237,41 @@ static void play_line()
         // set effect_table here
         process_effects_prepare(event, 0, chan);
         process_effects_prepare(event, 1, chan);
-
         play_line_arpgg_cleanup(event, chan);
         play_line_apply_global_fslide_row(event, chan);
+    }
+
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
+        event = &events[chan];
         play_line_tremor_row_reset(event, chan);
+    }
 
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
+        event = &events[chan];
         process_effects(event, 0, chan);
-        process_effects(event, 1, chan);
+    }
 
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
+        event = &events[chan];
+        process_effects(event, 1, chan);
+    }
+
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
         for (int slot = 0; slot < 2; slot++) {
-            if ((event->eff[slot].def == 0) && (event->eff[slot].val == 0)) {
+            if ((events[chan].eff[slot].def == 0) && (events[chan].eff[slot].val == 0)) {
                 if ((ch->glfsld_table[slot][chan].def == 0) && (ch->glfsld_table[slot][chan].val == 0)) {
                     ch->effect_table[slot][chan].def = 0;
                     ch->effect_table[slot][chan].val = 0;
                 }
             } else {
-                ch->event_table[chan].eff[slot].def = event->eff[slot].def;
-                ch->event_table[chan].eff[slot].val = event->eff[slot].val;
+                ch->event_table[chan].eff[slot].def = events[chan].eff[slot].def;
+                ch->event_table[chan].eff[slot].val = events[chan].eff[slot].val;
             }
         }
+    }
 
+    for (int chan = 0; chan < songinfo->nm_tracks; chan++) {
+        event = &events[chan];
         new_process_note(event, chan);
 
         check_swap_arp_vibr(event, 0, chan);
